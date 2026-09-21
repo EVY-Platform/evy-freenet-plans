@@ -68,35 +68,27 @@ Example: Bob taps Make offer. The executor runs the declared steps, the host che
 
 ### What Freenet provides today
 
+A web application orchestrates its own requests. Its JavaScript or Rust code sends `ClientRequest::ContractOp` and `ClientRequest::DelegateOp` over the client API and matches the responses itself. The website container holds `index.html` and the code it loads, per [bundles section 1](bundles.md#1-the-website-container).
+
 ### What AppKit proposes
 
-Implement versioned action definitions, view schemas and a typed delegate request/result convention. These are proposed AppKit interfaces. Prove them with Atlas before adopting them across products.
+Action definitions live in the bundle's `actions/` directory. Each names its resources, input and output schemas and the step versions it needs. Definitions allow bounded sequences and conditional branches, with caps on steps, input sizes, expression depth and concurrent requests. A new action assembled from supported steps arrives in a bundle. A new executor primitive requires a reader update.
 
-| Interface | Purpose |
-| --- | --- |
-| Invoke action | Accept a declared action name, typed arguments and a stable operation ID |
-| Read or observe | Fetch a declared contract or retain bounded subscription demand |
-| Call delegate | Pass typed arguments and bounded record bytes to a fully identified delegate |
-| Delegate result | Return a typed projection, prepared operation bytes, or a defined error |
-| Submit | Submit prepared bytes to a declared target after permission and payload checks |
-| Local operation | Read or write app-scoped drafts, caches and journals |
-| Device/service operation | Invoke an approved adapter and receive a scoped handle or typed result |
-| Cancel or close | Stop cancellable work, release host-side demand and invalidate the session |
+| Step | Returns | Detailed in |
+| --- | --- | --- |
+| Invoke action | The action's typed result, correlated by the operation ID from [section 6](#6-submitting-updates-and-pending-operations) | This section |
+| Read or observe | A verified snapshot, subscription events and the host-recorded response time | [Section 4](#4-reads-views-and-freshness) |
+| Call delegate | A typed projection, prepared operation bytes or a defined error | [Section 3](#3-delegate-requests-and-results) |
+| Submit | Merged locally, observed, superseded or unresolved | [Section 6](#6-submitting-updates-and-pending-operations) |
+| Local read, write or observe | App and user scoped records and the transaction outcome | [Section 5](#5-values-and-local-storage) |
+| Blob put or get | A verified content reference or a bounded byte stream | [Section 7](#7-device-and-service-adapters) |
+| Device or service operation | A scoped handle, a typed result, or a typed denial or unavailable result | [Section 7](#7-device-and-service-adapters) |
+| Time and randomness | Host-supplied values, with deterministic substitutes in tests | [Section 5](#5-values-and-local-storage) |
+| Cancel or close | Cancellable work stopped, host-side demand released and the session invalidated | [Section 6](#6-submitting-updates-and-pending-operations) |
 
-Action definitions reference named resources, declared input/output schemas and supported step versions. Allow bounded sequences and conditional branches. Cap steps, input sizes, expression depth and concurrent requests. A new action assembled from supported steps can arrive in a bundle. A new executor primitive requires a reader update.
+Definitions and schemas load from one verified archive snapshot. A session records the exact delegate code, parameters and protocol versions it selected. Hosts adopt updates after the [installation checks](hosts.md#6-installing-and-updating-applications). Atlas proves the definitions before other products adopt them.
 
-Validate action arguments, delegate results and outgoing view data before use. Read definitions and schemas from one verified archive snapshot. Record the exact delegate code, parameters and protocol selected for the session. Hosts adopt updates after the [installation checks](hosts.md#6-installing-and-updating-applications).
-
-| Operation family | Returns |
-| --- | --- |
-| Contract get and observe | Verified snapshot, subscription events and the host-recorded response time |
-| Contract update | Merged locally, observed, superseded or unresolved operation result |
-| Delegate request | Typed result the delegate returns after its own policy check, or an opaque handle |
-| Local read/write/observe | App/user-scoped records and transaction outcome |
-| Blob put/get | Verified content reference or bounded byte stream |
-| Device operation | File/media handles or typed denial/unavailable result |
-| External operation | On the browser target, a popup or redirect, or a service response through a delegate or contract. Core's Content Security Policy blocks every other cross-origin request. On native, an approved adapter response |
-| Time/randomness | Host-supplied values with deterministic substitutes in tests |
+Example: Carol's Make offer button names `marketplace.makeOffer` with the listing ID and amount, as the [SDUI binding example](sdui.md#2-connecting-controls-to-data-and-actions) shows. The action's steps read the `listingDetails` view, call the Marketplace delegate to prepare the offer and submit the prepared bytes. Carol ships a "Counter offer" action from the same steps in the next bundle. A step that opens the camera needs a reader update first.
 
 ## 3. Delegate requests and results
 
