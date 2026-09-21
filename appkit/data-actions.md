@@ -182,9 +182,11 @@ Example: Alice's 80 dollar price is `{ currency: "USD", minor: 8000 }`. Her draf
 
 ### What Freenet provides today
 
+`Update { key, data }` sends `UpdateData` as a state, a delta or both. The contract's `update_state` merges it and returns `UpdateModification`. Merge is total: an update merges into whichever replica receives it. `UpdateResponse { key, summary }` carries a summary the local node computed, and subscribers receive an `UpdateNotification`. A delegate can send `UpdateContractRequest` and receive `UpdateContractResponse`. A timeout after remote acceptance leaves the outcome unknown ([#3465](https://github.com/freenet/freenet-core/issues/3465)), and responses carry no request ID ([#5048](https://github.com/freenet/freenet-core/issues/5048)).
+
 ### What AppKit proposes
 
-Allocate and persist the operation ID before delegate preparation or other side effects. Correlate preparation retries with that ID and make any delegate state changes idempotent. Save exact prepared bytes before submission and before showing the operation as locally pending:
+Allocate and persist the operation ID before delegate preparation or any other side effect. Correlate retries with that ID and make delegate state changes idempotent. Save the exact prepared bytes before submission and before showing the operation as locally pending:
 
 ```text
 operation_id, app_ref, originating_content_ref, action_protocol, delegate_reference
@@ -192,25 +194,32 @@ resource_reference, canonical_payload, base_summary_if_required
 created_time, retry_policy, status, completion_evidence
 ```
 
+`app_ref` and the originating content reference come from [bundles section 2](bundles.md#2-publishing-and-evidence). The operation ID identifies one user action across retries, restarts and device recovery. SDK request correlation, once it lands, identifies one transport exchange, and the two stay separate.
+
 ```mermaid
 stateDiagram-v2
     [*] --> Queued
     Queued --> Rejected: local validation fails
     Queued --> Submitted: refresh, revalidate and submit
-    Submitted --> Accepted: merged locally, then observed in a GET or update notification
+    Submitted --> Accepted: merged locally, then observed in a GetResponse or UpdateNotification
     Submitted --> Superseded: a read shows the contract's merge chose a competing record
     Submitted --> Unresolved: response unavailable
     Unresolved --> Accepted: reconciliation observes the record
     Unresolved --> Superseded: reconciliation observes a competing record
 ```
 
-Merge is total. An update merges into whichever replica receives it, and the client's update response carries only the key and a summary from its own node. Accepted therefore means merged locally and later observed in a GET or update notification. Superseded is the normal outcome when Bob and another buyer submit conflicting offers: the Marketplace contract's merge rule resolves them, and a later read shows which record won. Rejected covers local validation failures before submission, such as an amount below the listing's minimum.
+| Status | Meaning |
+| --- | --- |
+| Rejected | Local validation failed before submission, such as an amount below the listing's minimum |
+| Accepted | Merged locally and later observed in a `GetResponse` or `UpdateNotification` |
+| Superseded | A read shows the contract's merge chose a competing record |
+| Unresolved | No response arrived, so reconciliation waits for the record or a competitor |
 
-Retrying the same action preserves its operation ID and exact encoded payload. Repair that changes the payload creates a successor operation. The host refreshes state and asks the domain delegate to reconcile the operation before retrying. The host rechecks permissions before queued operations execute.
+Retrying the same action preserves its operation ID and exact payload. Repair that changes the payload creates a successor operation. The host refreshes state and asks the domain delegate to reconcile before retrying, and rechecks permissions before queued operations run.
 
-Example: Alice lowers her skateboard price offline. Her laptop withdraws the listing. On reconnect, the host refreshes the listing, obtains the delegate's conflict result and preserves the draft for repair.
+Cancellation stops local cancellable work. A submitted mutation stays tracked until its outcome is known. After navigation or backgrounding, an uncertain submission stays unresolved until a read or notification shows the record or a competing one.
 
-Cancellation stops local cancellable work. A submitted mutation remains tracked until its outcome is known. After navigation or backgrounding, an uncertain submission stays unresolved until a read or notification shows the record or a competing one. Core transport correlation and the durable application operation queue have separate responsibilities.
+Examples: Bob and another buyer submit conflicting offers. The Marketplace contract's merge rule picks one, and the other buyer's read shows Superseded. Alice lowers her skateboard price offline while her laptop withdraws the listing. On reconnect, the host refreshes the listing, obtains the delegate's conflict result and preserves her draft for repair as a successor operation.
 
 ## 7. Device and service adapters
 
