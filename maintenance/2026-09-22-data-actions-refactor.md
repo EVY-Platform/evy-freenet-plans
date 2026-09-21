@@ -44,7 +44,7 @@ Paste this table after the intro. Every anchor must match the headings in the ne
 | Section | What Freenet provides today | What AppKit proposes |
 | --- | --- | --- |
 | [1](#1-who-does-what) | Core's contract and delegate runtimes and delegate secret namespaces | The action executor, the host broker and the application delegate convention |
-| [2](#2-declared-actions) | Application code that calls the client API directly | Versioned action definitions with bounded steps, run by installed readers |
+| [2](#2-declared-actions) | Application code that calls the client API directly | Versioned action definitions with bounded steps, run by the installed executor |
 | [3](#3-delegate-requests-and-results) | `ApplicationMessages` with opaque payload bytes and a runtime-attested `MessageOrigin` | A typed request and result protocol inside the payload, with fixtures and correlation |
 | [4](#4-reads-views-and-freshness) | `Get`, `Subscribe`, `GetResponse` and `UpdateNotification` keyed by contract, with no timestamps | Logical resources, declared views, value states and host-recorded freshness |
 | [5](#5-values-and-local-storage) | Opaque state bytes in Core and the browser storage gates | A shared value model, storage namespaces and cache keys |
@@ -195,13 +195,13 @@ Today:
 
 Proposes:
 
-- Proposes table with rows for SDUI action executor, host, application delegate convention, custom application orchestration and the memory preview adapter from current section 9.
+- Proposes table with rows for the action executor, host, application delegate convention, custom application orchestration and the memory preview adapter from current section 9.
 - The redrawn flowchart. Replace the current section 3 diagram with this one:
 
 ```mermaid
 flowchart LR
     subgraph proposed [Proposed AppKit parts]
-        UI["SDUI reader or custom application"] --> X["Action executor"]
+        UI["Application screens"] --> X["Action executor"]
         X --> H["Host broker"]
         H --> L["Scoped local storage"]
         H --> A["Device and service adapters"]
@@ -228,12 +228,12 @@ Today:
 Proposes:
 
 - Versioned action definitions in the bundle's `actions/` directory reference named resources, input and output schemas and supported step versions. Bounded sequences and conditional branches. Caps on steps, input sizes, expression depth and concurrent requests.
-- A new action assembled from supported steps arrives in a bundle. A new executor primitive requires a reader update.
+- A new action assembled from supported steps arrives in a bundle. A new executor primitive requires a host update.
 - The merged step table. Columns: Step, Returns, Detailed in. Rows: invoke action, read or observe, call delegate, submit, local operation, blob put and get, device or service operation, time and randomness, cancel or close. Fill Returns from the current section 3 table and point Detailed in at sections 3 to 8.
 - Definitions and schemas load from one verified archive snapshot. The session records the exact delegate code, parameters and protocol it selected. Hosts adopt updates after the [installation checks](../appkit/hosts.md#6-installing-and-updating-applications).
 - Prove the definitions with Atlas before adopting them across products.
 
-Example: Carol's Make offer button names `marketplace.makeOffer` with the listing id and amount, as the [SDUI binding example](../appkit/sdui.md#2-connecting-controls-to-data-and-actions) shows. The action's steps read the `listingDetails` view, call the Marketplace delegate to prepare the offer and submit the prepared bytes. Carol ships a new "Counter offer" action from the same steps in the next bundle. A step that opens the camera needs a reader update first.
+Example: Carol's Make offer button names `marketplace.makeOffer` with the listing id and amount. The action's steps read the `listingDetails` view, call the Marketplace delegate to prepare the offer and submit the prepared bytes. Carol ships a new "Counter offer" action from the same steps in the next bundle. A step that opens the camera needs a host update first. The [SDUI plan](../appkit/sdui.md#2-connecting-controls-to-data-and-actions) shows how a screen control binds to this action.
 
 Identifiers introduced: action definition, step version, action protocol version.
 
@@ -255,7 +255,7 @@ Proposes:
 - Application adapters supply domain codecs, canonical signing inputs and view projections. They validate source identities and signatures required by each domain.
 - A delegate's prepared update still passes host authorization and contract validation.
 
-Example: Bob's request is `prepareOffer` version 1 with request id 17, listing id and amount 8000 minor units of USD, plus the listing record bytes the host read. The Marketplace delegate checks the listing's minimum, signs the offer and returns prepared update bytes. Core stamps the message with `WebApp(Marketplace contract id)`. An amount below the minimum returns the typed error `below_minimum`, which the reader shows on the form.
+Example: Bob's request is `prepareOffer` version 1 with request id 17, listing id and amount 8000 minor units of USD, plus the listing record bytes the host read. The Marketplace delegate checks the listing's minimum, signs the offer and returns prepared update bytes. Core stamps the message with `WebApp(Marketplace contract id)`. An amount below the minimum returns the typed error `below_minimum`, which the form shows.
 
 Identifiers introduced: delegate protocol version, request id.
 
@@ -273,10 +273,10 @@ Proposes:
 - Definitions bind logical resources such as `marketplace.listings` and `identity.profile` to declared contracts and delegates. Views such as `listingDetails` declare input and output types and a maximum age.
 - The host performs bounded queries. The domain delegate interprets the returned records. Large search uses bounded region and category index shards. A delegate may return a proposed shard reference, which the host checks against declared resource and query limits before fetching it.
 - Value states `loading`, `ready`, `stale`, `missing`, `error` and `permission_required`, in a table with one Alice example per row. `ready` means a verified snapshot through the selected provider. Permission prompts belong to the host.
-- Freshness is the host-recorded time it received the response, or a publisher timestamp the application encodes in contract state and declares in the view schema. `stale` means that time exceeds the view's maximum age, so the reader shows the value with its observation time and the host refreshes it.
+- Freshness is the host-recorded time it received the response, or a publisher timestamp the application encodes in contract state and declares in the view schema. `stale` means that time exceeds the view's maximum age, so the screen shows the value with its observation time and the host refreshes it.
 - The host reference-counts subscriptions. Releasing a view releases its demand. Other active views keep theirs. When Unsubscribe ships, the reference count decides when to send it. Background shutdown follows the [SDK lifecycle](../freenet-mobile/README.md#5-connectivity-and-lifecycle) and invalidates late callbacks.
 
-Example: `listingDetails` declares a maximum age of five minutes. Alice opens her skateboard listing on the train. The host last received the listing seven minutes ago, so the reader shows the price with "seen 7 minutes ago" and the host refreshes when the network returns.
+Example: `listingDetails` declares a maximum age of five minutes. Alice opens her skateboard listing on the train. The host last received the listing seven minutes ago, so the screen shows the price with "seen 7 minutes ago" and the host refreshes when the network returns.
 
 Identifiers introduced: logical resource, view, maximum age, value state.
 
@@ -346,11 +346,11 @@ Today:
 
 Proposes:
 
-- Installed readers execute declarative steps under host limits for memory, input and output sizes, subscriptions, storage, action steps, view complexity and event frequency. Schedule bounded work away from the UI thread. Cancel overdue sequences. A failure ends the affected operation or session and preserves its durable journal.
+- The installed executor runs declarative steps under host limits for memory, input and output sizes, subscriptions, storage, action steps, view complexity and event frequency. Schedule bounded work away from the UI thread. Cancel overdue sequences. A failure ends the affected operation or session and preserves its durable journal.
 - Every protected operation uses host-assigned session authority and current grants. Delegates apply their own policy to approved calls. Platform networking, native objects and private keys stay behind host interfaces.
 - Treat definitions and delegate results as untrusted input. Validate action arguments, delegate results, returned targets and prepared bytes before any side effect. Resource-limit tests cover declarative evaluation and Core execution.
 
-Example: a bundle declares an action with ten thousand steps. Validation rejects it before the reader runs anything. A delegate returns prepared bytes for a contract the definition never declared. The host rejects the submit step and journals the failure.
+Example: a bundle declares an action with ten thousand steps. Validation rejects it before the executor runs anything. A delegate returns prepared bytes for a contract the definition never declared. The host rejects the submit step and journals the failure.
 
 ### Section 9. Application migrations
 
@@ -396,13 +396,12 @@ Add one line after the table: `app_ref`, `publication_ref` and installation and 
 
 Bullets, from current sections 7 and 9:
 
-- One Atlas action runs through declarative SDUI and a custom native control with the typed delegate convention, per the [Atlas sample](../atlas-sample/README.md#2-feasibility-and-application-responsibilities).
-- A new compatible SDUI definition works without application-specific code compiled into the reader.
+- One Atlas action runs through a declared action and a custom native control with the typed delegate convention, per the [Atlas sample](../atlas-sample/README.md#2-feasibility-and-application-responsibilities).
+- A new action built from supported steps runs on the installed executor without an executor update.
 - Request correlation, instance-id updates and subscription repair pass the [mobile SDK acceptance cases](../freenet-mobile/README.md#8-acceptance-cases).
 - Fixtures cover canonical records, signing inputs, typed errors, schema mismatches, codec errors, stale caches, duplicate responses, request isolation and late completions. Property tests cover domain conversions and reconciliation. Formatting fixtures supply identical locale, time zone and current time.
 - Force termination, lock, permission revocation and network change preserve recoverable drafts and operation identity.
 - Hosts reject cross-app access, forged caller ids, malformed delegate results, undeclared targets and excessive action work.
-- SDUI and custom native interfaces complete equivalent fixture actions through the same domain protocols.
 - Migration fixtures pass for skipped versions, late predecessors, deletions, conflicts, interrupted readback and mixed-version participants.
 
 Close with the references line: [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [delegate interface](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs), [freenet-migrate](https://github.com/freenet/freenet-migrate).
