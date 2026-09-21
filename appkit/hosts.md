@@ -146,7 +146,7 @@ flowchart TD
     G --> H["Show confirmed result or keep pending"]
 ```
 
-An update counts as accepted once it merges locally and a later read or update notification shows it in the contract state. Marketplace defines what that result means for the buyer and seller. The [operation lifecycle](data-actions.md#5-offline-operations-and-cancellation) defines retries, conflicts and unresolved submissions.
+An update counts as accepted once it merges locally and a later read or update notification shows it in the contract state. Marketplace defines what that result means for the buyer and seller. The [operation lifecycle](data-actions.md#6-submitting-updates-and-pending-operations) defines retries, conflicts and unresolved submissions.
 
 ### Storage and lifecycle implementation
 
@@ -184,7 +184,7 @@ Record both the latest verified publication and the installed copy, including wh
 | Ordinary website | Open through the Freenet browser shell |
 | Arbitrary contract | Open the contract inspection view |
 
-Run local database migrations against staged or recoverable storage and read back the result before committing installation. The [data and actions plan](data-actions.md#10-application-migrations) assigns domain adapters to the application and migration orchestration to the host, while [identity](../identity/README.md#4-delegate-upgrades) owns secret-access authorization. Shared contracts evolve independently of the local installation transaction. A cached definition can run only with compatible executor steps, delegates and local/shared state schemas.
+Run local database migrations against staged or recoverable storage and read back the result before committing installation. The [data and actions plan](data-actions.md#9-application-migrations) assigns domain adapters to the application and migration orchestration to the host, while [identity](../identity/README.md#4-delegate-upgrades) owns secret-access authorization. Shared contracts evolve independently of the local installation transaction. A cached definition can run only with compatible executor steps, delegates and local/shared state schemas.
 
 ### Withdrawal and reinstatement
 

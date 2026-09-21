@@ -124,7 +124,7 @@ Fixtures specify each component's parameter encoding, every host derives the sam
 
 Example: the Marketplace offer contract's key is the hash of its Wasm plus its parameter bytes. Bob's phone and Alice's laptop derive the same key from the bundle before either sends an offer, and the shared fixtures check that every host agrees.
 
-Hosts link `freenet-migrate` and resolve the verified code hash with the component's actual parameters, keeping the resolver's minimum accepted version. Applications own their migration adapters, as the [data and actions plan](data-actions.md#10-application-migrations) specifies. A pointer locates a component. The adapter recovers its data.
+Hosts link `freenet-migrate` and resolve the verified code hash with the component's actual parameters, keeping the resolver's minimum accepted version. Applications own their migration adapters, as the [data and actions plan](data-actions.md#9-application-migrations) specifies. A pointer locates a component. The adapter recovers its data.
 
 ## 4. Host execution from the definition
 
