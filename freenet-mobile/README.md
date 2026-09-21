@@ -117,33 +117,8 @@ The SDK bindings share protocol fixtures across browser and native builds. AppKi
 
 ## 4. Thin-peer network role
 
-A thin peer opens a terminal connection to a serving full peer. That connection carries its reads, writes and subscriptions. The full peer performs onward routing, hosting and update distribution.
+A thin peer opens a terminal connection to a serving full peer that routes, hosts and distributes updates for it. This is AppKit's proposed Core extension, specified in the [thin-peer proposal](thin-peer-proposal.md). The full-peer profile stays the production role until the proposal lands.
 
-```mermaid
-flowchart LR
-    App["Bob's reader or native application"] --> Host["Trusted host"]
-    Host --> SDK["Native Rust stdlib and bindings"]
-    SDK --> Thin["Embedded thin peer"]
-    Thin -->|"Own reads, writes and subscriptions"| Full["Serving full peer"]
-    Full --> Network["Freenet routing and hosting"]
-    Network --> Full
-    Full -->|"Requested updates"| Thin
-```
-
-Add versioned role negotiation and retain the accepted role for the connection's lifetime. Full peers handle onward routing, fallback routing, hosting and subscription roots. Send updates down the edge only for its authorized active subscriptions. Clean up downstream demand on disconnect.
-
-| Core area | Required change |
-| --- | --- |
-| Connect operation | Negotiate role and protocol compatibility in request and response. |
-| Connection manager | Register persistent terminal edges and preserve their negotiated role. |
-| Ring | Assign hosting and subscription roots to full peers and maintain serving connections for thin peers. |
-| Subscribe operation | Manage terminal subscriptions, downstream delivery and unsubscribe. |
-| Connection lifecycle | Preserve role on completion and release state on disconnect. |
-| Configuration and node construction | Apply role-specific topology rules and serving-peer settings. |
-
-Thin-peer connections are open to peers with compatible protocols when serving capacity is available.
-
-This role is AppKit's proposed Core extension. File it as a role-design proposal in freenet-core and track negotiation, terminal edges, subscription delivery and carrier acceptance against that proposal. The full-peer baseline stays the supported profile until the proposal lands. Related Core behavior the proposal must preserve: [GET routing for subscribed contracts #4222](https://github.com/freenet/freenet-core/issues/4222) and [placement migration #4440](https://github.com/freenet/freenet-core/issues/4440).
 
 ## 5. Connectivity and lifecycle
 
