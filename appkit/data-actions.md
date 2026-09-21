@@ -22,39 +22,47 @@ Each target has its own SDK path, listed in the [SDK paths table](../freenet-mob
 
 ### What Freenet provides today
 
+Freenet Core runs contract Wasm through `ContractInterface` and delegate Wasm through `DelegateInterface::process`. A contract's `validate_state` and `update_state` decide which shared state is valid and how updates merge. A delegate receives one inbound message with its attested origin and returns outbound messages. Core owns delegate secret namespaces, as [identity section 2](../identity/README.md#2-protected-keys-and-records) describes.
+
+| Part | Runs in | Responsibility |
+| --- | --- | --- |
+| Freenet SDK | TypeScript SDK, Rust stdlib in browser Wasm, or the native library, by target | Encode client requests, decode responses and deliver subscription events |
+| Contract | Core's Wasm runtime on every peer that holds the state | Validate and merge shared state |
+| Delegate | Core's Wasm runtime on the local node | Hold secrets and answer application messages under its own policy |
+
+The [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) names the SDK for each target and its status.
+
 ### What AppKit proposes
 
 | Part | Runs in | Responsibility |
 | --- | --- | --- |
-| Freenet SDK | TypeScript SDK, browser Wasm or native library, by target | Encode Freenet requests, decode responses and carry subscription events |
 | SDUI action executor | Installed reader | Evaluate bounded action steps and deliver typed results to controls |
-| Host | Trusted browser shell or native application | Sessions, permissions, storage, operation journals and device/service adapters |
-| Application delegate | Core's delegate runtime | Domain decoding, projections, update preparation and private operations |
-| Contract validator | Freenet Core | Validate and merge shared state |
+| Host | Core's shell on the browser target, or the native application | Sessions, permissions, storage, operation journals and device and service adapters |
+| Application delegate convention | The application's delegate Wasm | Typed requests and results for domain decoding, projections, update preparation and private operations |
 | Custom application | Browser or native application | Its own presentation and orchestration through the shared SDK |
-
-Core owns delegate secret namespaces. Host databases hold drafts, caches and pending operations. [Identity and recovery](../identity/README.md) specifies protected key storage, enrollment and migration. Freenet library bindings expose communication primitives. AppKit defines the application conventions above them.
+| Memory preview | [EVY Developer preview](sdui.md#8-preview-in-evy-developer) | Deterministic host adapters running the same executor with typed delegate fixtures |
 
 ```mermaid
 flowchart LR
-    UI["SDUI reader or custom application"] --> H["Host checks access and coordinates operations"]
-    H --> S["SDK for the target"]
-    S --> F["Freenet Core"]
-    F --> D["Application delegates"]
-    F --> C["Contract validation"]
-    H --> L["Scoped local storage"]
-    H --> A["Device and service adapters"]
-    D -->|"Typed results through Core and SDK"| H
+    subgraph proposed [Proposed AppKit parts]
+        UI["SDUI reader or custom application"] --> X["Action executor"]
+        X --> H["Host broker"]
+        H --> L["Scoped local storage"]
+        H --> A["Device and service adapters"]
+    end
+    subgraph existing [Existing Freenet parts]
+        S["SDK for the target"] --> F["Freenet Core"]
+        F --> D["Delegate Wasm"]
+        F --> C["Contract Wasm"]
+    end
+    H --> S
+    D -->|"OutboundDelegateMsg through Core and the SDK"| H
     H -->|"Views and operation results"| UI
 ```
 
-| Consumer | Integration |
-| --- | --- |
-| Web SDUI reader | Rust-backed browser SDK with JS/TS bindings, hosted by Core's shell |
-| JavaScript/TypeScript application | Existing TypeScript SDK |
-| Rust browser application | Rust stdlib linked into its browser Wasm build |
-| Native reader and custom application | The same native SDK and Swift/Kotlin bindings, with independent app enrollment |
-| Memory preview | Deterministic host adapters using the same declarative executor and typed delegate fixtures |
+Host databases hold drafts, caches and pending operations. [Identity and recovery](../identity/README.md) specifies protected key storage, enrollment and migration.
+
+Example: Bob taps Make offer. The executor runs the declared steps, the host checks Marketplace's grant, the native SDK carries the request, Core runs the Marketplace delegate, and peers validate the offer under the Marketplace contract.
 
 ## 2. Declared actions
 
