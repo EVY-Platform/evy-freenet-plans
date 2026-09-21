@@ -225,15 +225,26 @@ Examples: Bob and another buyer submit conflicting offers. The Marketplace contr
 
 ### What Freenet provides today
 
+Content served from a contract runs under Core's sandbox policy. It loads bytes from the node origin, `blob:` and `data:`, and only popups reach another origin. [Hosts section 7](hosts.md#7-photos-files-and-external-services) holds the network policy per target. Contract state is capped at 50 MiB. Core prompts the user for delegate `RequestUserInput` requests and shows the attested caller. Device access belongs to the host on every target.
+
 ### What AppKit proposes
 
-Validate attachment size and media policy before staging. Encrypt bytes when the application requires confidentiality. Store content-addressed bytes, authenticate metadata and return a verified reference. Publish the reference only after required upload evidence exists. Product policy defines availability repair.
+| Adapter | Browser target | Native target |
+| --- | --- | --- |
+| Media and blobs | Bundled in the archive or served by the node | Loaded through the approved adapter |
+| Photo and file pickers | The browser's picker inside the sandbox | The platform picker behind the host |
+| Checkout | Popup or redirect | System browser or in-app browser session |
+| Completion evidence | Approved service adapter | Approved service adapter |
 
-File and photo pickers return scoped handles. Granted operations, the session and its lifetime bound application access. Preview, image loading and external URL actions follow broker policy, including implicit network requests.
+For attachments, validate size and media policy before staging. Encrypt the bytes when the application requires confidentiality. Store content-addressed bytes, authenticate the metadata and return a verified content reference. Publish the reference only after required upload evidence exists. Product policy defines availability repair.
 
-Applications may declare completion evidence for the [remuneration plan](../remuneration/README.md). The adapter forwards that evidence with the operation's stable ID and the bindings the payment fixed at checkout, which the host retains and remuneration verifies. A newer application version submitting evidence for an older operation uses the original bindings.
+Pickers return scoped handles. The granted operations, the session and its lifetime bound application access. Preview, image loading and external URL actions follow broker policy, including implicit network requests.
 
-Checkout actions request payment sessions through the approved service adapter. On the browser target the host opens the checkout URL in a popup or redirect, the only paths that escape Core's Content Security Policy. Native hosts open the system browser or an in-app browser session. On return, the host refreshes payment state from the service and the order contract. [Payments](../payment/README.md) owns payment status and terms binding.
+Checkout actions request a payment session through the approved service adapter. On return, the host refreshes payment state from the service and the order contract. [Payments](../payment/README.md) owns payment status and terms binding.
+
+Applications may declare completion evidence for the [remuneration plan](../remuneration/README.md). The adapter forwards that evidence with the operation ID and the bindings the payment fixed at checkout, which the host retains and remuneration verifies. A newer application version submitting evidence for an older operation uses the original bindings.
+
+Example: Alice adds a skateboard photo. The host validates it, stores it as a content-addressed blob the node serves and returns a verified reference the listing embeds. Bob pays through a popup. On return the host reads the order contract and forwards completion evidence with Bob's operation ID.
 
 ## 8. Limits and security
 
