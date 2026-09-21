@@ -48,7 +48,7 @@ Derive `usage_event_id` from the product, capability, operation ID, and event ki
 
 The contract admits an event only when it embeds the bridge-signed payment record for its payment ID and that record verifies against the bridge root key in the contract parameters. Only events for real payments are valid, so a device key alone gains no write access. The contract also checks schema, signature and product scope. The remuneration service checks the capability ID against the signed contribution record bound to the payment ([attribution section 4](../attribution/README.md#4-bundle-integration)).
 
-The usage contract uses the same admission shape as the [Marketplace admission contract](../marketplace/README.md#5-structured-fulfillment-requests):
+The usage contract uses the same admission shape as the [Marketplace admission contract](../marketplace/fulfillment-requests.md#2-public-first-contact-and-bounded-transport):
 
 | Rule | Value |
 | --- | --- |
