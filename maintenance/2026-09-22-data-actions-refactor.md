@@ -1,6 +1,6 @@
 # Refactor plan: data-actions.md into today and proposes sections
 
-Status: planned on 2026-09-22, not started.
+Status: executed on 2026-09-22 in [PR #1](https://github.com/EVY-Platform/evy-freenet-plans/pull/1).
 
 Rewrite [appkit/data-actions.md](../appkit/data-actions.md) in the shape [appkit/bundles.md](../appkit/bundles.md) took on 2026-09-22. The intro table lists one row per major change and doubles as the table of contents. Each body section mirrors one row and splits into "What Freenet provides today" and "What AppKit proposes". A reference recap and an acceptance list close the plan.
 
@@ -36,14 +36,14 @@ No other file links into `data-actions.md` with an anchor. `evy/README.md`, `rep
 
 ### Intro
 
-Three paragraphs, then the table. Paragraph one names the plan's scope and links hosts, SDUI and bundles. Paragraph two keeps Bob's Make offer walk-through from the current intro. Paragraph three is the current sentence about each target's SDK path, shortened to one line with the link to the SDK paths table.
+Two paragraphs, then the table. Paragraph one names the plan's scope and links hosts, SDUI and bundles. Paragraph two keeps Bob's Make offer walk-through from the current intro. SDK paths stay in the [mobile plan](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) and get no paragraph here.
 
 Paste this table after the intro. Every anchor must match the headings in the next subsection.
 
 ```markdown
 | Section | What Freenet provides today | What AppKit proposes |
 | --- | --- | --- |
-| [1](#1-who-does-what) | Per-target SDKs, Core's contract and delegate runtimes, delegate secret namespaces | The action executor, the host broker and the application delegate convention |
+| [1](#1-who-does-what) | Core's contract and delegate runtimes and delegate secret namespaces | The action executor, the host broker and the application delegate convention |
 | [2](#2-declared-actions) | Application code that calls the client API directly | Versioned action definitions with bounded steps, run by installed readers |
 | [3](#3-delegate-requests-and-results) | `ApplicationMessages` with opaque payload bytes and a runtime-attested `MessageOrigin` | A typed request and result protocol inside the payload, with fixtures and correlation |
 | [4](#4-reads-views-and-freshness) | `Get`, `Subscribe`, `GetResponse` and `UpdateNotification` keyed by contract, with no timestamps | Logical resources, declared views, value states and host-recorded freshness |
@@ -107,7 +107,7 @@ Sections 1 to 9 each carry `### What Freenet provides today` and `### What AppKi
 | 7 limits and security paragraphs | Section 8 proposes |
 | 8 completion evidence paragraph | Section 7 proposes |
 | 8 checkout paragraph | Section 7 today for popups. Section 7 proposes for the adapter |
-| 9 consumer table | Section 1 today links the SDK paths table. Section 1 proposes keeps the memory preview row |
+| 9 consumer table | Section 1 proposes keeps the memory preview row. The SDK rows duplicate the mobile plan's SDK paths table and are dropped |
 | 9 feasibility and acceptance paragraphs | Section 11 |
 | 10 predecessor registry paragraph | Section 9 today for the crates. Section 9 proposes for the build check |
 | 10 host coordination, recovery policy, delegate migration, fixtures | Section 9 proposes, with the resolver and PR 5199 facts in section 9 today |
@@ -189,10 +189,9 @@ Each subsection below gives the content for one new section. "Today" and "Propos
 
 Today:
 
-- The SDK per target, in one sentence with the link to the SDK paths table.
 - Core runs contract Wasm through `ContractInterface` and delegate Wasm through `DelegateInterface::process`.
 - Core owns delegate secret namespaces, as [identity section 2](../identity/README.md#2-protected-keys-and-records) describes.
-- Today table with rows for Freenet SDK, contract validator and delegate runtime.
+- Today table with rows for contract and delegate. The SDK's carrier role sits in [hosts section 1](../appkit/hosts.md#1-how-the-parts-fit-together) and the mobile plan.
 
 Proposes:
 
@@ -213,11 +212,11 @@ flowchart LR
         F --> C["Contract Wasm"]
     end
     H --> S
-    D -->|"OutboundDelegateMsg through Core and the SDK"| H
+    D -->|"OutboundDelegateMsg"| H
     H -->|"Views and operation results"| UI
 ```
 
-Example: Bob taps Make offer. The executor runs the declared steps, the host checks Marketplace's grant, the native SDK carries the request, Core runs the Marketplace delegate, and peers validate the offer under the Marketplace contract.
+Example: Bob taps Make offer. The executor runs the declared steps, the host checks Marketplace's grant, Core runs the Marketplace delegate, and peers validate the offer under the Marketplace contract.
 
 ### Section 2. Declared actions
 
@@ -275,7 +274,7 @@ Proposes:
 - The host performs bounded queries. The domain delegate interprets the returned records. Large search uses bounded region and category index shards. A delegate may return a proposed shard reference, which the host checks against declared resource and query limits before fetching it.
 - Value states `loading`, `ready`, `stale`, `missing`, `error` and `permission_required`, in a table with one Alice example per row. `ready` means a verified snapshot through the selected provider. Permission prompts belong to the host.
 - Freshness is the host-recorded time it received the response, or a publisher timestamp the application encodes in contract state and declares in the view schema. `stale` means that time exceeds the view's maximum age, so the reader shows the value with its observation time and the host refreshes it.
-- The host reference-counts subscriptions. Releasing a view releases its demand. Other active views keep theirs. When Unsubscribe ships, the reference count decides when to send it. Background shutdown follows the SDK lifecycle and invalidates late callbacks.
+- The host reference-counts subscriptions. Releasing a view releases its demand. Other active views keep theirs. When Unsubscribe ships, the reference count decides when to send it. Background shutdown follows the [SDK lifecycle](../freenet-mobile/README.md#5-connectivity-and-lifecycle) and invalidates late callbacks.
 
 Example: `listingDetails` declares a maximum age of five minutes. Alice opens her skateboard listing on the train. The host last received the listing seven minutes ago, so the reader shows the price with "seen 7 minutes ago" and the host refreshes when the network returns.
 
@@ -348,7 +347,7 @@ Today:
 Proposes:
 
 - Installed readers execute declarative steps under host limits for memory, input and output sizes, subscriptions, storage, action steps, view complexity and event frequency. Schedule bounded work away from the UI thread. Cancel overdue sequences. A failure ends the affected operation or session and preserves its durable journal.
-- Every protected operation uses host-assigned session authority and current grants. Delegates apply their own policy to approved calls. Platform networking, native objects and private keys stay behind their owning SDK and host interfaces.
+- Every protected operation uses host-assigned session authority and current grants. Delegates apply their own policy to approved calls. Platform networking, native objects and private keys stay behind host interfaces.
 - Treat definitions and delegate results as untrusted input. Validate action arguments, delegate results, returned targets and prepared bytes before any side effect. Resource-limit tests cover declarative evaluation and Core execution.
 
 Example: a bundle declares an action with ten thousand steps. Validation rejects it before the reader runs anything. A delegate returns prepared bytes for a contract the definition never declared. The host rejects the submit step and journals the failure.
@@ -366,7 +365,7 @@ Today:
 Proposes:
 
 - Record original code hashes, parameter encodings and actual instance references in the registry. Add a build check that requires a predecessor entry when component code changes.
-- The host coordinates migration reads, approved imports, publication and readback through the SDK. Application-owned delegate adapters implement `PredecessorSecretsIo`, `SuccessorSecretsIo` and the contract probe I/O with domain codecs, validation and recovery rules. Atlas proves this adapter boundary. Custom applications link the library from their own code.
+- The host coordinates migration reads, approved imports, publication and readback. Application-owned delegate adapters implement `PredecessorSecretsIo`, `SuccessorSecretsIo` and the contract probe I/O with domain codecs, validation and recovery rules. Atlas proves this adapter boundary. Custom applications link the library from their own code.
 - A recovery policy per domain. Snapshot state uses the newest-generation policy. Combining several generations requires tests that prove the application's merge and deletion rules support it, using the crate's `policy_check` assertions. Preserve unresolved predecessor reads for retry. Validate recovered state with the successor's rules, publish it through authorized host operations, then read it back before recording success.
 - Shared-state recovery stays separate from host database migration and bundle installation. Mixed-version clients obey the domain's transition rules. Every AppKit delegate implements export and import, per [identity section 4](../identity/README.md#4-delegate-upgrades), so its secrets survive re-key. Use the resolver for successor pointers with its minimum accepted version, and handle stale, unavailable, conflicting and withdrawn results.
 - Fixtures cover several skipped versions, late predecessor responses, deletions, conflicting records, interrupted readback and mixed-version participants.
@@ -397,13 +396,13 @@ Add one line after the table: `app_ref`, `publication_ref` and installation and 
 
 Bullets, from current sections 7 and 9:
 
-- Reads, subscriptions, updates and delegate requests pass the same protocol fixtures through the Rust browser build, Swift and Kotlin, measured in the [feasibility stage](../freenet-mobile/README.md#0-feasibility-and-existing-evidence).
+- One Atlas action runs through declarative SDUI and a custom native control with the typed delegate convention, per the [Atlas sample](../atlas-sample/README.md#2-feasibility-and-application-responsibilities).
 - A new compatible SDUI definition works without application-specific code compiled into the reader.
 - Request correlation, instance-id updates and subscription repair pass the [mobile SDK acceptance cases](../freenet-mobile/README.md#8-acceptance-cases).
 - Fixtures cover canonical records, signing inputs, typed errors, schema mismatches, codec errors, stale caches, duplicate responses, request isolation and late completions. Property tests cover domain conversions and reconciliation. Formatting fixtures supply identical locale, time zone and current time.
 - Force termination, lock, permission revocation and network change preserve recoverable drafts and operation identity.
 - Hosts reject cross-app access, forged caller ids, malformed delegate results, undeclared targets and excessive action work.
-- SDUI and custom native interfaces complete equivalent fixture actions through their target's SDK and the same domain protocols.
+- SDUI and custom native interfaces complete equivalent fixture actions through the same domain protocols.
 - Migration fixtures pass for skipped versions, late predecessors, deletions, conflicts, interrupted readback and mixed-version participants.
 
 Close with the references line: [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [delegate interface](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs), [freenet-migrate](https://github.com/freenet/freenet-migrate).

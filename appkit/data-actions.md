@@ -2,13 +2,11 @@
 
 This plan owns AppKit's declared actions, data views, delegate convention and operation lifecycle. [Hosts](hosts.md) install applications and check permissions, [SDUI](sdui.md) defines screens, and [Bundles](bundles.md) define the signed archive that carries the definitions.
 
-Bob's Make offer button invokes a declared action with his draft amount. The host saves the operation ID, reads the listing and sends the record and typed arguments to the application's delegate. The delegate checks the terms and prepares the signed offer. The host saves the exact prepared bytes, checks submission permission and submits them through the SDK. A subsequent read or subscription supplies evidence of the result.
-
-Each target has its own SDK path, listed in the [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evidence). Custom applications can implement their own orchestration through their target's SDK and the same domain protocols.
+Bob's Make offer button invokes a declared action with his draft amount. The host saves the operation ID, reads the listing and sends the record and typed arguments to the application's delegate. The delegate checks the terms and prepares the signed offer. The host saves the exact prepared bytes, checks submission permission and submits them. A subsequent read or subscription supplies evidence of the result.
 
 | Section | What Freenet provides today | What AppKit proposes |
 | --- | --- | --- |
-| [1](#1-who-does-what) | Per-target SDKs, Core's contract and delegate runtimes, delegate secret namespaces | The action executor, the host broker and the application delegate convention |
+| [1](#1-who-does-what) | Core's contract and delegate runtimes and delegate secret namespaces | The action executor, the host broker and the application delegate convention |
 | [2](#2-declared-actions) | Application code that calls the client API directly | Versioned action definitions with bounded steps, run by installed readers |
 | [3](#3-delegate-requests-and-results) | `ApplicationMessages` with opaque payload bytes and a runtime-attested `MessageOrigin` | A typed request and result protocol inside the payload, with fixtures and correlation |
 | [4](#4-reads-views-and-freshness) | `Get`, `Subscribe`, `GetResponse` and `UpdateNotification` keyed by contract, with no timestamps | Logical resources, declared views, value states and host-recorded freshness |
@@ -26,11 +24,8 @@ Freenet Core runs contract Wasm through `ContractInterface` and delegate Wasm th
 
 | Part | Runs in | Responsibility |
 | --- | --- | --- |
-| Freenet SDK | TypeScript SDK, Rust stdlib in browser Wasm, or the native library, by target | Encode client requests, decode responses and deliver subscription events |
 | Contract | Core's Wasm runtime on every peer that holds the state | Validate and merge shared state |
 | Delegate | Core's Wasm runtime on the local node | Hold secrets and answer application messages under its own policy |
-
-The [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) names the SDK for each target and its status.
 
 ### What AppKit proposes
 
@@ -39,7 +34,7 @@ The [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evi
 | SDUI action executor | Installed reader | Evaluate bounded action steps and deliver typed results to controls |
 | Host | Core's shell on the browser target, or the native application | Sessions, permissions, storage, operation journals and device and service adapters |
 | Application delegate convention | The application's delegate Wasm | Typed requests and results for domain decoding, projections, update preparation and private operations |
-| Custom application | Browser or native application | Its own presentation and orchestration through the shared SDK |
+| Custom application | Browser or native application | Its own presentation and orchestration over the same domain protocols |
 | Memory preview | [EVY Developer preview](sdui.md#8-preview-in-evy-developer) | Deterministic host adapters running the same executor with typed delegate fixtures |
 
 ```mermaid
@@ -56,13 +51,13 @@ flowchart LR
         F --> C["Contract Wasm"]
     end
     H --> S
-    D -->|"OutboundDelegateMsg through Core and the SDK"| H
+    D -->|"OutboundDelegateMsg"| H
     H -->|"Views and operation results"| UI
 ```
 
 Host databases hold drafts, caches and pending operations. [Identity and recovery](../identity/README.md) specifies protected key storage, enrollment and migration.
 
-Example: Bob taps Make offer. The executor runs the declared steps, the host checks Marketplace's grant, the native SDK carries the request, Core runs the Marketplace delegate, and peers validate the offer under the Marketplace contract.
+Example: Bob taps Make offer. The executor runs the declared steps, the host checks Marketplace's grant, Core runs the Marketplace delegate, and peers validate the offer under the Marketplace contract.
 
 ## 2. Declared actions
 
@@ -143,7 +138,7 @@ Definitions bind logical resources such as `marketplace.listings` and `identity.
 
 Freshness is the host-recorded time it received the response, or a publisher timestamp the application encodes in contract state and declares in the view schema. `stale` means that time exceeds the maximum age, so the reader shows the value with its observation time and the host refreshes it. Permission prompts belong to the host.
 
-The host reference-counts subscriptions. Releasing a view releases its demand, and other active views keep theirs. When Unsubscribe ships, the reference count decides when to send it. Background shutdown follows the SDK lifecycle and invalidates late callbacks.
+The host reference-counts subscriptions. Releasing a view releases its demand, and other active views keep theirs. When Unsubscribe ships, the reference count decides when to send it. Background shutdown follows the [SDK lifecycle](../freenet-mobile/README.md#5-connectivity-and-lifecycle) and invalidates late callbacks.
 
 Example: `listingDetails` declares a maximum age of five minutes. Alice opens her skateboard listing on the train. The host last received the listing seven minutes ago, so the reader shows the price with "seen 7 minutes ago" and the host refreshes when the network returns.
 
@@ -194,7 +189,7 @@ resource_reference, canonical_payload, base_summary_if_required
 created_time, retry_policy, status, completion_evidence
 ```
 
-`app_ref` and the originating content reference come from [bundles section 2](bundles.md#2-publishing-and-evidence). The operation ID identifies one user action across retries, restarts and device recovery. SDK request correlation, once it lands, identifies one transport exchange, and the two stay separate.
+`app_ref` and the originating content reference come from [bundles section 2](bundles.md#2-publishing-and-evidence). The operation ID identifies one user action across retries, restarts and device recovery. The [mobile plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) keeps SDK request correlation separate from it.
 
 ```mermaid
 stateDiagram-v2
@@ -261,9 +256,9 @@ The contract sandbox policy and `Authenticate { token }` bound what a web app re
 
 ### What AppKit proposes
 
-Installed readers execute declarative steps under host limits for memory, input and output sizes, subscriptions, storage, action steps, view complexity and event frequency. The browser SDK runs as Wasm and the mobile SDK runs as native code. Schedule bounded work away from the UI thread. Cancel overdue sequences. A failure ends the affected operation or session and preserves its durable journal.
+Installed readers execute declarative steps under host limits for memory, input and output sizes, subscriptions, storage, action steps, view complexity and event frequency. Schedule bounded work away from the UI thread. Cancel overdue sequences. A failure ends the affected operation or session and preserves its durable journal.
 
-Every protected operation uses host-assigned session authority and current grants. Delegates apply their own policy to approved calls. Platform networking, native objects and private keys stay behind their owning SDK and host interfaces.
+Every protected operation uses host-assigned session authority and current grants. Delegates apply their own policy to approved calls. Platform networking, native objects and private keys stay behind host interfaces.
 
 Treat definitions and delegate results as untrusted input. Validate action arguments, delegate results, outgoing view data, returned targets and prepared bytes before any side effect. Resource-limit tests cover declarative evaluation and Core execution.
 
@@ -289,7 +284,7 @@ A contract or delegate key is BLAKE3 over the code hash and parameter bytes, so 
 
 Record original code hashes, parameter encodings and actual instance references in the registry. Add a build check that requires a predecessor entry when component code changes.
 
-The host coordinates migration reads, approved imports, publication and readback through the SDK. Application-owned adapters implement `PredecessorSecretsIo`, `SuccessorSecretsIo` and the contract probe I/O with domain codecs, validation and recovery rules. Atlas proves this adapter boundary. Custom applications link the library from their own code.
+The host coordinates migration reads, approved imports, publication and readback. Application-owned adapters implement `PredecessorSecretsIo`, `SuccessorSecretsIo` and the contract probe I/O with domain codecs, validation and recovery rules. Atlas proves this adapter boundary. Custom applications link the library from their own code.
 
 | Recovery policy | Use it for | Required proof |
 | --- | --- | --- |
@@ -308,7 +303,7 @@ Example: the Marketplace publisher rebuilds the offer contract. The build fails 
 
 | Reference | Status | Names | Explained in |
 | --- | --- | --- | --- |
-| Contract and delegate key | Existing | One contract or delegate, from its code hash and parameters | [Section 1](#1-who-does-what) |
+| Contract and delegate key | Existing | One contract or delegate, from its code hash and parameters | [Section 9](#9-application-migrations) |
 | `MessageOrigin` | Existing | The attested caller of a delegate message | [Section 3](#3-delegate-requests-and-results) |
 | `UpdateResponse` summary | Existing | The local node's view after a merge | [Section 6](#6-submitting-updates-and-pending-operations) |
 | Action definition and step version | Proposed | One declared action and the executor primitives it uses | [Section 2](#2-declared-actions) |
@@ -324,13 +319,13 @@ Example: the Marketplace publisher rebuilds the offer contract. The build fails 
 
 ## 11. Acceptance
 
-- Reads, subscriptions, updates and delegate requests pass the same protocol fixtures through the Rust browser build, Swift and Kotlin, measured in the [feasibility stage](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) separately from declarative and delegate orchestration.
+- One Atlas action runs through declarative SDUI and a custom native control with the typed delegate convention, per the [Atlas sample](../atlas-sample/README.md#2-feasibility-and-application-responsibilities).
 - Real delegate integration tests run alongside deterministic previews, and a new compatible SDUI definition works without application-specific code compiled into the reader.
 - Request correlation, instance ID updates and subscription repair pass the [mobile SDK acceptance cases](../freenet-mobile/README.md#8-acceptance-cases).
 - Fixtures cover canonical records, signing inputs, typed errors, schema mismatches, codec errors, stale caches, duplicate responses, request isolation and late completions. Property tests cover domain conversions and reconciliation. Formatting fixtures supply identical locale, time zone and current time.
 - Force termination, lock, permission revocation and network change preserve recoverable drafts and operation identity.
 - Hosts reject cross-app access, forged caller IDs, malformed delegate results, undeclared targets and excessive action work.
-- SDUI and custom native interfaces complete equivalent fixture actions through their target's SDK and the same domain protocols.
+- SDUI and custom native interfaces complete equivalent fixture actions through the same domain protocols.
 - Migration fixtures pass for skipped versions, late predecessors, deletions, conflicts, interrupted readback and mixed-version participants.
 
 References: [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [delegate interface](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs), [freenet-migrate](https://github.com/freenet/freenet-migrate).
