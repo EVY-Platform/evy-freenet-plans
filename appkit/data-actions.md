@@ -151,13 +151,32 @@ Example: `listingDetails` declares a maximum age of five minutes. Alice opens he
 
 ### What Freenet provides today
 
+Contract state, deltas and summaries are byte wrappers. Their meaning belongs to the contract and the application. Core stores contract state up to 50 MiB per contract, plus delegate state and secrets. The browser sandbox gains durable storage through [#5165](https://github.com/freenet/freenet-core/issues/5165) and [#5254](https://github.com/freenet/freenet-core/issues/5254), per [hosts section 3](hosts.md#3-browser-hosting). Native stores use host-supplied paths, per the [mobile plan](../freenet-mobile/README.md#2-embedded-node-and-native-api).
+
 ### What AppKit proposes
 
-Shared values distinguish null, missing, booleans, integers, decimals, strings, byte references, timestamps, durations, lists and objects. Define numeric ranges, decimal encoding, comparisons and missing-value behavior in shared fixtures. Money remains an application domain object with explicit currency and integer minor units or an equally precise declared representation.
+| Shared value | Example |
+| --- | --- |
+| Null and missing | A listing with an empty description, and a listing whose description field is absent |
+| Booleans, integers, decimals and strings | `true`, `3`, `12.5` and `"skateboard"` |
+| Byte references | The verified reference of Alice's photo |
+| Timestamps and durations | The offer time and the five minute maximum age |
+| Lists and objects | The offers on a listing, and the listing itself |
+| Money | An application object such as `{ currency: "USD", minor: 8000 }` |
 
-Storage namespaces include user, app identity, installation and schema version. Permission grants live in host-only storage. Route parameters are immutable for a route entry. Session values expire with the session. Drafts survive according to the declared flow policy.
+Shared fixtures define numeric ranges, decimal encoding, comparisons and missing-value behavior. Time and randomness come from the host, with deterministic substitutes in tests.
 
-Render cached projections with stale metadata, refresh their backing state and notify only changed views. Cache keys include contract identity and the definition, delegate and schema versions. Encrypt sensitive local data using platform-backed keys. Recovery coverage is explicit in the identity plan.
+| Local storage | Scope | Lifetime |
+| --- | --- | --- |
+| Permission grants | Host only | Until revoked |
+| Route parameters | One route entry | Immutable for that entry |
+| Session values | One session | Expire with the session |
+| Drafts and pending operations | User, app identity, installation and schema version | The declared flow policy |
+| Cached projections | The same namespace, keyed by contract identity and the definition, delegate and schema versions | Until refreshed or evicted |
+
+Cached projections render with stale metadata. The host refreshes their backing state and notifies only changed views. Platform-backed keys encrypt sensitive local data. The [identity plan](../identity/README.md#2-protected-keys-and-records) states recovery coverage.
+
+Example: Alice's 80 dollar price is `{ currency: "USD", minor: 8000 }`. Her draft lives under her user, the Marketplace `app_ref`, her phone's installation ID and schema version 3. A schema version 4 update migrates the draft during installation, per [hosts section 6](hosts.md#6-installing-and-updating-applications).
 
 ## 6. Submitting updates and pending operations
 
