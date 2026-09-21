@@ -250,13 +250,24 @@ Example: Alice adds a skateboard photo. The host validates it, stores it as a co
 
 ### What Freenet provides today
 
+| Limit | Value | Where |
+| --- | --- | --- |
+| Contract state | 50 MiB | Core's state store |
+| Delegate context | 409,600 bytes | stdlib `DelegateContext::MAX_SIZE` |
+| Guest execution | A wall-clock deadline | Core's Wasm runtime |
+| Memory per Wasm instance and module cache | Listed in the [mobile plan](../freenet-mobile/README.md#3-runtime-and-packaging) | Core's engine configuration |
+
+The contract sandbox policy and `Authenticate { token }` bound what a web app reaches. Core delivers delegate output by locality, and Core-authenticated sessions wait on [#5264](https://github.com/freenet/freenet-core/issues/5264).
+
 ### What AppKit proposes
 
-Installed readers execute declarative steps under host limits. The browser SDK runs as Wasm and the mobile SDK runs as native code. Core executes contract and delegate Wasm under its own limits. Keep platform networking, native objects and private keys behind their owning SDK and host interfaces.
+Installed readers execute declarative steps under host limits for memory, input and output sizes, subscriptions, storage, action steps, view complexity and event frequency. The browser SDK runs as Wasm and the mobile SDK runs as native code. Schedule bounded work away from the UI thread. Cancel overdue sequences. A failure ends the affected operation or session and preserves its durable journal.
 
-Enforce limits for memory, input/output sizes, subscriptions, storage, action steps, view complexity and event frequency. Schedule bounded work away from the UI thread. Cancel overdue sequences and enforce delegate execution limits through Core. A failure ends the affected operation or session while preserving its durable journal.
+Every protected operation uses host-assigned session authority and current grants. Delegates apply their own policy to approved calls. Platform networking, native objects and private keys stay behind their owning SDK and host interfaces.
 
-Every protected operation uses host-assigned session authority and current grants. Delegates apply their own policy to approved calls. Treat definitions and delegate results as untrusted input. Validate returned targets and prepared bytes before any side effect. Resource-limit tests cover both declarative evaluation and Core execution.
+Treat definitions and delegate results as untrusted input. Validate action arguments, delegate results, outgoing view data, returned targets and prepared bytes before any side effect. Resource-limit tests cover declarative evaluation and Core execution.
+
+Example: a bundle declares an action with ten thousand steps. Validation rejects it before the reader runs anything. A delegate returns prepared bytes for a contract the definition never declared. The host rejects the submit step and journals the failure.
 
 ## 9. Application migrations
 
