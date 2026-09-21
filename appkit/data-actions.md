@@ -273,17 +273,36 @@ Example: a bundle declares an action with ten thousand steps. Validation rejects
 
 ### What Freenet provides today
 
+A contract or delegate key is BLAKE3 over the code hash and parameter bytes, so a rebuild creates a new key and leaves state under the old one.
+
+| Library item | What it does |
+| --- | --- |
+| `freenet-migrate-build` | Generates the lineage registry from a TOML file at build time. River's build fails when the table is empty |
+| `predecessor_ids`, `ProbeDriver` and `migrate_contract` | Rebuild predecessor IDs from code hash and parameters and probe them newest first under a `SelectionPolicy` |
+| `CarryForward` and `policy_check` | Run `verify()` after `merge()`, and assert commutative, idempotent and order-invariant merges |
+| `migrate_delegate_secrets` and `register_delegate_with_migration` | Run the export and import round trip through `PredecessorSecretsIo` and `SuccessorSecretsIo` under a `MigrationAuthorization` |
+| `resolve_app_pointer` | Reads the frozen pointer contract from [#5194](https://github.com/freenet/freenet-core/issues/5194) and answers which code hash is current |
+
+[PR #5199](https://github.com/freenet/freenet-core/pull/5199) disabled Core's copy-forward of secrets, and stdlib 0.9.0 removed the predecessor-registering request. Core's secret export caps plaintext at 256 MiB. The [mobile plan](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) records the stdlib compatibility check the library needs.
+
 ### What AppKit proposes
 
-Use `freenet-migrate` and its build-time predecessor registry for contract and delegate upgrades. Record original code hashes, parameter encodings and actual instance references. Add a build check that requires a predecessor entry when component code changes.
+Record original code hashes, parameter encodings and actual instance references in the registry. Add a build check that requires a predecessor entry when component code changes.
 
-The host coordinates migration reads, approved imports, publication and readback through the SDK. Application-owned delegate adapters supply codecs, validation and domain recovery rules, using `freenet-migrate` where its interfaces fit. The Atlas feasibility work must prove this adapter boundary. Custom applications can also use the library from their own compiled domain code.
+The host coordinates migration reads, approved imports, publication and readback through the SDK. Application-owned adapters implement `PredecessorSecretsIo`, `SuccessorSecretsIo` and the contract probe I/O with domain codecs, validation and recovery rules. Atlas proves this adapter boundary. Custom applications link the library from their own code.
 
-Select a recovery policy for each domain. Use the library's newest-generation policy for snapshot state. Combining state from several generations requires tests that prove the application's merge and deletion rules support it. Preserve unresolved predecessor reads for retry. Validate recovered state with the successor's rules. Publish it through authorized host operations, then read it back before recording success.
+| Recovery policy | Use it for | Required proof |
+| --- | --- | --- |
+| Newest generation | Snapshot state such as a listing | The successor's validation rules accept the recovered state |
+| Combined generations | Event histories with deletions and conflicts | `policy_check` assertions pass against the domain's real state model |
 
-Keep shared-state recovery separate from host database migration and bundle installation. Mixed-version clients must obey the domain's transition rules. Delegate migration is application-controlled, per the [identity plan](../identity/README.md#4-delegate-upgrades): the predecessor delegate answers an export request and the successor imports through the application. Plaintext secrets transit the application during that round trip. Every AppKit delegate implements export and import. A delegate without them strands its secrets on re-key. Use the existing resolver for successor pointers. Retain its minimum accepted version and handle stale, unavailable, conflicting and withdrawn results.
+Preserve unresolved predecessor reads for retry. Validate recovered state with the successor's rules, publish it through authorized host operations, then read it back before recording success.
 
-Fixtures cover several skipped versions, late predecessor responses, deletions, conflicting records, interrupted readback and mixed-version participants. Test the selected policy against the domain's actual state model. Reference: [freenet-migrate](https://github.com/freenet/freenet-migrate).
+Shared-state recovery stays separate from host database migration and bundle installation. Mixed-version clients obey the domain's transition rules. Every AppKit delegate implements export and import, per [identity section 4](../identity/README.md#4-delegate-upgrades), so its secrets survive re-key. Plaintext secrets transit the application during that round trip. Use the resolver for successor pointers with its minimum accepted version, and handle stale, unavailable, conflicting and withdrawn results.
+
+Fixtures cover several skipped versions, late predecessor responses, deletions, conflicting records, interrupted readback and mixed-version participants.
+
+Example: the Marketplace publisher rebuilds the offer contract. The build fails until the registry gains the old code hash. Bob's phone installs the new bundle, probes the predecessor key newest first, carries Alice's listing forward, validates it under the new rules and reads it back. Alice approves the delegate upgrade, the old delegate exports her seller key, and the new one imports it through the Marketplace adapter.
 
 ## 10. Reference recap
 
