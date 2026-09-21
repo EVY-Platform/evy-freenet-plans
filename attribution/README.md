@@ -1,232 +1,193 @@
-# Product attribution app
+# Attribution
 
-## 1. Purpose
+Attribution records who built each application capability, who reviewed the work, and the contribution weight accepted for it. The attribution service owns a transactional database with uniqueness constraints, evidence, signatures, and audit history. It publishes separate signed contribution records for [payments](../payment/README.md) and [remuneration](../remuneration/README.md). Each record identifies exact application contents and their accepted contributions.
 
-Record who built each capability, who reviewed and validated that work, and how much work it took. Attribution is not done through a central authority but it is derived with code from signed records anyone can re-check. Attribution attaches to the product behaviour users receive (never to files, functions, commits) so a code refactor changes nothing.
+Application publishing supports optional attribution. The contributor-funded Marketplace requires this integration. [EVY Developer](../evy/README.md) presents the workflow, while the service owns its decisions.
 
-Payment of product fees against these attributions is planned in the [remuneration plan](../remuneration/README.md).
+## 1. Products and identities
+
+A product has an economic `ProductId` mapped to authorized application container identities. The service verifies publisher authority when approving each mapping and retains its signed history. Publisher transfers follow [identity continuity](../identity/README.md#7-publisher-continuity), and this service approves the successor mapping separately. Marketplace and River have separate products. The generic Freenet mobile app can host both.
+
+| Identifier | Meaning |
+| --- | --- |
+| ProductId | Economic product identity mapped to authorized containers |
+| PublicationRef | Container identity, version and archive digest defined by the bundle plan |
+| ContributionRecordId | Immutable signed certification of exact archive or native-build contents |
+| CapabilityId | Credited behavior, such as `marketplace.listing.publish` |
+| ProposalId | Submitted work and its revision history |
+| AcceptanceId | Accepted evidence revision, size, shares and policy |
+| SnapshotId | Immutable resolved contribution weights for a certified artifact |
+| ActorId | Contributor signing-key lineage |
+
+Security permissions and credited capabilities have separate identifiers and schemas. Custom web builds, declarative actions, SDUI documents, delegate and contract upgrades, and dedicated native executables each have their own artifact identity. Each contribution record binds its artifact identity, active capabilities, accepted evidence and resolved snapshot. Reviewed web, SDUI and native artifacts may share a snapshot. The artifact identity identifies the certified contents. Domain evidence proves a qualifying use.
+
+## 2. Roles
+
+| Role | Does | Eligible when | Earns |
+| --- | --- | --- | --- |
+| Contributor | Submits proposals and evidence, and agrees on challenge resolutions | Holds a signing key and proves repository or authoring-checkpoint authority (below) | Their share of the proposal's accepted size |
+| Reviewer | Checks delivery against the acceptance criteria and signs acceptance or rejection | Two accepted proposals of their own in this product | A share of the product-wide reviewer pool, 10% of each accepted size |
+| Validator | Signs a size estimate and settles size disagreements | Two accepted proposals and two accepted reviews in this product | A share of the product-wide validator pool, 5% of each accepted size |
+| Operator | Runs the attribution service and records each product's signed initial role list | Named in the signed product configuration | Nothing |
+
+The attribution service enforces separate contributor and reviewer/validator roles for each proposal. Its audit history records:
+
+- key rotation, role grants, suspension, and signed reinstatement after a false-evidence finding
+- every proposal's estimates, assignments, signatures, claims, and resolutions
+
+### Registration
+
+Contributors authenticate signed requests with their key. Repository proposals prove ownership of their linked pull request through this workflow:
+
+| Step | What happens | Carol |
+| --- | --- | --- |
+| Create a key | The contributor generates a signing key in the builder or host. Every proposal, review, estimate, and resolution is signed with it | The key in Carol's builder |
+| Submit a proposal | The contributor signs the proposal and links the pull request. The service returns a one-time PIN derived from the proposal and the key, valid for 24 hours | Carol submits her Make offer screen proposal and receives `AT-7Q4K` |
+| Prove PR ownership | The contributor puts the PIN in the pull request description. The repository integration reads it on the next webhook, records "PR ownership verified" for the key in the audit history, and ignores later edits to the description | Carol adds `AT-7Q4K` to her PR description |
+| Add a payout identity | Before the first payout, the contributor completes the legal identity and payout details that [remuneration](../remuneration/README.md#6-double-spend-prevention-and-payouts) holds. Accepted units remain contribution weights. Funded balances accumulate separately while payout registration is pending | Carol adds hers after her first accepted proposal |
+
+A visual-authoring proposal binds an exact signed authoring-project checkpoint, its project identity and membership epoch. The service verifies the author's authorized membership and operation signatures against that checkpoint. Changed checkpoint content creates a new evidence revision. This path proves authorship through signed project edits.
+
+For repository proposals, one contributor proves PR ownership. Co-contributors are named in the split and sign the proposal with their own keys. A proposal that links a commit with no pull request carries the PIN in the commit message instead.
+
+Each product publishes a signed bootstrap list of reviewers and validators, allowing its first proposals to proceed. Later eligibility is product-scoped. Every assignment preserves contributor/reviewer separation.
+
+Track each contributor through their signed key history. Accepted work determines reviewer and validator eligibility across that history. Suspension and reinstatement apply to the same identity. A new key with no verified history starts as a contributor.
+
+Key rotation is a statement signed by the old key naming the new one. Recovery of the key itself follows the [identity plan](../identity/README.md). This service accepts a recovery case when the recovered lineage presents the repository identity recorded at registration. The service freezes payout-identity changes while recovery is unresolved and preserves signed identity lineage.
+
+## 3. Enforced workflow
+
+### Proposal to certification
+
+The app builder and linked pull requests use the same workflow and display the same attribution status. A certified and published capability can qualify for paid usage, which [section 6](#6-interface-to-remuneration) defines.
 
 ```mermaid
 flowchart LR
-    P["Propose<br/>scope, size, split, evidence"] --> RV["Review"]
-    P --> VA["Validate size"]
-    RV --> AC["Accepted by code"]
-    VA -- same size --> AC
-    VA -. sizes differ .-> TIE["Tiebreak: a 2nd validator<br/>picks one of the two"]
-    TIE --> AC
-    CH["Challenges"] -. block until resolved .-> AC
-    AC --> REL["Activated by a release"]
+    Submit[Submit] --> Review{Review}
+    Review -->|Accept| Validate[Validate size]
+    Review -->|Reject| Closed[Close proposal]
+    Validate --> Accept[Accept proposal]
+    Accept --> Certify[Certify exact archive]
+    Certify --> Publish[Verify publication]
+    Publish --> Eligible[Eligible for paid usage]
 ```
 
-**Shipping is native; remuneration is optionally layered on top**
-
-Freenet itself imposes no gate: publishing is permissionless, an artifact's address is the fingerprint of its content, and nothing can block a release. The attribution ledger keeps that boundary:
-
-- **Shipping needs no records.** A release adds exactly one record, the signed release record (section 6), which gives the ledger its ordering and its settlement anchor.
-- **Display credit needs no records.** An app credits whoever it likes in its own content.
-- **Only money needs records.** A contribution that should count toward remuneration passes the machine-checked workflow of section 4; a record that fails any check never merges.
-- **Why the workflow exists.** A signature proves who made a statement, not that it is true (the boundary [freenet-core#2776](https://github.com/freenet/freenet-core/issues/2776) draws for author keys). The workflow closes that gap for exactly the records money will hang on. Skipping it costs only eligibility: ship anyway and resubmit later.
-
-## 2. Glossary
-
-| Term | Meaning |
+| Stage | Rule |
 | --- | --- |
-| Actor | A participant: contributor, reviewer, or validator (section 3). `ActorId` = Ghost Key-backed signing key (with signed rotation lineage) |
-| Product | A user-facing application with its own product key, capabilities, and releases. `ProductId` = product root key (optionally `hash(namespace, root key)`) |
-| Product key | A product's signing key: a publisher, never a judge (section 3) |
-| Capability | A stable product responsibility such as `marketplace.listing.publish`; not a UI widget or code module. `CapabilityId` = `ProductId` + stable capability name |
-| Catalogue | Versioned tree of capability IDs |
-| Proposal | A request to add or change product behaviour, filed before the work is accepted. `ProposalId` = `hash(canonical proposal record)` |
-| Allocation | The accepted proportions among capabilities and contributors |
-| Acceptance | The attribution decision a completed workflow chain determines (section 4). `AcceptanceId` = `hash(canonical accepted allocation and attestations)` |
-| Attribution units | Non-currency weights derived from accepted size and allocations |
-| Release | A signed record of shipping one product version (section 6). `ReleaseId` = `hash(canonical signed product release)` |
-| Generation | A product's release counter; it only counts upward, and it is the only ordering this plan uses |
-| Activation | The release that first includes an accepted proposal's units in the snapshot |
-| Snapshot | A product's cumulative attribution state as of a release. `SnapshotId` = `hash(canonical ordered cumulative attribution state)` |
-| Ledger | The single Freenet contract every product's records merge into (section 9). `LedgerAddress` = resolved via the pointer record under the ledger key |
-| Ledger key | The ledger's root key: publishes policy and the contract pointer, nothing else |
+| Submit | Problem, outcome, capabilities, proposed size, contributor split, and exact repository or signed authoring-checkpoint evidence. Prove the corresponding authority through [registration](#registration). Changed content needs a new evidence revision and review |
+| Size and shares | Size is one of `1, 2, 3, 5, 8, 13, 21`. Capability shares total 10,000 basis points, and contributor shares within each capability also total 10,000 |
+| Review | An eligible reviewer signs against the evidence revision. Rejection closes the proposal, and further work starts a linked successor |
+| Validate size | An eligible validator signs an estimate. Agreement accepts the proposed size. On disagreement, a second validator selects one of the two estimates |
+| Accept | Requires complete evidence, review, size, allocation, and resolved challenges. Acceptance binds to the evidence revision and policy version |
+| Certify | Requires resolved challenges and accepted source-to-artifact evidence. Commit a snapshot and signed contribution record for the prepared archive in one transaction ([bundle integration](#4-bundle-integration)) |
+| Observe publication | Verify the published container and match its archive digest to the contribution record before enabling paid use |
 
-## 3. Roles and identity
+An attributed change reaches Accept before it merges. Acceptance requires addressed review feedback, a signed size estimate and a signed resolution for every challenge. The repository integration permits merging once these checks pass. The product publication workflow obtains certification for the prepared archive before signing and publishing it. Paid eligibility also requires verified publication. The acceptance gate applies to changes claiming attribution.
 
-- **Contributor** creates or joins a proposal and supplies evidence: code, designs, research, testing, documentation, or release operations.
-- **Reviewer** checks that the delivered change meets its acceptance criteria and that the evidence is real.
-- **Validator** assesses size and proportions: attribution scope, not code quality.
+### Challenges
 
-An `ActorId` is a signing key backed by a [Ghost Key](https://freenet.org/ghostkey/) certificate, Freenet's donation-backed identity primitive (mitigating Sybil attacks); the ledger verifies the certificate when an actor first appears in an enforced record. Eligibility to review or validate (section 13) is earned in the one ledger and counts for every product. Two keys are not actors: a product key signs its product's releases, and the ledger key publishes policy and the contract pointer — publishers, never judges.
+Contributors may claim omitted authorship or challenge proportions, size, evidence, or delivery at any point before certification.
 
-## 4. Enforced workflow
+```mermaid
+flowchart LR
+    Challenge[Challenge raised] --> Block[Block proposal]
+    Block --> Agree{Affected parties sign?}
+    Agree -->|Yes| Close[Record resolution]
+    Close --> Resume[Recheck requirements]
+    Agree -->|Pending| Block
+```
 
-Every step produces a signed record, the ledger's code enforces every rule below (section 9), and every number is policy, not code (section 13).
+A challenge blocks acceptance and certification until the challenger and all affected contributors named when the challenge opened sign a resolution.
 
-**Propose.** A contributor files the proposal before the product accepts the work: the problem, the intended outcome, testable acceptance criteria, a contribution class (documentation, feature, improvement, bug, or security), the affected capabilities and the contributor split in basis points (hundredths of a percent; 10,000 = 100%), a size from `1, 2, 3, 5, 8, 13, 21`, evidence references, and disclosure of related or possibly superseded proposals. Size is a relative weight of contribution to the product, not hours or code volume.
+A size resolution selects between the disputed estimates. The builder shows overdue challenges and the contributors responsible for resolving them. A challenger claiming omitted authorship is a party to that resolution. An unresolved proposal stays blocked. Withdrawing a proposal closes it and preserves its evidence.
 
-**Join or contest authorship.** Before acceptance, another contributor may claim inclusion with a proposed proportion and evidence, or challenge an omitted contribution or inaccurate allocation. A proposal cannot be accepted while an authorship challenge is open (section 8).
+After certification, accepted units remain in the audit history. Remuneration records payment reversals.
 
-**Review.** The proposer assigns an eligible reviewer who is not a contributor on the proposal, the same way validators are assigned below. The reviewer verifies the code and the acceptance criteria against the linked evidence and signs one verdict: `accepted | rejected`. There is deliberately no changes-requested verdict: a rejection ends the proposal, and the contributor resubmits a fresh one with fresh assignments, so a reviewer's power over a contribution is one verdict — nobody can demand changes round after round.
+## 4. Bundle integration
 
-**Validate size.** One validator checks the proposer's sizing, and a second settles any disagreement:
+[Application bundles](../appkit/bundles.md) defines container publication and exact content references. Attribution owns these records:
 
-1. **Assign.** The proposer signs an assignment naming one eligible validator uninvolved in the proposal. Someone has to name the validator because the network cannot: records merge in any order, so "first volunteer" has no meaning, and a "random" pick would be computed from bytes somebody authored — that somebody's choice in disguise. An open choice can be held against its maker: a crony assignment sits in the ledger under the proposer's own signature, challengeable like any other record. Conflicting assignments permanently void the proposal; a replacement is legitimate only once the assignee has signed nothing for `K_assign` generations. Reviewer assignments follow the same rules.
-2. **Estimate.** The assigned validator signs their own size for the work, from the same scale.
-3. **Compare.** If the validator names the same size, it is accepted. Any other number flags the proposal, and the proposer assigns a second validator the same way to pick whichever of the two sizes is the better fit — never a third.
+| Record | Binding |
+| --- | --- |
+| Acceptance | Exact source or authoring-checkpoint revision, contribution shares and policy |
+| Contribution record | Product, authorized container, exact archive digest and hash profile, included acceptances, active capabilities and snapshot |
+| Snapshot | Immutable resolved actor and role weights, capability scope and policy version |
+| Publication observation | Verified publication reference, matching contribution record, the observing node and retained publisher evidence |
+| Native artifact record | Product, platform/build identity, exact build digest, accepted evidence, capabilities and snapshot |
 
-The proposed size is public, so the validator estimates with the proposer's number in view; the counterweights are that both signatures are permanent public records, a flag costs only a second opinion, and size stays challengeable until activation (section 8).
+```mermaid
+sequenceDiagram
+    participant Builder as EVY Developer or CLI
+    participant Attribution as Attribution service
+    participant Publisher as Freenet publisher
+    participant Network as Freenet
+    Builder->>Builder: Build and validate exact archive
+    Builder->>Attribution: Certify archive digest and accepted evidence
+    Attribution->>Attribution: Commit snapshot and contribution record
+    Attribution-->>Builder: Signed contribution record
+    Builder->>Publisher: Prepared archive bytes
+    Publisher->>Network: Sign and publish normal container state
+    Attribution->>Network: Read back from an independent node and verify publication
+    Attribution->>Attribution: Record matching publication reference and observing node
+```
 
-**Accept and activate.** The completed chain fully determines the acceptance: any client may compute the acceptance record, and the ledger merges it only if it equals that derivation — no discretionary signature anywhere. Units enter the snapshot when a release references the acceptance, and the release names its activation set explicitly for the same reason an assignment names the validator: which records count is always stated, never inferred. The publisher's only discretion is delay: a later release can pick up an omitted acceptance, and nothing can cancel one. Most releases activate nothing, which changes nobody's weights.
+The contribution record lives separately from the archive it certifies. The service signs all binding fields using a specified, versioned encoding. Repeating an identical certification request returns the existing record. Changed archive bytes require a matching new certification and review of changed evidence. The preparation hook in the bundle plan must preserve bytes through signing and submission.
+
+A failed publish leaves a retryable certification record. After an uncertain publication, read and verify the container. Record its exact publication reference against the contribution record, together with the node that served the read. Core serves GET from locally cached state, so a readback from the publisher's own node proves acceptance there and a read from an independent node proves retrievability at that moment. Paid eligibility requires the independent-node observation. The same certified archive can appear at several container versions, each with its own verified observation. Paid use requires the observation and the product's commercial eligibility decision.
+
+Native builds receive their own artifact certification and publisher/distribution evidence under the product's declared verification policy. They can share contribution weights with a reviewed SDUI bundle. The service validates that mapping. A client-supplied build digest remains a claim until it passes the policy's evidence checks.
+
+Each snapshot records the capabilities present in its certified contents. Contribution history survives capability removal and restored application code. Payments keep their original contribution record and snapshot through updates and publisher transfers. The product's signed settlement configuration selects the eligible record for new checkout and prevents clients from choosing arbitrary historical weights.
+
+Retain records, snapshots, source mappings, exact artifacts and signed publication evidence through the configured support and transaction-evidence periods. Restore fixtures must verify a historical payment after the live container has advanced and the publisher's primary archive is unavailable.
 
 ## 5. Attribution units
 
-Units are immutable and only accumulate; fraud that survives the workflow keeps its units forever, so the whole defence is concentrated before finality (sections 4 and 8). Two factors, both outside the ledger, change what a contributor earns:
+Store exact scaled or rational weights, and leave currency rounding to remuneration.
 
-- **Dilution.** New accepted work mints new units beside the old, shrinking every share of that capability.
-- **Usage.** The [remuneration plan](../remuneration/README.md) routes each transaction's fee to the capabilities that transaction draws on. A capability nobody uses pays nobody, however many units it holds.
+A proposal reserves 85% for contributors, 10% for reviewer weights, and 5% for validator weights. The accepted reviewer earns that review weight. The validator weight is split equally between the validators whose signed estimates determined the accepted size. Product-wide pool weights sum those earned amounts by actor lineage and role. Snapshots resolve pool recipients so remuneration receives explicit weights.
 
-```text
-proposal_units    = accepted_size
-capability_units  = proposal_units * capability_basis_points / 10_000
-contributor_units = capability_units * contributor_basis_points / 10_000
-```
+Carol and another contributor, Dave, improve a database path used by ten capabilities, five in Marketplace and five in River. The accepted size is 8 and all ten receive equal shares. Carol supplied five eighths of the work and Dave three eighths.
 
-Capability proportions must total 10,000 basis points, as must contributor proportions within each capability; the ledger enforces both with integer arithmetic and a published rounding rule so every node computes identical results. Example: an 8-point proposal allocates 75% to listing publication and 25% to seller profiles; two contributors split the listing work 60/40, yielding 3.6 and 2.4 listing units. Units compare accepted contributions within one product; they are not ownership or a promise of payment.
+| Recipient | Units |
+| --- | ---: |
+| Carol | 4.25 |
+| Dave | 2.55 |
+| Reviewer pool | 0.8 |
+| Validator pool | 0.4 |
+| Total | 8 |
 
-Each acceptance also mints reviewer and validator units at the policy rates (section 13), kept product-wide rather than per capability because those roles protect the whole product. How fees split between contributor, reviewer, and validator pools is the remuneration plan's business; attribution records the weights.
+Each capability receives one tenth of these weights. The proposal conserves its size across both products. Contributor units measure accepted work. They become funded credits only when remuneration validates an eligible paid operation.
 
-## 6. Records
+## 6. Interface to remuneration
 
-Every record type the ledger accepts is defined by the step that produces it, and no other type merges. Enforced records also name the policy and ruleset versions they were validated under (section 9). Three carry enough structure to spell out:
+For a verified publication or native artifact and capability, the service returns:
 
-**Proposal.**
+- The matching signed contribution record and its verified publication or distribution evidence.
+- Whether the capability exists in those certified contents.
+- The immutable snapshot and resolved recipient weights.
+- The contribution policy version and the product's current eligibility for new commercial operations.
 
-```yaml
-schema: freenet-attribution/proposal/v1
-proposal_id: <derived>
-product_id: <product root key>
-title: <display metadata, excluded from enforcement>
-class: capability_improvement
-outcome: <user or product outcome>
-acceptance_criteria:
-  - <testable criterion>
-proposed_size: 8
-capabilities:
-  - id: marketplace.listing.publish
-    basis_points: 7500
-  - id: marketplace.seller.profile
-    basis_points: 2500
-contributors:
-  - actor_id: <contributor A identity>
-    basis_points_by_capability:
-      marketplace.listing.publish: 6000
-      marketplace.seller.profile: 10000
-  - actor_id: <contributor B identity>
-    basis_points_by_capability:
-      marketplace.listing.publish: 4000
-evidence:
-  - kind: pull_request
-    reference: <repository and PR>
-    content_hash: <sha256 of the evidence content>
-policy_version: <the policy this proposal binds to>
-signature: <proposer signature>
-```
+Historical lookups retain the original evidence and weights. Withdrawal or commercial suspension governs new checkout. Existing payments follow their recorded terms and settlement policy.
 
-`content_hash` is mandatory on every evidence entry: forge links rot, and a challenge years later must be able to re-verify what was claimed. Products may additionally mirror evidence into [freenet-git](https://github.com/freenet/freenet-git).
+Checkout fixes these bindings as the [payment plan](../payment/README.md#2-checkout-flow) specifies, and delayed processing or application updates retain them. Remuneration stores them with payment IDs and credits, enforces funding caps, and owns reversals and payouts.
 
-**Acceptance.** The authoritative attribution decision: accepted size, final allocations, and references to every record it derives from (verdict, assignments, estimate, any tiebreak, resolved challenges), plus policy and ruleset versions. It carries no approval signature (section 4). Source-control metadata is supporting evidence only.
+## 7. Interfaces and authority
 
-**Release and snapshot.** Every release signs its product, generation, previous release, artifact addresses (already content hashes), activated acceptances, snapshot, and policy version. The snapshot carries the product's cumulative unit totals as of that release. A rollback release restores earlier artifacts, but its snapshot stays cumulative: units activated by the rolled-back release remain, because attribution records that work was accepted, not that code is currently deployed.
+The service exposes signed proposal, review, estimate, challenge, resolution, certification, publication-observation and snapshot operations. EVY Developer and repository integrations use the same API and authoritative status. Generic Freenet publication uses publisher authority. Participating products add this certification workflow before publication.
 
-## 7. Products, components, and forks
+Artifact validation maps reviewed source revisions or signed builder checkpoints to shipped artifacts. Artifact provenance identifies unattributed work separately from accepted contributions.
 
-All products share the one ledger; a product is its key, its capabilities in the catalogue, and its releases. Internal repositories, packages, and components have no separate economic identity: work points at the capabilities of the product it changes, product-wide work at `product.reliability`. A library is not automatically a product — it earns attribution when a product using it allocates proposal units to its maintainers, or by becoming a product itself, after which consumers record a dependency reference.
-
-A contribution that affects several products, a shared library being the common case, is one proposal per affected product: size is relative to each product, each proposal runs the workflow on its own, and one product's rejection never touches another's acceptance. Units are never summed or compared across products.
-
-A fork starts a new product in the same ledger: a new key, a recorded origin, and an opening snapshot stating which inherited capabilities and units it recognises; the original product's records are untouched. An app that displays several products presents each product's credits separately and never mixes their units.
-
-## 8. Challenges
-
-Until the release that activates a proposal, any eligible contributor may challenge omitted authorship, wrong proportions, inflated or understated size, false evidence, or incomplete delivery, naming the disputed record and supplying evidence. After activation the units are final (section 5).
-
-Resolution is as automatic as acceptance: a panel of three uninvolved eligible actors rules by majority of signed verdicts — a size question is a choice between the disputed sizes, never a fresh number — and the acceptance derivation consumes the outcome, correcting the allocation or voiding the proposal for false evidence. An actor with two upheld false-evidence findings loses eligibility for `K_suspend` generations.
-
-There is no clock; windows are counted in releases, so a rarely-releasing product leans on explicit resolutions. A challenge opens at a generation that must already exist, blocks acceptance while open, and closes with a resolution — or lapses `K_challenge` generations later, the anti-griefing backstop: visible forever, no longer blocking. Emergencies need no exception: the fix ships immediately (section 1), and the pending acceptance activates in a later release once its challenges close.
-
-## 9. The ledger
-
-The whole app is one ordinary Freenet contract holding every product's records — nothing in Freenet itself changes; its launch parameters are the ledger key, the v1 policy, and the initial eligible set. The contract's code is the only judge: it accepts a record or it doesn't, and any peer can re-check the entire state from the records alone. Order of arrival never matters — duplicates change nothing and invalid records never enter. Beyond the workflow rules of section 4, the code checks every signature (actors on workflow records, with new actors carrying a valid Ghost Key certificate; product keys on releases; the ledger key on policy and the pointer), that releases occupy strictly increasing generation slots per product, that nothing is edited in place or reduces recorded units, and that each release's snapshot equals the totals recomputed from scratch.
-
-Rules only grow. A record is judged forever by the ruleset it names, so no rule change can invalidate history. Numbers (eligibility counts, K values, rates) live in policy, which the ledger key publishes along with the future generation it takes effect from; changing the contract's code is reserved for genuinely new mechanisms. When the code does change, the new contract has a new address, the pointer record under the ledger key names the current one, and release tooling refuses an upgrade that cannot carry every record forward ([freenet-migrate](https://github.com/freenet/freenet-migrate)).
-
-Growth stays bounded because plain shipping adds one release record (section 1), each release checkpoints its product's totals, and workflow records fully absorbed by a checkpointed acceptance move to archive storage, still verifiable by their hashes. Freenet lets unused data expire ([#4642](https://github.com/freenet/freenet-core/issues/4642)), so release tooling re-publishes archives periodically.
-
-If a product key signs two different releases for the same generation, both stay visible and the slot is marked `CONFLICTED`: it never counts as "latest" for settlement, and it resolves when a later generation extends exactly one branch. A conflict means that key signed two competing histories or leaked. Conflicting validator assignments void their proposal instead (section 4).
-
-## 10. Interface to remuneration
-
-Payments are the [remuneration plan](../remuneration/README.md)'s job, but the binding rule between the two plans is fixed here. **Latest at settlement:** a fee distribution uses the snapshot of the product's highest non-conflicted release generation at settlement time; everything in a snapshot is already final (section 8). Two consequences are accepted and mitigated rather than hidden:
-
-- the network syncs gradually, so two observers can briefly disagree about "latest"; every settlement is therefore itself a signed record naming the snapshot it used, making the choice auditable rather than implicit;
-- attribution can drift between a transaction and its settlement, so each transaction carries the payer client's release generation as evidence. It is client-asserted and unproven ([#5264](https://github.com/freenet/freenet-core/issues/5264)), so it audits drift disputes but never selects the snapshot.
-
-A transaction is always for exactly one product; remuneration prices the fee before consulting the ledger, and implementation call depth never decides value. Which capabilities a fee routes to is the fee policy's published mapping (the usage gate of section 5).
-
-## 11. Client integration
-
-Any client can host the workflow (a product's visual builder, a CLI, repository automation), and any client must be able to create and verify the same records; none is a trusted authority. A workflow client provides catalogue management, proposal and claim flows, evidence linking, the validation and tiebreak flow, previews matching the ledger's arithmetic exactly, challenge tracking, and attribution history. Repository automation may collect PR evidence and block a release missing required records; a proposal ID in a PR title is a convenience, never the source of authority.
-
-## 12. Security and privacy
-
-- No legal identity, bank, tax, or payout data ever enters the public ledger; a Ghost Key certificate proves a donation (section 3), not who somebody is.
-- Compromising a product key affects that product's future releases, and compromising the ledger key affects future policy and the pointer; neither touches recorded units. Other key-compromise scenarios are out of scope.
-- No node count, IP address, first-arrival time, GitHub role, or repository ownership grants attribution authority by itself.
-
-## 13. Policy defaults (v1)
-
-Every number here is policy data: versioned, changeable without touching the ledger's code (section 9). Suggested launch defaults:
-
-| Parameter | Default |
-| --- | --- |
-| Reviewer role eligibility | 2 accepted proposals |
-| Validator role eligibility | 2 accepted proposals + 2 accepted reviews |
-| `K_suspend` (after 2 upheld false-evidence findings) | 20 generations |
-| `K_assign` (a silent assigned reviewer or validator becomes replaceable) | 2 generations |
-| `K_challenge` (unresolved challenge lapses) | 3 generations |
-| Reviewer units per acceptance | 10% of accepted size, split among reviewers |
-| Validator units per acceptance | 10% of accepted size, split among the validators who signed |
-
-## 14. Implementation plan
+## 8. Delivery and tests
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
-| 1. Records and arithmetic | Record encodings with deterministic bytes (IDs are content-derived); the unit arithmetic and rounding rule; signature, Ghost Key, and key-history verification as a reusable library | Rust, TypeScript, Swift, and Kotlin produce identical bytes and IDs from shared golden fixtures |
-| 2. Ledger contract | The full rule set of section 9 from day one: merging, checks, versioning, checkpoints, archives, conflicts | Property tests pass: repeats and reordering never change the outcome, and every checkpoint equals the recomputed totals |
-| 3. First product | The catalogue, v1 policy, and initial eligible set as launch parameters; workflow flows in the product's authoring client (section 11); releases activating accepted proposals | The full chain runs end to end on a real product, with no import of history: display credit stays in app content, and historical work seeking eligibility resubmits through the workflow |
-| 4. Second product and hardening | A second product in the same ledger; one real contract upgrade end to end; challenge paths (resolution, lapse, conflicting assignments); audits of identity privacy, validator independence, arithmetic, and signature handling | A shared-library contribution is accepted independently by both products (section 7); history survives the upgrade; ruleset v1 freezes when both products pass one conformance suite |
+| Registration | Product roles, actor lineage and evidence ownership | Bootstrap works per product, and self-review and unauthorized recovery fail |
+| Workflow | Review, sizing, challenges and acceptance | Changed evidence is reviewed, and unresolved challenges block certification |
+| Units | Cross-product shares and resolved role pools | Shares conserve accepted size and reproduce the example above |
+| Certification | Exact artifact binding and immutable snapshots | Changed bytes fail, retries return one record, and failed publication can resume |
+| Usage lookup | Publication-bound eligibility | Reviewed native and SDUI artifacts sharing a snapshot return the same weights, and absent capabilities fail |
+| Recovery | Audit exports, backups and publication reconciliation | Restored history preserves signatures, snapshots and publication bindings |
 
-Done when, across all phases:
-
-- a proposal never names a code path;
-- a release with no enforced records adds only its release record;
-- an incomplete acceptance chain never merges on any conforming node;
-- acceptance follows mechanically from the workflow records, with no discretionary signature anywhere;
-- no record of any kind reduces or removes activated units;
-- an accepted size is always the proposed size or the assigned validator's estimate, never a third number;
-- no rule reads a clock;
-- an upgrade carries every record forward;
-- duplicate records converge, and conflicting releases stay visible as `CONFLICTED`.
-
-## References
-
-- [Freenet whitepaper](https://github.com/freenet/paper-1) (trust section: identity and reputation as application-layer contracts)
-- [Remuneration plan](../remuneration/README.md) (the consumer of these records)
-- [Stable identity: successor-pointer convention, freenet-core#5194](https://github.com/freenet/freenet-core/issues/5194)
-- [Tracking: graceful upgrades, freenet-core#2776](https://github.com/freenet/freenet-core/issues/2776)
-- [freenet-migrate](https://github.com/freenet/freenet-migrate) (carry-forward, pointer contract, build guard)
-- [Upgrading contracts and delegates, freenet.org manual](https://freenet.org/build/manual/upgrading-contracts/)
-- [Is commutativity a crippling limitation? freenet-core#643](https://github.com/freenet/freenet-core/discussions/643)
-- [Stranded contract generations, freenet-core#5158](https://github.com/freenet/freenet-core/issues/5158)
-- [Over-disk-budget divergence, freenet-core#4868](https://github.com/freenet/freenet-core/issues/4868)
-- [Bounded summarize, freenet-core#5238](https://github.com/freenet/freenet-core/issues/5238)
-- [Client API authentication and app identity, freenet-core#5264](https://github.com/freenet/freenet-core/issues/5264)
-- [Ghost Keys](https://freenet.org/ghostkey/)
-- [freenet-git](https://github.com/freenet/freenet-git)
+Retain capability IDs, accepted units and audit history through any future migration into Freenet, coordinated with the [remuneration migration gates](../remuneration/README.md#9-migration-into-freenet). Contract merge is total, so a single contract cannot give one decision point to the uniqueness constraints, the one-time PIN check or the blocking challenge. Those operations stay in the service, or move only with an auxiliary consensus mechanism. The migration moves records, signatures and snapshots.

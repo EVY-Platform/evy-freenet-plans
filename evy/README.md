@@ -1,181 +1,220 @@
-# Freenet and EVY <3
+# EVY Developer platform
 
-## What is EVY, the Everything App?
+Dependencies: [Bundles](../appkit/bundles.md), [Data and actions](../appkit/data-actions.md), [SDUI](../appkit/sdui.md), [Hosts](../appkit/hosts.md), [Attribution](../attribution/README.md), [Payments](../payment/README.md), and [Remuneration](../remuneration/README.md).
 
-https://github.com/EVY-Platform/evy
+EVY Developer combines drag-and-drop SDUI authoring with contribution review, attribution, earnings and payout workflows. Its export tools bundle web files, an application definition, declarative actions, domain artifacts and SDUI for ordinary Freenet publication.
 
-The purpose of EVY is to enable everyone to connect consumers to services, avoid gatekeepers, grift & profiteering, and compensate contributors fairly.
+The visual builder lets people create, preview, validate and publish AppKit applications by assembling screens, flows, data bindings and actions. The builder uses Freenet container identity and publication interfaces, local project storage, and the attribution service API for contribution review and archive certification. The builder uses React, the AppKit protocols for declared actions and typed delegate operations, and Freenet publication.
 
-Imagine drivers delivering food to people without a middleman taking 30%, or selling your used skateboard without your data then being used for ads targeting incessantly. Imagine never having to download apps again, signup, or enter your payment details over and over. Imagine trusting that your data truly remains on your device. Imagine being able to see exactly what the app does, what algorithms exist, and being able to change them if you want.
+Example: Carol wants a "Make offer" screen. Carol drags an input and a button onto a page, binds the input to `local:draft.amount`, attaches `marketplace.makeOffer` to the button, previews it in a phone frame, and submits a proposal. The attribution service reviews and accepts the work before certification and publication. Carol receives funded credit when a qualifying paid operation supplies the evidence required by its checkout policy.
 
-You don't even have to take our word for it, you can verify yourself as everything is public (code and data).
+Hand-written definitions and other builders use the same protocol. Every client creates and verifies the same records.
 
-EVY does this through a simple idea: a super app on your mobile device which acts as your identity and your key. The app is community-built and contributors get paid whenever their functionality is used (when transactions happen in-app), incentivising useful and quality features. Functionality can be added in realtime through a server-driven-UI system, so users immediately get new functionality as it is released, and contributors can easily develop and test their changes. At the same time, the SDUI system ensures a coherent beautiful design system and good UX throughout the app.
+## 1. Technology and repository
 
-The initial launch product is a Marketplace (facebook/craigslist style) because we believe we can build a 10x better product than what is out there. The challenge will be critical mass problem but we believe it can be overcome.
+Use TypeScript, React, and Vite in a dedicated app-builder repository, with Bun for development and tests. Reuse EVY's drag-and-drop canvas, row and component factories, action editor, design system, and generated schema approach where they match AppKit.
 
-**2 approaches to build EVY with Freenet:**
-
-1. **EVY standalone (safe but monolithic giant):** self-contained architecture in a single app & contracts.
-2. **AppKit + EVY (hard but small scalable pieces):** individual re-usable building blocks used throughout freenet and all used together in an EVY native mobile app.
-
-## Goals
-
-- keep network and contract concerns in Freenet rather than recreating them in EVY;
-- make mobile use practical without turning phones into always-on network relays;
-- retain EVY's existing SDUI, builder, native rendering;
-- combine EVY's local-first principles with Freenet's delegates architecture;
-- keep all new protocols small, versioned, and independently testable;
-- fund development from product fees attributed to contributors, never from ads: contributor remuneration removes any need for advertising, tracking, or data resale on the platform;
-- make contributions verifiably trustworthy: credit is derived by contracts from signed, independently reviewed, blind-validated records that anyone can re-check, and no authority can grant or deny it.
-
-## Independent plans EVY consumes
-
-These live outside this folder, are reviewed and built on their own, and EVY is one consumer among any:
-
-| Plan | EVY's use of it |
-| --- | --- |
-| [Freenet Mobile](../freenet-mobile/README.md) | The Freenet engine inside the iOS and Android apps, foreground-only, no duties for others |
-| [Product attribution app](../attribution/README.md) | Contributor credit: EVY registers as one product, with one shallow capability catalogue, in the shared attribution ledger |
-| [Remuneration](../remuneration/README.md) | Product fees collected and paid out to contributors against attribution snapshots |
-
-[Duty negotiation](../duty-negotiation/README.md) and [hardware-backed identity](../hardware-identity/README.md) improve the network EVY runs on; EVY requires neither.
-
-## Approach 1. - Standalone app
-
-Build EVY as one self-contained Freenet application from the existing EVY repository, keeping the builder, JSON Schema SDUI, React and SwiftUI renderers, action system, and local-first behaviour.
-
-```mermaid
-flowchart TB
-    subgraph EVY[EVY application]
-        Builder[EVY web builder]
-        Web[EVY web UI]
-        IOS[EVY iOS app]
-        SDUI[EVY SDUI definitions]
-        EvyContracts[EVY contracts]
-        EvyDelegates[EVY delegates]
-
-        Builder --> SDUI
-        SDUI --> Web
-        SDUI --> IOS
-        Web --> EvyContracts
-        IOS --> EvyContracts
-        IOS --> EvyDelegates
-    end
-
-    Core[Freenet Core and network]
-
-    subgraph Existing[Existing Freenet applications, unchanged]
-        RiverUI[River UI]
-        RiverParts[River contracts and delegate]
-        RiverUI --> RiverParts
-    end
-
-    EvyContracts --> Core
-    EvyDelegates --> Core
-    RiverParts --> Core
+```text
+freenet-app-builder/
+  app/
+    shell/  canvas/  catalogue/  configuration/
+    bindings/  actions/  preview/  publishing/  collaboration/
+  packages/
+    project-model/
+    migration-evy/
+  tests/
 ```
 
-Plan: [One product repository with internal SDUI, messaging, marketplace, and builder](standalone-evy.md)
+Import schemas through released `freenet-appkit` packages. A person composes screens using declared actions built from supported reader steps. Domain behavior uses typed application delegate interfaces. New domain operations require delegate/schema work. New executor primitives require a reader update. Developer interfaces also include contribution workspaces, earnings, payout onboarding, publication history and service clients.
 
-## Approach 2. - Integrated building blocks
+## 2. Project model
 
-Extract the generic parts of EVY into reusable Freenet repositories and packages. EVY becomes one product assembled from AppKit, marketplace (which owns its messaging), the [attribution app](../attribution/README.md), and [Freenet Mobile](../freenet-mobile/README.md). An application consists of a signed release record, an SDUI definition contract, data contracts and private delegates, plus attribution snapshot references.
+| A project holds | In Carol's project |
+| --- | --- |
+| Application interfaces and their requirements | Custom web, SDUI and native targets selected independently |
+| Custom web entry point and built assets | Publisher-supplied web build |
+| Declarative actions, typed views and delegate descriptors | Required for SDUI; available to custom applications using the same domain protocols |
+| Optional SDUI targets and overrides | Shared screens with platform presentation overrides |
+| Artifact hashes, source evidence and prepared archive | Reviewed checkpoint and exact domain artifact digests |
+| Product identity and metadata | Marketplace container and draft display version |
+| Flows, pages, components | The "Make offer" page |
+| Routes and parameters | `listing/{listingId}/offer` |
+| Theme and localization | The Marketplace theme, English and French strings |
+| Logical contract and delegate bindings | `marketplace.orders`, `identity` |
+| Permissions | Open Stripe Checkout, read photos |
+| Sample data and preview scenarios | Alice's skateboard listing, an offline scenario |
+| Capability catalogue | `marketplace.offer.negotiate` |
+| Product proposals, contributor claims, attribution drafts | Carol's proposal for the offer screen |
+
+Local signing keys live in protected native stores or delegates. The payment service holds the payment processor credentials.
+
+## 3. Editing model
+
+Each edit has a stable local operation ID:
+
+| Operation | Carol's edit |
+| --- | --- |
+| CreateEntity | Adds the amount input |
+| SetProperty | Sets the button title |
+| InsertChild | Places the input above the button |
+| MoveChild | Swaps their order |
+| RemoveChild | Takes the input off the page |
+| TombstoneEntity | Deletes the input and keeps a marker |
+| RestoreEntity | Undoes the delete |
 
 ```mermaid
-flowchart TB
-    Core[Freenet Core\nContracts and delegates]
-    Mobile[Freenet Mobile\nThin peer]
-    AppKit[Freenet AppKit\nUI, runtime, data protocols]
-    Attribution[Attribution app\nProduct proposals + one shared ledger]
-    Apps[Applications\nEVY, Marketplace, River, others]
-
-    Apps --> AppKit
-    Apps --> Mobile
-    Apps --> Attribution
-    AppKit --> Mobile
-    Mobile --> Core
+flowchart LR
+    E["Carol edits"] --> A["Apply at once"] --> J["Append to the local draft journal"]
+    J --> S["Save or publish checkpoint"]
+    S --> N["Normalize: drop superseded property operations, coalesce structural changes"]
+    N --> B["Enforce byte, operation, and rate budgets"]
+    B --> C["Submit one bounded batch to the authoring-project contract"]
 ```
 
-| Plan | Purpose |
+Undo appends a safe inverse operation. Conflicting values show up with an explicit resolution action. Export application bundles from validated checkpoints. Byte and rate budgets bound [checkpoint traffic](https://github.com/freenet/freenet-core/issues/5153) and [update volume](https://github.com/freenet/freenet-core/issues/5050). The [authoring-project contract](authoring-project-contract.md) defines merge, membership and checkpoint rules.
+
+## 4. Component catalogue and configuration
+
+Configuration controls come from the AppKit JSON Schemas. Complex fields get curated editors:
+
+| Field | Editor |
 | --- | --- |
-| [AppKit Foundation and Release Records](blocks-01-appkit-foundation.md) | Pointer-based identity, signed release records, and capability declarations |
-| [AppKit SDUI](blocks-02-appkit-sdui.md) | Portable declarative UI format |
-| [AppKit Runtime](blocks-03-appkit-runtime.md) | Actions, expressions, navigation, and effects |
-| [AppKit Data Bindings](blocks-04-appkit-data-bindings.md) | Contract, delegate, local, and parameter data access |
-| [AppKit Web Reader](blocks-05-appkit-web-reader.md) | Browser renderer for SDUI applications |
-| [AppKit Mobile Readers](blocks-06-appkit-mobile-readers.md) | SwiftUI and Compose renderers |
-| [App Builder](blocks-07-app-builder.md) | Visual creation and publishing of AppKit applications |
-| [Marketplace](blocks-08-marketplace.md) | Reusable marketplace contracts and UI modules |
-| [EVY App](blocks-09-evy-app.md) | Consumer mobile and web shell combining the components |
+| Bindings and selectors | Picks a data source, then a field |
+| Declared actions | Selects supported steps and typed delegate operations, then binds their arguments |
+| Routes and parameters | Names the route and types its parameters |
+| Typed delegate operations | Adds editors for the application's declared delegate protocol, with its typed arguments and results |
+| Responsive layout | Sets behavior per size class |
+| Accessibility labels | Requires a label for every non-text control |
 
-## What must still change in Freenet before launch
+The builder explains each term in plain language and shows the underlying technical reference only in an advanced view.
 
-Audited 2026-08-27 against freenet-core (all issues, PRs, and discussions), paper-1, and the ecosystem repos. **None of these blocks starting the work above** — every plan has a phase that proceeds today — but each must close, or be consciously accepted, before a consumer launch. Status labels: **active** (upstream work in flight), **designed** (RFC or design exists, unbuilt), **unowned** (no tracking issue yet).
+## 5. Data and capability design
 
-### 1. Delegate-secret migration and recovery — *designed, blocked*
+Carol selects declared data sources and delegate protocols, then binds controls to typed views and actions. The builder validates each bounded action sequence against reader capabilities and delegate descriptors. Hosts coordinate reads and submissions. Application delegates own domain decoding, projections and prepared updates. Presentation bindings provide bounded formatting and navigation.
 
-Losing the phone loses the user's identity, and a delegate re-key can do the same to a user who did nothing wrong. Addressing and contract-state carry-forward are solved; delegate secrets are the acknowledged unsolved third of the upgrade epic ([#2776](https://github.com/freenet/freenet-core/issues/2776)). Five designs have been disproven; the current RFC ([#5255](https://github.com/freenet/freenet-core/issues/5255)) is blocked on a missing platform primitive (no delegate can deposit bytes into another delegate's secret store), and the node-side copy-forward that was built ([PR #4908](https://github.com/freenet/freenet-core/pull/4908)) was disabled two weeks later as forgeable ([PR #5199](https://github.com/freenet/freenet-core/pull/5199)). The interim path re-runs old delegate WASM, which is what permanently lost three generations of River users' identities ([river#630](https://github.com/freenet/river/issues/630)). Cross-device sync is a separate open RFC ([#4560](https://github.com/freenet/freenet-core/issues/4560)); hosted-mode export/import ([#4381](https://github.com/freenet/freenet-core/issues/4381), shipped) is the nearest working relative. For a marketplace with money attached, launch needs either this solved upstream or an application-level recovery design (mnemonic-derived keys, social recovery) of our own.
+```text
+Data source: Marketplace listings
+Kind: Declared view
+Readable views: listings, listingById
+Actions: makeOffer, acceptOffer
+```
 
-### 2. Silent update-delivery loss — *active*
+Queries follow the [declared-views rule](../appkit/data-actions.md). Definitions bound queries and identify allowed indexes. The host fetches the declared records and delegates interpret the results. The builder exposes the typed query arguments and limits. SDUI expressions perform only bounded presentation formatting and visibility checks over returned views.
 
-Registered subscribers can miss committed updates with zero logging ([#4681](https://github.com/freenet/freenet-core/issues/4681)); updates racing a forming subscription tree are dropped with no repair ([#4764](https://github.com/freenet/freenet-core/issues/4764), fixed, but the class recurs); SUBSCRIBE can dead-end at hop 0 ([#4414](https://github.com/freenet/freenet-core/issues/4414), fixed); long-lived subscribers flap at 184 reconnects/hour ([#4970](https://github.com/freenet/freenet-core/issues/4970)); and core has no client-facing success metric for PUT/UPDATE/SUBSCRIBE at all ([#5250](https://github.com/freenet/freenet-core/issues/5250)). The interest-sync hardening program is active (e.g. [PR #5243](https://github.com/freenet/freenet-core/pull/5243), [PR #5346](https://github.com/freenet/freenet-core/pull/5346)). The plans already assume app-level reconciliation; launch quality still depends on the upstream floor rising.
+## 6. Preview
 
-### 3. Suspend/resume and reconnect recovery — *active, open*
+The builder embeds the released reader and declarative executor with typed delegate-result fixtures through a deterministic memory host adapter, as the [reader preview plan](../appkit/sdui.md#8-preview-in-evy-developer) specifies. Preview uses fake identity, network, payment and signing adapters by default. An explicit development environment supplies live Core/delegate integration through the Rust-backed browser SDK. Shared fixtures check that preview results agree with live domain behavior. Preview modes:
 
-A NATed peer sat at one connection for 5.5 hours after suspend/resume with subscriptions registered but frozen ([#4951](https://github.com/freenet/freenet-core/issues/4951)); interest entries and the connection set diverge after wake ([#4153](https://github.com/freenet/freenet-core/issues/4153)); and there is no delta-based restart resync, so every cold start ships full state per contract ([#4651](https://github.com/freenet/freenet-core/issues/4651)). This is precisely the thin peer's foreground path, dozens of times a day. Until fixed, the mobile runtime must treat resume as "assume nothing, rebuild everything" and budget the bandwidth for it.
+- responsive web sizes plus iOS and Android semantic frames
+- light, dark, and high-contrast themes
+- offline, loading, stale, empty, error, and permission-denied states
+- sample identity and Marketplace data, plus typed delegate-result fixtures
+- recorded user-flow playback
 
-### 4. The thin-peer role needs a maintainer-approved issue — *unowned*
+Mobile frames approximate layout only. Final native conformance runs through real SwiftUI and Compose test applications.
 
-No issue exists for the duty-free terminal edge; the only prior signal is maintainer intent from 2022–23 ([#420](https://github.com/freenet/freenet-core/discussions/420): "a limited node will be running in the device… embedded/used as a library"; [#811](https://github.com/freenet/freenet-core/discussions/811): "Yes, we'll support mobile"). Per CONTRIBUTING.md, feature PRs without an approved issue are auto-closed, so a concept discussion and RFC are step zero for [Freenet Mobile's Phase 2](../freenet-mobile/README.md#3-delivery-plan), and equally for [duty negotiation](../duty-negotiation/README.md#11-delivery) if the network wants the metered version. The mobile plan's Phase 1 (unmodified Core embedded as a normal peer, lifecycle, storage) needs nothing from Core and proceeds regardless.
+## 7. Validation
 
-### 5. Carrier-network reachability — *designed, unbuilt*
+Validation runs continuously while Carol edits:
 
-Symmetric NAT has no relay fallback ([#2925](https://github.com/freenet/freenet-core/issues/2925): relay-candidate directory considered, unbuilt), carriers sometimes block UDP outright ([#5051](https://github.com/freenet/freenet-core/discussions/5051)), and gateways already churn transient arrivals at a 10:1 expiry-to-promotion ratio ([#4787](https://github.com/freenet/freenet-core/issues/4787)). Many thin peers will realistically be gateway-attached; launch needs either upstream relays or our own serving/gateway capacity, planned as infrastructure.
+| Check | Example finding |
+| --- | --- |
+| Action and delegate protocol agreement | An action supplies a different argument type from the declared delegate schema |
+| Artifact integrity and source mapping | Candidate bytes differ from reviewed checkpoint |
+| Platform profiles and optional SDUI | The requested target lacks a required host operation |
+| Schema and component requirements | The button has no title |
+| Unknown actions, functions, and component types | `marketplace.makeOfer` is misspelled |
+| Missing data bindings and routes | The offer page has no route |
+| Permission declarations | The page writes an order without declaring the order contract |
+| Unreachable pages and broken references | A page nothing navigates to |
+| Accessibility labels and form errors | An icon button without a label |
+| Unsupported reader versions | A component newer than the installed readers |
+| Oversized inline data or unbounded collection assumptions | A list bound to all listings with no index |
+| Attribution readiness | An open challenge, unaddressed review feedback, or missing size validation on a attributed change the archive includes ([enforced workflow](../attribution/README.md#3-enforced-workflow)) |
 
-### 6. Scale and bandwidth — *active, the largest gap*
+Each check reports an error or a warning. Errors block publishing. Warnings require acknowledgement or policy approval.
 
-The network is ~1,300–1,800 peers; the whitepaper's own measurement (§5.7) is a single data point that "cannot distinguish O(log n) from O(√n)", and the simulator cannot form organic topology past N≈16 ([paper-1 PR #2](https://github.com/freenet/paper-1/pull/2)). Baseline cost is 4.32 GB/day/node with 32.7% of update applies healing non-convergent contracts forever ([#5153](https://github.com/freenet/freenet-core/issues/5153), the canonical tracker); ~18× duplicate delivery ([#5147](https://github.com/freenet/freenet-core/issues/5147)); 97% of received contract bytes change nothing ([#4956](https://github.com/freenet/freenet-core/issues/4956)); state size caps storage but not broadcast cost ([#5050](https://github.com/freenet/freenet-core/issues/5050)); gateway event loops saturate under load ([#4145](https://github.com/freenet/freenet-core/issues/4145)). A consumer launch would be the largest load event in the network's history. We should define our own client-side SLIs from day one and treat capacity as a launch gate with numbers, not a hope.
+## 8. Attribution workflow
 
-### 7. Merge-law enforcement and clock removal are landing under us — *active*
+The builder provides the proposal, review, size-validation and challenge screens for the [enforced workflow](../attribution/README.md#3-enforced-workflow). Each submission binds exact reviewed pull request evidence or a signed authoring-project checkpoint, and the service returns the authoritative status. For participating products, certification requires acceptance of every included attributed change. The builder previews the allocation calculations and shows contribution weights for each product.
 
-Contract conformance is becoming enforceable with **removal** as the sanction ([#5320](https://github.com/freenet/freenet-core/issues/5320) RFC; verifier and `fdev` harness merged in [PR #5344](https://github.com/freenet/freenet-core/pull/5344)): canonical byte representation, deterministic summaries, empty self-deltas, terminating reconciliation. Host-clock access is being removed from contracts ([#5465](https://github.com/freenet/freenet-core/issues/5465)). Even the project's own example app currently fails the laws ([#5462](https://github.com/freenet/freenet-core/issues/5462)). Every contract in these plans must pass `fdev` conformance from its first commit. Related: every re-key permanently strands a generation the network heartbeats forever ([#5158](https://github.com/freenet/freenet-core/issues/5158), open, fixes proposed) — until that lands, our release cadence is a network tax, which argues for freezing contract WASM early (the [attribution app's upgrade discipline](../attribution/README.md#9-the-ledger) and the pointer convention of [#5194](https://github.com/freenet/freenet-core/issues/5194) both exist for this).
+## 9. Publishing
 
-### 8. Web-app platform gaps gate the web reader — *designed*
+Export web files, the application definition, actions, domain artifacts, schemas and optional SDUI into an ordinary Freenet application archive. Mobile-only projects include a static browser landing page. Native distribution links identify separately installed applications. Validate each declared interface against the bundled requirements. The canvas edits SDUI. Publishers edit web source in their chosen tools.
 
-Contract apps run in opaque-origin iframes where all origin-keyed storage throws ([#5165](https://github.com/freenet/freenet-core/issues/5165), by design); the fix is per-app real origins ([#5254](https://github.com/freenet/freenet-core/issues/5254), `S-needs-design`, maintainer engaged). The capability manifest was shipped and reverted for CSRF and silent-default-expansion holes ([#4014](https://github.com/freenet/freenet-core/issues/4014), revert checklist in [PR #4090](https://github.com/freenet/freenet-core/pull/4090)). The cross-browser security suite cannot yet block merges ([#5275](https://github.com/freenet/freenet-core/issues/5275)). This is why the mobile readers (plan 06) lead and the web reader (plan 05) follows.
+Use the existing Freenet container signing and publication path described by [application bundles](../appkit/bundles.md). Add definition, action, delegate-interface and screen validation plus the prepared-archive input or certification hook required by that plan. Preserve custom web entry points and relative assets. SDUI declares reader requirements. The application definition declares common entry points, permissions and action/delegate requirements.
 
-### 9. Client-API identity for native clients — *active design*
+Marketplace's workflow obtains a separate signed contribution record for the prepared archive, then publishes those exact bytes. Follow the [attribution sequence](../attribution/README.md#4-bundle-integration) for acceptance, certification and publication verification. Retain the prepared archive, contribution record and signed envelope for retry. After a timeout, check whether publication succeeded before submitting another version. A changed archive needs matching certification. Read back and verify the published archive, record whether the readback came from the publishing node or an independent node, and check retrieval from an independent node before advertising it. Enable new checkout after the services confirm eligibility.
 
-The client API issues app identity on request and has no authentication ([#5264](https://github.com/freenet/freenet-core/issues/5264), TOFU + passkeys direction; non-browser clients explicitly unresolved), and safe non-loopback access is a pending proposal ([#5219](https://github.com/freenet/freenet-core/issues/5219)). The phone app embeds Core in-process and never speaks the client API over the network, so the stake here is the [standalone app](standalone-evy.md) — a native client of its own local instance, and exactly the case [#5264](https://github.com/freenet/freenet-core/issues/5264) defers. Register as a stakeholder now so the credential design doesn't settle around `riverctl`/`fdev` alone.
+Show project checkpoints, prepared archive digests, contribution records and published container versions as distinct records. Keep publisher signing keys protected. Provide publisher-transfer and status controls through the identity and host rules, and retain archive backups under the publisher's stated retention policy.
 
-### 10. Cold-state durability — *designed, partial*
+## 10. Collaboration and offline use
 
-There is no re-replication and no durability guarantee for cold state (whitepaper §7.4), and demand-driven eviction deliberately drops zero-demand contracts first ([#4642](https://github.com/freenet/freenet-core/issues/4642) epic; local-pin proposal [#5041](https://github.com/freenet/freenet-core/issues/5041) open). A marketplace's long tail of cold listings and the attribution archive are exactly that shape. Until upstream changes, owner-side periodic re-PUT is our responsibility, and the plans assign it: sellers and index operators re-publish listings and shards ([marketplace §4](blocks-08-marketplace.md#4-discovery-and-search)), and release tooling re-publishes the attribution archive ([attribution §9](../attribution/README.md#9-the-ledger)).
+The builder stores drafts locally and publishes project checkpoints to the [authoring-project contract](authoring-project-contract.md), so Carol can edit on a plane.
 
-### 11. Known-bug tail on our critical path — *active*
+Real-time collaboration is optional and opt-in per project. It uses separate bounded collaboration-session shard contracts that participants stop renewing when a session ends, with durable checkpoints in the authoring-project contract. A shard lives while any host retains it, is evicted under budget pressure, and any holder can republish it. Presence updates at a fixed cadence from many members are full fan-out cost, so the session:
 
-UPDATE cannot be addressed by instance id ([#4978](https://github.com/freenet/freenet-core/issues/4978) — breaks the TS SDK path and blocked the pointer contract's network-mode verification); the npm TypeScript SDK still ships FIFO request/response matching ([#5048](https://github.com/freenet/freenet-core/issues/5048) — fixed in-repo, unpublished); streaming PUT can succeed without ever telling the originator ([#5458](https://github.com/freenet/freenet-core/issues/5458), [#5446](https://github.com/freenet/freenet-core/issues/5446)); PUTs can report timeout while landing ([#3465](https://github.com/freenet/freenet-core/issues/3465)). Cheap to track, expensive to discover in production.
+- batches at a fixed maximum cadence
+- caps participants, operations, and bytes
+- checkpoints periodically
+- drops local presence hints after a fixed age
 
-### 12. No peer-to-peer messaging primitive — *proposed, unanswered*
+Local editing and checkpoint publication work independently of real-time collaboration. Authoring membership controls project changes. Mutable projects and their retention policies are separate from exact published archives and application permissions.
 
-Freenet has contracts and delegates; it has no application datagram or direct peer-message path, and a delegate hop is pinned as *not* a privacy boundary ([PR #5363](https://github.com/freenet/freenet-core/pull/5363)). The ephemeral datagram API proposal ([#4959](https://github.com/freenet/freenet-core/discussions/4959)) has no maintainer response. Messaging therefore runs contract-mediated (inbox contracts) in both approaches ([standalone §2.6](standalone-evy.md), [marketplace §6](blocks-08-marketplace.md#6-trade-messaging)) until and unless that primitive exists — acceptable for marketplace messaging, disqualifying for real-time voice/video.
+Large binary assets use content references and upload progress.
 
-**Product-side blockers tracked in the plans themselves, not upstream:** the [remuneration plan](../remuneration/README.md) (drafted, awaiting its own review and build), the separate moderation plan ([standalone §2.8](standalone-evy.md), [marketplace §8](blocks-08-marketplace.md#8-moderation-and-abuse)), and an identity-recovery design if item 1 stays unsolved upstream.
+## 11. Definition import
 
-## Reference material
+The importer applies the [SDUI import specification](../appkit/sdui.md) to EVY exports:
 
-- [Freenet whitepaper source](https://github.com/freenet/paper-1)
-- [Freenet Core](https://github.com/freenet/freenet-core)
-- Mobile discussions [#811](https://github.com/freenet/freenet-core/discussions/811) and [#420](https://github.com/freenet/freenet-core/discussions/420)
-- [UI security architecture discussion #5380](https://github.com/freenet/freenet-core/discussions/5380)
-- [Ghost Keys](https://freenet.org/ghostkey/) and the [ghostkeys repository](https://github.com/freenet/ghostkeys)
-- [Multi-Purpose Trust Network #458](https://github.com/freenet/freenet-core/issues/458)
-- [Freenet contracts](https://freenet.org/build/manual/components/contracts/)
-- [Freenet delegates](https://freenet.org/build/manual/components/delegates/)
-- [Freenet user interfaces](https://freenet.org/build/manual/components/ui/)
-- [Freenet TypeScript SDK](https://freenet.org/build/manual/typescript-sdk/)
-- [Atlas discovery RFC](https://github.com/freenet/atlas)
-- [River](https://github.com/freenet/river)
-- [Harvest](https://github.com/freenet/harvest)
-- [EVY](https://github.com/EVY-Platform/evy)
+- reads EVY flows, pages, and rows and converts resource references to AppKit logical bindings
+- converts bounded presentation expressions to typed syntax and maps domain actions to supported steps and typed delegate operations
+- creates explicit implementation tasks for business behavior that needs a delegate change or a new reader primitive
+- maps each row type to a standard component or a composition of them
+- reports unsupported behavior for Carol to resolve
+- preserves stable IDs where possible
+
+## 12. Delivery
+
+Testing includes:
+
+- Playwright tests for creation, editing, undo, conflict, validation, and publishing
+- shared AppKit fixture projects
+- burst typing and drag tests proving thousands of local edits coalesce into bounded checkpoint batches
+- rate, byte, and operation budget tests
+- real Freenet contract tests for opt-in collaborative and offline operations
+- accessibility testing of the builder itself
+- publish-and-open tests using released readers
+- custom web packaging and browser opening using the web target's declared artifacts
+- combined-bundle tests where adding or updating SDUI preserves the custom web entry point
+- migration tests against representative EVY applications
+- attribution tests for invalid totals, incomplete chains, size tiebreaks, challenges, and conflicting publications
+
+| Phase | Delivers | Done when |
+| --- | --- | --- |
+| 1. Extract EVY builder core | Neutral canvas, row catalogue, configuration, and action editor | The core editing model uses product-neutral types |
+| 2. Adopt AppKit schemas | Generated controls and validation from released definitions | The builder validates against released schema packages |
+| 3. Binding and capability editor | Declared views, bounded actions, delegate descriptors and local presentation state | Unbounded query assumptions are blocked at edit time |
+| 4. Local drafts and checkpoint persistence | Offline journals, deterministic coalescing, bounded save and publish batches, optional collaboration sessions | Concurrent edits converge and conflicts are visible, and a burst-edit fixture stays within fixed update-count and byte budgets |
+| 5. Real reader preview | Web reader embed plus mobile semantic frames | Preview uses the released reader |
+| 6. Publishing workflow | Validate archive, certify when required, sign, publish and verify | A new user publishes web, mobile-only and combined fixtures. Certified bytes match published bytes, readback records the publication, and native links identify separately distributed apps |
+
+## 13. Contribution and earnings workspace
+
+The platform shows proposal status, source revisions, review assignments, size estimates, co-contributor signatures, challenges, role eligibility and recovery status. Attribution remains the authoritative workflow service. Allocation previews use its resolved recipient weights.
+
+Contributors see accepted units, archive certifications, pending evidence, funded credits, payable balances, reversals and payout history. Units remain contribution weights. Show the currency and last confirmed service update with each balance. Payout onboarding uses protected remuneration interfaces.
+
+| Authority | Owns |
+| --- | --- |
+| Publisher signer | Container publication authorization |
+| Attribution | Evidence acceptance, contribution weights and snapshots |
+| Payments | Checkout, fee receipts and processor-result attestations |
+| Remuneration | Allocations, reservations, balances and payouts |
+| EVY Developer | Authoring, integrated workflow screens and service requests |
+
+Test stale service status, pending identity recovery, failed publication after certification, missing payout details and payment reversals. The interface shows confirmed outcomes from the owning service. Service outages preserve local authoring and pending requests.
+
+## 14. Proposed Freenet home
+
+Propose the developer platform and its reusable service interfaces for adoption under Freenet Developer. Adoption requires agreement on governance, operations and responsibility for stored data. Keep the versioned interfaces compatible through an ownership transfer.

@@ -1,46 +1,161 @@
-# Freenet plans
+# EVY + Freenet <3
 
-Plans for building on [Freenet](https://freenet.org), a decentralized network where the devices of the people using it store the data and move the messages. There are no central servers, so problems servers normally solve (identity, capacity, credit, payments) each need their own design.
+## EVY's vision
 
-## Five independent plans
+Imagine smartphones and the internet built by the people, for the people. We want to enable anyone to connect consumers to services, free from gatekeepers taking a cut, and compensate contributors fairly.
 
-Each folder below is one plan: reviewed, approved, and built on its own. No product or other plan requires any of them; every arrow between them is an optional integration, never a prerequisite.
+A driver could deliver food without a middleman taking 30%. You could sell your skateboard without your data being used to target you with ads. Bringing these services together in one open platform means you can use the same identity and payment setup, instead of downloading another app, signing up and entering your details each time.
 
-| Plan | What it delivers |
-| --- | --- |
-| [Hardware-backed identity](hardware-identity/README.md) | Proof that a key lives in real security hardware on a genuine device, so creating identities costs something |
-| [Duty negotiation](duty-negotiation/README.md) | A protocol for peers to request lighter network duties in exchange for a metered allowance, sized by locally computed reputation |
-| [Freenet Mobile](freenet-mobile/README.md) | The Freenet engine inside iOS and Android apps, connected as a peer that does no work for others |
-| [Product attribution app](attribution/README.md) | A verifiable record of who contributed what to a product, with no authority able to grant or deny credit |
-| [Remuneration](remuneration/README.md) | Currency-agnostic payments: Freenet holds the auditable books while external rails (cards, banks, crypto, cash) move the money |
+That is the vision for EVY. Its code and data are open for anyone to inspect, so people can verify how it works. Private data is readable only by the parties who need it, such as a delivery address that only the driver making the delivery can decrypt.
+
+EVY starts with a simple idea: a super app on your phone that acts as your identity and your key. The app is community built, and those contributors get paid when an in-app transaction uses their functionality, giving them a reason to build useful features.
+
+A server-driven UI system lets contributors develop, test and release functionality that people can use as it becomes available. Shared components and themes give the app a consistent design and familiar controls across services.
+
+The launch product is a Marketplace for buying and selling locally. It arranges pickup, delivery and shipping as signed structured terms, and it shows the exact address only to the two people meeting.
+
+**Why Freenet fits EVY very well**: Freenet distributes applications through its peer network with verified authorship, this means the app is distributed by the community, not a single entity. Its delegate system keeps private data and signing keys on the device, exactly as EVY intended with it's device-only privacy.
+
+## The approach at a glance
+
+Developers can build JavaScript/TypeScript or Rust clients today. These plans add SDUI readers and reusable Swift/Kotlin integrations for native mobile applications. The diagram shows the supported paths by target. The [SDK paths table](freenet-mobile/README.md#0-feasibility-and-existing-evidence) is the canonical list.
 
 ```mermaid
 flowchart LR
-    HW[Hardware-backed identity]
-    DN[Duty negotiation]
-    FM[Freenet Mobile]
-    AT[Product attribution app]
-    RE[Remuneration]
-    EVY[EVY]
+    subgraph Existing["Current architecture"]
+        direction TB
+        ExistingPUT["Publish a website<br>Contract + State + Params"] --> ExistingState
 
-    DN -. optional evidence .-> HW
-    RE -. payout weights .-> AT
-    EVY -. consumes .-> FM
-    EVY -. consumes .-> AT
-    EVY -. consumes .-> RE
+        subgraph ExistingState[State]
+            direction TB
+            ExistingMetadata[Metadata]
+            ExistingBrowserWasm["JS/TS UI"]
+            ExistingRustUI["Rust UI<br>(Wasm)"]
+            ExistingDelegateWasm["Delegate code<br>(Wasm)"]
+        end
+
+        ExistingState --> ExistingBrowser[Browser]
+        
+        ExistingBrowser --> |JS/TS| ExistingTS["freenet-stdlib<br>TypeScript SDK"]
+        ExistingBrowser --> |Rust| ExistingR["freenet-stdlib<br>rust to browser Wasm"]
+
+        subgraph ExistingNode["Freenet node"]
+            direction TB
+            ExistingContracts["Contracts and delegates"]
+        end
+
+        ExistingTS --> ExistingNode
+        ExistingR --> ExistingNode
+    end
+
+    subgraph New["New architecture"]
+        direction TB
+        NewPUT["Publish an app<br>Contract + State + Params"] --> NewState
+
+        subgraph NewState[State]
+            direction TB
+            NewMetadata[Metadata]
+            NewBrowserWasm["JS/TS UI"]
+            NewRustUI["Rust UI<br>(Wasm)"]
+            NewDelegateWasm["Delegate code<br>(Wasm)"]
+            NewSDUI[SDUI]
+        end
+
+        NewState --> NewBrowser[Browser]
+        NewBrowser --> |JS/TS| NewTS["freenet-stdlib<br>TypeScript SDK"]
+        NewBrowser --> |Rust| NewR["freenet-stdlib<br>rust to browser Wasm"]
+        NewBrowser --> |SDUI| WebReader["Web SDUI reader"]
+        
+        NewState --> NativeApp["Native swift/kotlin apps"]
+        NativeApp --> |"SDUI"| MobileReader["Native SDUI readers<br>Used inside iOS/Android app"]
+
+        NewTS --> NNode
+        NewR --> NNode
+        WebReader --> BrowserSDK["freenet-stdlib<br>to web Wasm<br>JS/TS bindings or linked rust build"]
+        MobileReader --> NativeSDK["freenet-stdlib<br>to iOS/Android build<br>Swift/Kotlin bindings"]
+        NativeApp --> |Custom| NativeSDK
+
+        subgraph NNode["Freenet node"]
+            direction TB
+            NewContracts["Contracts and delegates"]
+        end
+
+        BrowserSDK --> NNode
+        NativeSDK --> NNode
+    end
+    
+    style Existing fill:none,stroke:#333
+    style New fill:none,stroke:#333
+    classDef stdlib fill:#e8e8e8,stroke:#999,color:#222
+    class ExistingTS,ExistingR,NewTS,NewR,BrowserSDK,NativeSDK stdlib
+
+    %% Used for display purposes, ignore
+    Existing ~~~ New
 ```
 
-Dashed arrows are optional consumption: duty negotiation works without hardware identity (Ghost Keys and a floor tier suffice), remuneration works without attribution (fixed recipients), and Freenet Mobile works without duty negotiation (an unmetered role).
+#### From a developer's change to a contributor payment
 
-## EVY
+```mermaid
+sequenceDiagram
+    participant Carol as Carol in EVY Developer
+    participant Attribution
+    participant Publisher
+    participant App as Bob's mobile app
+    participant Payments
+    participant Remuneration
+    Carol->>Attribution: Submit pickup work and review evidence
+    Publisher->>Publisher: Build and hash the prepared archive
+    Publisher->>Attribution: Request certification for those exact bytes
+    Attribution-->>Publisher: Separate signed contribution record and snapshot
+    Publisher->>Publisher: Sign and publish the ordinary container state
+    Publisher->>Attribution: Supply publication reference
+    Attribution->>Attribution: Verify signed publication and archive digest
+    App->>App: Verify bundle and activate declared actions
+    App->>Payments: Request checkout for the agreed 70 dollar order
+    Payments-->>App: Checkout link
+    Payments->>Payments: Verify processor result and record fee
+    App->>Remuneration: Submit evidence of the qualifying operation
+    Remuneration->>Payments: Verify the payment's funding and fixed policy
+    Remuneration->>Remuneration: Allocate within that payment's fee once
+```
 
-Everything else lives in the [EVY folder](evy/README.md): the plans for the EVY everything-app and the reusable AppKit blocks it is assembled from. Those blocks contribute toward EVY and are reviewed there, not independently.
+## Roadmap
 
-## Reference material
+| Plan | What for |
+| --- | --- |
+| [Application bundles](appkit/bundles.md) | Bob opens a signed Freenet container holding definitions, screens and domain artifacts. |
+| [Application data and actions](appkit/data-actions.md) | Readers coordinate declared actions, delegates prepare domain results and hosts track pending work. |
+| [SDUI](appkit/sdui.md) | A publisher describes screens once. Readers display them using browser, iPhone and Android controls. |
+| [Hosts](appkit/hosts.md) | The host verifies bundles, manages installed copies and asks for access in a trusted screen. |
+| [Freenet mobile SDK](freenet-mobile/README.md) | A phone embeds Freenet, reconnects and follows the contracts its apps use. |
+| [Identity, recovery and device sync](identity/README.md) | Alice recovers the keys and private records needed to finish her sale. |
+| [Attribution](attribution/README.md) | Accepted contributions have recorded authors, reviews and allocation weights. |
+| [Payments](payment/README.md) | The payment service signs the payment result for the agreed order. |
+| [Remuneration](remuneration/README.md) | The service allocates funded contributor fees once and accounts for refunds. |
+| [EVY Developer platform](evy/README.md) | Developers build SDUI screens, publish bundles and manage contributions and earnings. |
+| [Atlas sample](atlas-sample/README.md) | Atlas search and publication work through web, SDUI and custom native interfaces. |
+| [Freenet mobile app](freenet-mobile-app/README.md) | People discover and open compatible Freenet applications in one mobile app. |
+| [Marketplace](marketplace/README.md) | People buy and sell nearby, arrange fulfillment and pay through the shared platform. |
 
-- [Freenet whitepaper source](https://github.com/freenet/paper-1)
+Start with the [SDK feasibility stage](freenet-mobile/README.md#0-feasibility-and-existing-evidence). Exercise reads, subscriptions, updates and delegate requests through the TypeScript SDK, the Rust browser build, and Swift and Kotlin bindings. Compare the Rust-backed browser build that the web SDUI reader uses against the TypeScript SDK for startup, download size and memory. Measure native library size, memory, copying, subscription traffic and lifecycle recovery.
+
+Use Atlas to test SDK reuse and declarative SDUI separately. Prove one action through SDUI and a custom native interface while preserving the published index identity. Record adapter work, unsupported operations and API changes, then set acceptance budgets before wider adoption. Publish its web files, definitions, domain artifacts and SDUI through the existing container format. Test offline use, an incompatible update and a component migration. Then complete EVY's export and contribution workflow, followed by Marketplace payments.
+
+Optional extension: [peer reputation](reputation-proofs/README.md) where a person can prove a supported application claim while limiting disclosure.
+
+## Risks and limitations
+
+1. SDUI readers and native apps share Rust stdlib through platform adapters and generated bindings. The feasibility stage measures overhead and supported operations before any wider SDK consolidation. Custom JS/TS apps keep the TypeScript SDK.
+2. SDUI applications must fit the supported components and action steps. New executor primitives require a reader update. Typed application delegate interfaces are proposed work and need an Atlas proof.
+3. Mobile packages contain native libraries and Core's contract/delegate runtime. Device testing and distribution review apply to the complete package.
+
+## Sources
+
 - [Freenet Core](https://github.com/freenet/freenet-core)
-- [Freenet contracts](https://freenet.org/build/manual/components/contracts/), [delegates](https://freenet.org/build/manual/components/delegates/), [user interfaces](https://freenet.org/build/manual/components/ui/), [TypeScript SDK](https://freenet.org/build/manual/typescript-sdk/)
-- [Ghost Keys](https://freenet.org/ghostkey/) and the [ghostkeys repository](https://github.com/freenet/ghostkeys)
-- [Atlas discovery RFC](https://github.com/freenet/atlas), [River](https://github.com/freenet/river), [Harvest](https://github.com/freenet/harvest)
-- [EVY](https://github.com/EVY-Platform/evy)
+- [whitepaper](https://github.com/freenet/paper-1)
+- [UI security discussion](https://github.com/freenet/freenet-core/discussions/5380)
+- [Atlas](https://github.com/freenet/atlas)
+- [River's native-client issue](https://github.com/freenet/river/issues/319)
+- [Harvest](https://github.com/freenet/harvest)
+
+Shared-library sources: [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [TypeScript package](https://github.com/freenet/freenet-stdlib/blob/main/typescript/package.json), [UniFFI](https://mozilla.github.io/uniffi-rs/latest/).

@@ -1,146 +1,136 @@
 # Remuneration
 
-Freenet products will move money: a buyer pays a seller, and part of the price (the product fee) funds the people who built and maintain the product. The [product attribution app](../attribution/README.md) records who those people are and their relative weights; this plan is the other half: how fees are collected, split, and paid out.
+The remuneration service owns contributor balances, allocations and payouts. It is one of the three services in the [EVY Developer authority table](../evy/README.md#13-contribution-and-earnings-workspace), alongside attribution and payment.
 
-It is currency-agnostic. The same records work whether value moves as card payments, bank transfers, stablecoins, Bitcoin, or cash handed over in person, and nothing in the protocol ever converts between currencies or prefers one.
+## 1. Purpose
 
-This plan stands alone and nothing else requires it. It consumes a product's attribution snapshots when they exist, and falls back to policy-named recipients when they don't. Products keep working with no payments at all; the [marketplace plan's payment boundary](../evy/blocks-08-marketplace.md#9-payment-boundary) is the first intended consumer.
+Record capability-use claims in Freenet and notify the remuneration service. The remuneration service verifies paid operations and allocates each payment's 1% contributor fee only to the validated capabilities used in that operation. It owns balances, allocations, payout reservations, and payout execution. [Attribution](../attribution/README.md) identifies contributors. [Payment](../payment/README.md) supplies verified fee receipts.
 
-## 1. Why Freenet cannot hold the money
+Attribution units weight accepted work. Usage credits record verified paid usage and its allocation within one payment. Payable balances express funded allocations in a named currency. Usage outside paid operations remains analytics.
 
-Money needs one property Freenet deliberately does not provide: a single agreed order of events. To stop the same coin being spent twice, everyone must agree which of two spends came first. Freenet contracts have no clock and merge concurrent updates in any order with the same result. That design makes the network resilient, and it makes a balance stored in a contract unsafe, because two conflicting spends would both look valid. The [whitepaper](https://github.com/freenet/paper-1) acknowledges this: double-spend-safe transfer cannot be a single contract.
-
-So the responsibilities split three ways:
-
-- **Freenet keeps the books.** What should be paid, what was claimed paid, and how fees were distributed are signed records anyone can re-check.
-- **Rails move the money.** A rail is any existing payment system: a card processor, a bank transfer, a blockchain, cash.
-- **Operators bridge the two.** A settlement operator holds fees between collection and payout. The books keep it honest: every step leaves a signed record, so cheating is provable even though it is not preventable (section 6).
+## 2. Usage flow
 
 ```mermaid
-flowchart LR
-    T[Transaction:<br/>parties fix terms] --> P[Payer pays<br/>through a rail]
-    P --> PR[Payment proof<br/>recorded]
-    PR --> A[Fee receipt accrues in the<br/>remuneration contract]
-    A --> S[Settlement: operator splits<br/>fees by attribution snapshot]
-    S --> O[Payouts through rails,<br/>one proof per recipient]
-    O --> R[Signed settlement record<br/>anyone can audit]
+sequenceDiagram
+    participant App as Freenet client
+    participant Contract as Usage contract
+    participant Bridge as usage bridge
+    participant Platform as Remuneration service
+    App->>Contract: Signed capability-use event embedding the bridge-signed payment record
+    Contract->>Contract: Admit only if the payment record verifies against the bridge root key
+    Contract-->>Bridge: Subscription update
+    Bridge->>Platform: Deliver event with contract reference
+    Platform->>Platform: Verify payment and capability evidence
+    Platform->>Platform: Allocate within that payment's fee once
+    Platform-->>Bridge: Durable processing acknowledgement
 ```
 
-## 2. Currency-agnostic amounts
+The host records a usage claim when verified domain evidence meets the action's declared completion condition. Application delegates supply domain interpretation and authorized signing through Core. The host or authorized delegate signs and queues the claim. A custom web client with its own integration submits equivalent domain evidence, and the service applies the same attester, certified-content, funding and policy checks to every path. A usage contract stores the event, and the bridge subscribes to its updates. The bridge notifies remuneration and saves its delivery position. It periodically checks the contract for events it has yet to deliver.
 
-An amount is a pair: an asset identifier and an integer count of that asset's smallest unit.
+## 3. Usage record
 
 ```text
-asset   "iso4217:USD" | "iso4217:EUR" | "btc:sat" | "eth:usdc" | ...
-units   integer minor units (cents, satoshi); never floating point
+schema_version
+usage_event_id
+product_id
+application_content_ref
+contribution_record_id
+capability_id
+operation_id
+payment_id
+event_kind
+evidence_reference_or_digest
+producer_key
+signature
 ```
 
-- The protocol never converts. Totals, splits, minimums, and audits are all computed per asset; there is no protocol exchange rate and no unit of account.
-- Conversion is a rail-level event, recorded when it happens: amount in, amount out, and who chose the rate. The record makes a conversion auditable; the protocol does not judge it.
-- A contributor whose product collects euros and satoshi is owed euros and satoshi, unless they opt into a recorded conversion.
+Derive `usage_event_id` from the product, capability, operation ID, and event kind. Preserve that ID through offline retries. `application_content_ref` is the payment's original publication or native artifact reference. `contribution_record_id` identifies its signed certification under [bundle integration](../attribution/README.md#4-bundle-integration). Use a canonical, domain-separated encoding for the event ID and product-scoped operation IDs. Claims for remuneration require a payment ID bound to the same order and operation. Keep customer content and private identity in their authorized stores.
 
-## 3. Three record kinds
+The contract admits an event only when it embeds the bridge-signed payment record for its payment ID and that record verifies against the bridge root key in the contract parameters. Only events for real payments are valid, so a device key alone gains no write access. The contract also checks schema, signature and product scope. The remuneration service checks the capability ID against the signed contribution record bound to the payment ([attribution section 4](../attribution/README.md#4-bundle-integration)).
 
-| Record | Says | Comes from |
-| --- | --- | --- |
-| **Terms** | What should be paid: price, accepted assets, the fee and the fee-policy version it was computed under | The product's published fee policy plus the transaction parties' signatures |
-| **Payment proof** | Value moved on a rail | The rail (section 4); graded by how independently checkable it is |
-| **Settlement** | How collected fees were distributed: the snapshot used, per-recipient amounts per asset, payout proofs, carried-over remainders | The settlement operator's signature |
+The usage contract uses the same admission shape as the [Marketplace admission contract](../marketplace/README.md#5-structured-fulfillment-requests):
 
-Payment proofs come in two grades, and the grading is honest labelling, not a ranking of worth:
+| Rule | Value |
+| --- | --- |
+| Record size | 4 KiB including the embedded payment record and signature |
+| Records per epoch instance | 4,096 |
+| Eviction | Deterministic. Keep the lowest full content digests |
+| Variants retained per event ID | 2, by lowest digest, as explicit conflict evidence |
+| Instance boundary | One contract instance per product and epoch. Parameters are the product, the epoch number and the bridge root key |
 
-- **Grade A, cryptographically verifiable.** Anyone can re-check it offline or against public data: a Lightning payment preimage matching the invoice hash, an on-chain transaction reference.
-- **Grade B, attested.** Someone signed a claim that it happened: a processor receipt, a bank-statement match, a countersigned cash handover. Auditable and disputable, not independently provable.
+A usage epoch is a contract instance, not a partition inside one contract. A saturated epoch stops growing, and the bridge opens the next epoch and records the boundary. Merge events within an instance as an idempotent set. Two individually valid states union within the limit because eviction is deterministic over the combined set. Allow delayed events into the epoch named in their payment record.
 
-A card payment can only ever be grade B, and that is fine. The rule that matters is fixed here and holds everywhere: **a contract never treats a payer's own claim as proof of payment.** Proof comes from the rail or the counterparty, never from the person who benefits from asserting it.
+Each product defines the qualifying capabilities, completion evidence, authorized attesters, and allocation weights for each operation type. The [checkout bindings](../payment/README.md#2-checkout-flow) fix that policy and the certified content reference for the payment. Verify completion against domain records, such as the order's validated state transition. Payment evidence proves funding. Completion evidence proves qualifying capability use. Claims stay pending until both checks pass.
 
-## 4. Payment rails
+Credit requires validated completion evidence. Repeated renders, new event IDs and replayed notifications for the same payment and capability resolve to one allocation. The contract's admission check is the embedded payment record. The service then checks the producer key against the policy bound at checkout, since that policy lives in the payment service. Domain evidence establishes eligibility, which the service checks against the fixed policy.
 
-A rail is an adapter with four operations; anything that can implement them can carry value for a Freenet product:
+## 4. Bridge and credit accounting
 
-```text
-quote(terms)               what paying these terms costs on this rail
-collect(terms)             payer pays; returns a payment proof
-payout(recipient, amount)  operator pays out; returns a payout proof
-verify(proof)              grade A: re-check locally; grade B: check the attestation
-```
+1. Read the event from its contract and verify its signature, completion evidence, and payment-to-operation binding.
+2. Ask the attribution service to verify the original content-to-contribution mapping, publication or native distribution evidence, and included capability ([attribution section 6](../attribution/README.md#6-interface-to-remuneration)).
+3. Require that answer to name the contribution record, snapshot and policy version bound to the payment at checkout. A mismatch rejects the claim with a recorded reason.
+4. Verify the collected contributor fee against reconciled processor records, then apply the payment's fixed allocation as section 5 defines.
+5. Commit the payment and event IDs, evidence decision, snapshot, policy, and credit entries in one database transaction. Enforce the payment's fee cap across all allocations.
+6. Acknowledge processing after commit. Retry with the same event ID.
 
-| Rail | Proof grade | Notes |
-| --- | --- | --- |
-| Card processors | B | Receipts are operator attestations; chargebacks exist and are recorded as reversal events that adjust future settlements |
-| Bank transfer | B | Reference-matched statements, attested by the operator |
-| On-chain crypto (BTC, stablecoins) | A | Transaction reference re-checkable by anyone with chain access |
-| Lightning | A | Payment preimage matches the invoice hash |
-| Cash in person | B | Countersigned receipt between the parties |
+Store uniqueness constraints on event IDs, processor fee receipts, and payment-capability-recipient allocations. Two bridge workers receiving the same claim produce one credit result. Retain pending, credited, rejected, and conflicted states with reasons. After application withdrawal or commercial suspension, process existing payments under their recorded settlement policy. Late events retain their payment, content, contribution-record and policy bindings and follow the published claim cutoff.
 
-Rail choice is per transaction and per payout. A product declares which rails its operator supports; how a fee is physically carved out is the rail's business (some split at source, others collect the full price and forward the principal), and either way both legs produce proofs.
+Each payment funds its own qualifying usage. Fabricated activity can recover at most that payment's contributor fee through remuneration. Processing costs and fraud losses still require payment controls, funded separately by the payment service's operating budget. Payment controls also cover processor losses and subsidies.
 
-## 5. The fee pipeline
+## 5. Funding and allocation
 
-1. **Terms.** A transaction (a marketplace order, a paid feature) fixes the price, the accepted assets, and the fee, computed from the product's published, versioned fee policy (basis points of the price, a flat amount, or zero). The fee policy also maps each transaction kind to the capabilities it draws on (a completed sale might route across listing publication, discovery, and order handling), and terms carry that mapping's result, so every fee is usage-routed by construction. Terms name the policy version so an audit can recompute both the fee and its routing years later.
-2. **Payment.** The payer pays through a rail. The principal goes to the seller; the fee goes to the product's settlement operator. The payment proof is recorded against the transaction, where order contracts and product flows can react to it.
-3. **Accrual.** Each fee receipt merges into the remuneration contract: product, amount, asset, transaction reference, policy version. The contract holds records, never funds.
-4. **Settlement.** On the cadence policy sets, the operator computes the split:
-   - first across pools: contributor, reviewer, and validator pools, the operator's declared fee, and recorded rail costs, all versioned policy data;
-   - then by usage: each receipt's contributor share divides among the capabilities its terms name, and within each capability among that capability's units in the attribution snapshot selected by the binding rule the [attribution app fixes](../attribution/README.md#10-interface-to-remuneration) (the snapshot of the highest non-conflicted release). Reviewer and validator pools are product-wide and ride on every receipt. A capability no receipt names in the settled range receives nothing: attribution units are permanent, and this usage gate is the only way they ever stop earning. A product with no attribution records names fixed recipients in policy instead.
-5. **Payout.** The operator pays each recipient above the per-asset minimum through a rail the recipient registered (section 7), then signs one settlement record: snapshot id, per-recipient amounts per asset, payout proofs, and carried-over dust. Where a rail yields only grade-B proof, the recipient's countersigned receipt upgrades the audit trail.
+Each successful eligible checkout contributes the 1% fee defined in the [payment plan](../payment/README.md#3-the-1-fee), under the bindings it fixed. Track currencies separately in integer minor units.
 
-**The remuneration contract.** One Freenet contract holds every product's receipts and settlements, found through a pointer under the ledger key and following the same no-clock, checkpoint, and upgrade discipline as the [attribution ledger](../attribution/README.md#9-the-ledger). Its code enforces:
+Reserve each payment's available contributor fee once. Divide it across the operation's qualifying capabilities using the weights fixed at checkout, then across their contributors, reviewers, and validators using the bound attribution snapshot and policy. Total allocations must stay within that payment's collected fee after reversals.
 
-- every record is signed by its claimed key, and fee receipts reference real terms;
-- settlement arithmetic re-derives exactly: per asset, payouts + operator fee + rail costs + carry-over = fee receipts in the settled range, with each receipt's contributor share routed to the capabilities its terms name, all under the same rounding rule attribution uses;
-- **a settlement embeds the weights it used, and their hash must equal the SnapshotId it names.** Snapshot ids are content hashes, so a forged split fails validation with no cross-contract read;
-- settlements occupy strictly increasing slots per product, so the same receipts cannot be settled twice;
-- reversals (chargebacks, failed payouts) are records that adjust future settlements; nothing edits history.
+Remuneration owns allocated, reserved, payable and paid balances. Payment supplies the fee receipt. For a partial refund, calculate the cumulative refunded proportion of the original contributor fee with round-half-up, cap it at the original fee, and subtract reversals already recorded.
 
-**Public and private.** Public by construction: fee totals, pool splits, and per-recipient amounts. There is no hiding them anyway, since attribution weights are already public and audits need the amounts. What never appears in any record: payout endpoints (bank details, addresses), legal identity, tax data. Recipients register endpoints encrypted to the operator and hold them in their own delegates.
+Use deterministic remainder allocation with stable recipient ordering. Record fee receipts, credit entries, policy, arithmetic, and remaining balance per payment. Keep pending capability shares reserved against their originating payment. Return unclaimed shares to the original contributor-fee payer after the bound claim cutoff. Preserve receipt lineage for every return. Keep allocations with empty or missing recipient weights pending against that payment until the weights are resolved or the funds are returned. Payout batches may combine funded balances while preserving each payment's allocation.
 
-## 6. Settlement operators
+Require one signed, versioned settlement policy with these fields:
 
-The operator is the one trusted component, kept deliberately small: custody between collection and payout, rail accounts, and the compliance duties (KYC, tax) that rails impose. Trust is bounded four ways:
+| Fields | Purpose |
+| --- | --- |
+| Capability weights, attribution snapshot and role shares | Determine each recipient's allocation |
+| Payout schedule and minimum payout by currency | Determine when a balance can be paid |
+| Claim cutoff and unclaimed-fee return rules | Determine when unused funds return to the payer |
+| Payout delay and reversal reserve | Define when funds become payable and how much to retain for reversals |
 
-- **Everything is provable.** The records let anyone re-derive every settlement; theft or mis-splitting is visible in public arithmetic.
-- **Exposure is bounded.** An absconding operator costs at most the fees collected since the last settlement; settlement cadence is policy, so products bound that window deliberately.
-- **The role is replaceable.** Policy names the operator key and the product key can rotate it; receipts and settlements before and after remain valid.
-- **The role is plural.** Several operators can serve one product (per rail or per region), each settling the receipts it collected.
+The service operator approves these values before launch. Checkout requires every field. Each payment keeps its policy through delayed completion, client updates and later policy changes.
 
-Alternatives considered: an on-network currency needs the global ordering Freenet doesn't provide (section 1); contract escrow fails for the same reason, since a contract that can't hold funds can't release them; a trust-minimized crypto-only deployment (every movement grade A and on-chain) is compatible with this design as a choice of rails and operator, not a different protocol.
+Attribution supplies the recipients and weights for each role pool. Payment supplies immutable fee receipts and funding adjustments. Remuneration reserves funds and records payout state. Append allocation entries and preserve the underlying credits.
 
-## 7. Payouts and recipients
+## 6. Double-spend prevention and payouts
 
-- A recipient is an ActorId from the attribution ledger (key rotation follows its lineage rules) or a policy-named key.
-- Per-asset minimum payout thresholds keep rail fees from eating small amounts; below-threshold entitlements carry over and are listed in each settlement, so dust never silently disappears.
-- Unreachable or unregistered recipients keep their entitlement for a policy-set number of settlements; after that, policy decides (return to the pools, or donate) and the outcome is recorded either way.
+The remuneration service's transactional ledger owns fund reservations and payout state. Atomically reserve fee receipts and payable balances before creating a payout request. Unique constraints prevent reuse in a second settlement.
 
-## 8. What this plan is not
+Release payable amounts only after processor settlement and the policy's payout delay, retaining the required reversal reserve. Use stable payout IDs and processor idempotency keys. After a timeout, reconcile the existing processor operation before retrying. Persist pending, processing, paid, failed, and reversed outcomes. Release a reservation only after the processor confirms the relevant failure or cancellation.
 
-- **Not a currency or token.** Nothing here mints, stakes, or trades anything.
-- **Not escrow.** Contracts never hold funds, so they cannot release or freeze them.
-- **Not pricing.** What a product charges is product policy; this plan makes whatever it charges auditable.
-- **Not a promise that attribution units are money.** Units become money only when fees exist and a settlement includes them, and the [attribution app](../attribution/README.md) says the same.
+Keep legal identity, payout endpoints, tax records, and processor credentials in the remuneration service's protected services. Contributors view credits, payable funds, and payout history through the remuneration service. Record currency conversion separately if a contributor selects it.
 
-## 9. Delivery
+Persist transfer recovery separately from the payout record. A refund or chargeback appends a funding adjustment. Apply the published reserve and recovery policy to unsettled funds or future allocations. Reconcile a reversal that arrives after payout against the original receipt and settlement.
+
+## 7. Recovery and authority
+
+The remuneration service runs the usage bridge, durable queues, database backups, and reconciliation jobs. Retain recoverable event archives and republish active Freenet state as needed. Test outages across both sides of the bridge.
+
+During a service outage, clients continue to record capability use and show queued credit processing. Recovery resumes from durable cursors and deduplicates every event. Credit and payout displays include their last confirmed service update.
+
+The remuneration service signs auditable statements of credit and settlement results. Keep the financial ledger and contributor allocations in the remuneration service. Freenet usage records supply the event trail.
+
+## 8. Delivery
+
+Shared fixtures submit the same operation from SDUI, web, native and two devices. Test fresh event IDs against the same payment, application updates and publisher transfers between checkout and fulfillment, changed policy, key recovery, missing weights and reordered funding reversals. Every case preserves the original payment binding and one funded allocation.
+
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
-| 1. Records and arithmetic | Terms, receipt, and settlement encodings; the per-asset amount type; split arithmetic sharing attribution's rounding rule; golden fixtures | Independent implementations produce identical settlement bytes from the same inputs |
-| 2. Remuneration contract | Merging, the checks of section 5, checkpoints, the same upgrade discipline as the attribution ledger | A forged split, a double-settled receipt, and an over-payout each fail to merge in tests |
-| 3. One grade-A rail end to end | Lightning or an on-chain stablecoin rail; collect, accrue, settle, and pay out on a demo product with a real attribution snapshot | An outside auditor re-derives the settlement from public records alone, and every proof re-verifies |
-| 4. One grade-B rail and operator tooling | A card-processor rail, reversal handling, recipient registration, operator tooling | A chargeback adjusts a future settlement without editing history; a recipient disputes a payout using records alone |
-| 5. Hardening | Multiple operators, dust and unreachable-recipient policies exercised, operator-rotation drill, third-party audit tooling | Rotating the operator mid-cycle loses at most the declared in-flight window |
+| 1. Usage events | Contract schema, payment-record admission, capacity profile and declared completion-evidence actions | One completed operation records one stable event through retries, and an event without a valid payment record fails admission |
+| 2. Credit bridge | Payment binding, completion evidence and transactional credits | Replays with new IDs count once, and unrelated capability or payment claims fail |
+| 3. Funding | Per-payment fee receipts and fixed allocations | Allocations and remainders reconcile per payment, and manufactured usage receives at most its own fee |
+| 4. Payouts | Reservations, recipient registration and processor reconciliation | Racing workers and timeout retries produce one payout |
+| 5. Recovery | Outage, late-event, refund and chargeback handling | Event history survives bridge recovery and reversals remain auditable |
 
-## 10. Open questions
+## 9. Migration into Freenet
 
-1. Default pool split (contributors, reviewers, validators, operator fee): policy data that needs real products to price.
-2. Settlement cadence without a clock: per release generation, threshold-triggered, or operator-attested calendar dates.
-3. Whether grade-A proofs should verify inside the contract (embedding chain proofs) or stay client-audited; start client-audited.
-4. Operator accountability beyond evidence: bonds, insurance, or multiple co-signing operators.
-5. How a payer proves fee payment to an order contract without revealing which rail they used.
-6. Whether entitlements can be redirected (payroll-like flows) or stay bound to the ActorId lineage.
-7. How capability routings for new transaction kinds get contested: the mapping is public, versioned product policy, but a mapping that steers fees toward favoured capabilities is a governance question the records expose without settling.
-
-## References
-
-- [Freenet whitepaper](https://github.com/freenet/paper-1) (double-spend and ordering constraints)
-- [Product attribution app](../attribution/README.md) (the weights this plan pays against, and the snapshot binding rule)
-- [Marketplace payment boundary](../evy/blocks-08-marketplace.md#9-payment-boundary) (the first intended consumer)
+Move accounting when Freenet has primitives for exclusive fund reservation, double-spend prevention, final settlement decisions, and recoverable financial history. Preserve usage IDs and ledger lineage. Prove replay and concurrent-spend safety before transferring authority. Fiat collection and payout also need an agreed network primitive and processor integration, as the payment plan describes.

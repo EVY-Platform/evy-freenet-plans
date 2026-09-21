@@ -1,171 +1,218 @@
-# Freenet Mobile SDK
+# Freenet mobile SDK
 
-Freenet Mobile SDK is an iOS and Android library that puts the Freenet engine (freenet-core, the same code desktops run) inside a mobile app and connects it as a **thin peer**: a peer that uses the network without doing work for others.
+Embed Freenet in iOS and Android applications. When Bob opens Marketplace, the SDK connects his phone, reads the skateboard listing and follows updates to his order. Application delegates interpret domain records for declarative SDUI. Custom applications can also interpret records in their own code. The SDK manages the node and carries authorized requests. Opening a custom web target from mobile uses that target's own session and permissions.
 
-This plan stands alone and nothing else requires it. A separate plan, [duty negotiation](../duty-negotiation/README.md), covers letting serving peers meter connections like these; this plan does not depend on it.
+The first native integrations run an embedded full peer. The thin-peer role in [section 4](#4-thin-peer-network-role) is AppKit's proposed Core extension and awaits upstream agreement.
 
-## 1. The thin peer
+## 0. Feasibility and existing evidence
 
-### 1.1 Why a phone can't do the usual work
+Each target has its own supported SDK path. Wider consolidation onto one Rust build is optional and follows the measurements below. Equivalent domain behavior across targets comes from shared protocol fixtures rather than from an identical SDK implementation.
 
-A full peer does three jobs for other people, none optional:
+| Target | SDK | Status |
+| --- | --- | --- |
+| Custom JS/TS web app | Existing TypeScript `freenet-stdlib` | Available |
+| Rust browser app | Rust stdlib linked into the app's Wasm build | Available |
+| Web SDUI reader | Rust stdlib compiled to browser Wasm with JS/TS bindings | Proposed, measured in this stage |
+| Native SDUI reader and custom native app | Rust stdlib native library with Swift/Kotlin bindings from `crates/mobile` | Local development work on Core's `ios` branch |
 
-- **Forwarding.** It passes other peers' messages toward their destination. Every connected peer is a candidate for this; there is no way to opt out.
-- **Storing.** Data travels to its home address by hopping across peers, and each peer along the way keeps a copy and serves it to others from then on.
-- **Broadcasting.** When a contract a peer follows changes, the peer re-sends the update to the other peers holding copies. This is the expensive one: during one incident ([#3791](https://github.com/freenet/freenet-core/issues/3791)), a gateway uploaded up to 163 bytes for every byte it downloaded.
+Keep browser networking, native networking, language bindings and lifecycle integration in platform adapters.
 
-On a phone, these jobs mean uploading for strangers all day: battery drain, data-plan drain, and exactly the background activity iOS and Android kill apps for.
-
-### 1.2 What a thin peer is
-
-A thin peer connects, reads and writes its own data, and follows its own contracts. It does none of 1.1's jobs:
-
-- **Never selected.** The network never picks it to forward, store, or host anything.
-- **Terminal delivery.** It receives the updates it subscribed to, and the chain stops there; it re-sends nothing.
-- **Nothing unsolicited.** It is only ever sent what it asked for. Anything else is a protocol violation it rejects.
-
-When the app is in the background, the phone is simply offline (2.3).
-
-```
-    peer ─── peer
-    /           \
- peer           peer
-    \           /   \
-    peer ─── peer -- thin peer
-       \     /
-        \   /
-      thin peer
-```
-
-### 1.3 Joining without duties
-
-Joining is unchanged for everyone else. Thin is an exception the joiner asks for, with a new versioned CONNECT message naming the role. Gateways route the request to peers advertising room (1.4), and a serving peer with a free thin slot accepts. There is no credential, no payment, and no negotiation: a slot is free or it isn't.
-
-Each serving peer sets its own cap on thin connections (operators can raise, lower, or zero it), and under pressure it sheds thin connections first. A shed or refused thin peer simply reconnects elsewhere. A gateway on an old version can't read the new CONNECT variant, so the thin peer fails closed and retries elsewhere rather than silently joining as a full peer.
-
-One tradeoff is stated up front rather than hidden: the phone connects through a few serving peers, and those peers can see which contracts it reads, writes, and follows.
-
-### 1.4 Extending freenet-core: generalize the transient path
-
-The changes land in Core's shared connection modules, which is why any peer can request the role, not just mobile builds. Core is close to having this already: it has one connection type excluded from all three jobs, the **transient connection**, a short-lived slot a gateway opens for a peer that is still joining. The thin peer is that mechanism made a standing role.
-
-| Property a thin edge needs | Where transient already provides it |
+| Evidence | What it establishes |
 | --- | --- |
-| A registry with a hard budget and race-safe accounting | `ConnectionManager::try_register_transient` / `drop_transient` / `transient_count` / `transient_budget` (`ring/connection_manager.rs:1741-1801`), including the undo-on-overshoot path |
-| May carry no ring location | `try_register_transient(addr, location: Option<Location>)`; the location is already optional, so a location-less edge is not a new concept |
-| Excluded from routing | `routing_candidates` skips transients (`connection_manager.rs:2515`) |
-| Excluded from contract hosting | `k_closest_potentially_hosting` skips transients unconditionally, with no fallback (`ring.rs:3720`); exactly the semantic a thin edge wants, and deliberately stricter than the not-ready-peer filter beside it, which does fall back |
-| Excluded from subscription-root selection | `ring.rs:1059`, whose comment records why: without it a peer whose only closer neighbour is transient fails to recognise itself as the terminus, wire-renews, dead-ends, and storms ([#4440](https://github.com/freenet/freenet-core/issues/4440)) |
-| Regression protection for all three | Pin tests assert each selector still calls `is_transient(addr)` (`ring.rs:7091`, `:7142`), from [#4222](https://github.com/freenet/freenet-core/issues/4222) |
-| A TTL and automatic reclamation | `transient_ttl`, with the lifecycle and its failure modes documented in [#4787](https://github.com/freenet/freenet-core/issues/4787) |
+| Rust stdlib's browser and native transports | Rust source already supports both environments through separate adapters |
+| River browser UI and native CLI dependencies | An existing application uses Rust stdlib in browser and native clients |
+| TypeScript SDK source | The supported path for custom JS/TS apps. It stays in place and supplies the comparison baseline for the web reader's Rust build |
+| Local Core `ios` branch and `freenet-ios` package | A mobile UniFFI wrapper and iOS packaging exist as local development work |
+| Local Atlas iOS demo | Uses a browser client through a WebView. Native compilation of its application behavior needs separate verification |
+| Android bindings and device support | Planned packaging and device validation |
 
-So "never selected" and "nothing unsolicited" (1.2) already exist. Three pieces are genuinely new:
+Sources: [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [TypeScript SDK](https://github.com/freenet/freenet-stdlib/tree/main/typescript), [River browser dependencies](https://github.com/freenet/river/blob/main/ui/Cargo.toml), [River CLI dependencies](https://github.com/freenet/river/blob/main/cli/Cargo.toml), [UniFFI](https://mozilla.github.io/uniffi-rs/latest/). Local evidence describes the inspected development checkouts, with build/device coverage still to verify.
 
-1. **A standing slot instead of a countdown.** A transient slot expires after a fixed time and drops. A thin slot lives until either side disconnects or the serving peer sheds it, and it never converts into a ring connection.
-2. **Terminal delivery (1.2).** Transient connections never subscribe, so nothing today delivers contract updates to one. It needs its own design and its own pin test (a test that fails if the guarantee is ever removed).
-3. **Advertisement and a budget of its own.** Serving peers must be able to say "I accept thin peers" so gateways know where to route the request; the nearest existing shape is the readiness bit `routing_candidates` already checks over the wire (`connection_manager.rs:2526-2546`). And thin slots get their own counter and cap: the transient registry is already busy ([#4787](https://github.com/freenet/freenet-core/issues/4787) measured 368 transient expiries against 37 ring promotions in about 50 minutes on one gateway), and it was sized for 30-second joins, not connections that last as long as an app is open. The cleanup task must never reap a live thin connection as a stale joining slot.
+Complete two separate feasibility checks before wider adoption:
 
-## 2. Running applications on the phone
+1. Exercise reads, subscriptions, updates and delegate requests through the Rust browser build with JS/TS bindings, Swift and Kotlin. Compare request/response encodings, errors, cancellation and callback ordering with fixtures shared with the TypeScript SDK.
+2. Prove one Atlas action through declarative SDUI and a custom native interface. Exercise the proposed typed delegate interface, record preparation and readback while preserving the published index identity.
 
-### 2.1 One engine: Core runs the contracts
+Measure browser startup, compressed download size and memory against the TypeScript SDK. Measure native library size, startup, memory, large-record copying, subscription throughput and lifecycle recovery on target devices. Record the workload, platform, library revision and adapter configuration with every result. Measure embedded Core separately from SDK binding costs. For SDUI, also measure action steps, delegate calls, transferred bytes and response time.
 
-_One platform difference: iOS forbids apps from generating machine code while running, so on iPhone the contract engine runs Wasmtime's interpreter backend, Pulley, instead of a just-in-time compiler. Same code, one configuration switch, somewhat slower execution._
+Record the tested Core, stdlib, binding and `freenet-migrate` versions with every result. Core's lockfile pins stdlib 0.10.0, and the [migration library README](https://github.com/freenet/freenet-migrate#status) describes a published runtime targeting 0.8.x plus unreleased APIs. Confirm compatible adapters or aligned dependencies before selecting its runtime policy.
 
-```text
-freenet-mobile/
-  mobile-runtime/       Core embedding and lifecycle adapter
-  mobile-storage/       platform paths, protection, migration
-  native-api/           UniFFI interface for Swift and Kotlin
-  ios/                  Swift application and platform integration
-  android/              Kotlin application and platform integration
-```
+Publish required adapters, unsupported operations and API compatibility changes with the results. Set device and workload acceptance budgets from those measurements before adopting the Rust-backed browser build for the web reader or expanding product adoption. A successful library build establishes compilation. Integration and device results establish usable behavior. If a gate fails, record the required follow-up and keep broader adoption pending.
 
-Bind the native API with UniFFI (a tool that generates Swift and Kotlin wrappers for Rust), with a small spike first to prove cancellation, streaming, and callback lifetimes map cleanly.
+## 1. Responsibilities
 
-### 2.2 Native API
+| Part | Owns | Example |
+| --- | --- | --- |
+| Mobile SDK | Embedded Core, connections, request outcomes, native bindings and node lifecycle | Restart the node when Bob returns to the app. |
+| AppKit host | Verified app sessions, grants, scoped storage, runtime limits and application session lifecycle | Permit Marketplace to follow Bob's order. |
+| Action executor and domain delegates | Declarative orchestration, decoding and reconciliation | Reconcile Bob's pickup request before the host retries its saved operation. |
+| Core | Contract validation and delegate state/secret namespaces | Reject an invalid seller signature. |
+| Identity integration | Recovery authority, protected key operations and authorized migration | Restore Alice's access after replacing her phone. |
+| Services | Payment and remuneration ledgers and bridge recovery | Publish a verified payment result while Bob's phone sleeps. |
 
-The `profile` argument carries the requested role (1.3) along with storage paths and network settings.
+The [data and actions](../appkit/data-actions.md), [hosts](../appkit/hosts.md) and [identity](../identity/README.md) plans define these interfaces. Hosts retain pending-order journals and use application delegates for domain reconciliation. Payment and remuneration services manage fees.
 
-```text
-start(profile) / stop() / status()
+## 2. Embedded node and native API
 
-getContract(id)
-putContract(contract, state)
-updateContract(id, update)
-subscribe(id) / unsubscribe(id)
+The `crates/mobile` package exposes native operations through UniFFI bindings. Extend the existing wrapper with the required native operations. Define separate profiles for local fixtures, full-peer networking and the planned thin-peer role. Use separate stores for fixture and network operation, with host-supplied paths that remain correct after reinstall or container relocation.
 
-registerDelegate(delegate)
-sendDelegateMessage(delegate, message)
+The native API must cover:
 
-observeEvents()
-```
-
-### 2.3 Lifecycle
-
-- **Foreground.** Open storage, restore the application list and pending requests, connect, let applications issue their normal reads and subscriptions, and resume pending writes only after fetching current state and revalidating.
-- **Background.** Stop new work, cancel or finish the operations in flight, save state, disconnect, stop contract execution. Assume the OS grants no background time; every operation crossing the boundary must be safe to cancel and retry.
-- **Offline writes.** Queue a write made offline only when the application's data rules support replaying it later. On reconnect, fetch current state, rebuild or revalidate the pending write, submit, and surface conflicts to the application. Merge rules make copies converge; they do not guarantee an old signed action is still valid.
-
-### 2.4 Storage
-
-Use Core's existing stores unless profiling finds a platform-specific problem. The categories need different protection because not everything is secret:
-
-| Category | Protection |
+| Operation | Required behavior |
 | --- | --- |
-| Public contract data the phone requested (code, parameters, public state) | Integrity checks |
-| Data the application encrypted before writing it into a contract | The application's own encryption |
-| Delegate secrets (the user's keys) | Encrypted delegate store, below |
-| Mobile bookkeeping (pending operations) | Encrypted app storage |
+| Start, stop and status | One serialized lifecycle transition, with defined results for repeated calls. |
+| Read and publish contract | Validate code, original parameters and returned instance identity. |
+| Update contract | Return a correlated outcome and preserve uncertainty after timeout. |
+| Subscribe and release | Return owned subscription handles. The host reference-counts demand and releases it when the count reaches zero. |
+| Register and call delegate | Require an authenticated app session and declared grant. |
+| Observe events | Include request/session identity, typed errors and lifecycle changes. |
+| Cancel request | Stop local work where possible and state whether submission may already have happened. |
 
-The delegate store:
+The mobile crate exposes get, put, update by delta, subscribe and peer counts, with update and status callbacks. Deliver callbacks on the host's expected executor. Core may issue them from its own runtime.
 
-- A random encryption key protects it, and that key lives in the iOS Keychain or Android Keystore.
-- No backup or sync: losing the phone loses the delegate secrets on it, unless an application provides its own recovery.
+The remaining native operations are feasibility deliverables:
 
-### 2.5 Contracts ship with the app and update over Freenet
+| Deliverable | Why it is needed | Where it lands |
+| --- | --- | --- |
+| Delegate messaging, register and unregister | Domain delegates run on the device | `crates/mobile` API |
+| Full-state update | Recovery republishes whole records | `crates/mobile` API |
+| Structured operation events with request and session identity | Hosts correlate callbacks to sessions | `crates/mobile` API |
+| Client-side Unsubscribe | stdlib 0.10 has Put, Update, Get and Subscribe. Core lists the Unsubscribe variant as upcoming, and demand is released when the client connection closes | stdlib and Core, tracked upstream |
+| Request correlation | The protocol matches responses by variant and contract key and carries no request id, so the mobile client serializes requests | Either serialize per contract key in the SDK, or add a request id to stdlib and track it upstream. Record the choice with the feasibility results |
+| Kotlin build script | Only the iOS build script exists | `crates/mobile/scripts` |
 
-Each app ships the contracts and delegates its features use (River, Marketplace, ...), and that set fixes what the app does. Freenet then keeps them current, delivering new revisions of those same contracts alongside their data. That respects the line Apple draws: downloaded code must not change an app's features, functionality, or primary purpose (App Store guideline 2.5.2 and the developer agreement's allowance for interpreted code); new features arrive through an app update and store review.
+Until Unsubscribe ships, a subscription to Core ends with the client connection. The host's reference count decides which screens still need the data.
 
-## 3. Delivery plan
+Create a trusted in-process host-to-Core path for production app sessions. It binds the verified container identity, content reference, user and session to each privileged call. Route application requests through that path. Every privileged call requires caller authentication, including calls over a loopback socket. [Core session admission](https://github.com/freenet/freenet-core/issues/5264) defines that boundary and remains open. Implement and test it before enabling protected operations.
 
-### Phase 1: a real app on a normal peer, iOS and Android
+SDK request IDs correlate transport work once the correlation deliverable above lands. Application operation IDs identify actions such as Bob's purchase and survive retries, restarts and device recovery. Return both when relevant so each network request remains linked to the same purchase.
 
-Embed Core untouched and run one real application end to end on both platforms, joining the network as an ordinary peer.
+## 3. Runtime and packaging
 
-- Embed Core (2.1), UniFFI spike first. Start in local mode (`OperationMode::Local`), which runs the whole engine with no network, so the app's shipped contracts and delegates (2.5) work before the first join; then switch the same instance to a normal network join.
-- Build the lifecycle adapter (2.3) and the Keychain/Keystore-protected delegate store (2.4); test reinstall and OS upgrades.
-- Measure everything: CPU, memory, bandwidth, battery, startup, shutdown, and specifically what the three jobs of 1.1 cost on cellular and on battery.
+Compile the shared Rust client into native libraries and generate Swift/Kotlin bindings. Package these with both custom native apps and SDUI readers. The installed SDUI executor coordinates declared actions. Embedded Core executes application contract and delegate Wasm.
 
-This phase is a test vehicle, not a shippable product; it runs on developer devices in the foreground. The measurements turn 1.1's argument into numbers for the maintainers, and they size Phase 2's default thin-slot cap.
+Core's iOS contract/delegate profile uses the Pulley interpreter. Device tests verify resource limits and interruption. Distribute contracts and delegates as standard Wasm. Pulley and other compiled caches stay local and include backend and engine version in their identity. The [Wasmtime Pulley guide](https://docs.wasmtime.dev/examples-pulley.html) describes the interpreter target.
 
-### Phase 2: the thin role
+| Area | Work |
+| --- | --- |
+| Engine configuration | Preserve per-target defaults, configure interruption and prove host calls on devices. |
+| Module cache | Bound memory and invalidate artifacts built for an incompatible backend or version. |
+| Mobile API and bindings | Complete native operations, correlation, owned subscriptions and shutdown behavior. |
+| Browser package | Expose the Rust build through JS/TS bindings for the web SDUI reader and compare it with the TypeScript SDK. |
+| Node profile and lifecycle | Carry explicit role and storage paths through restart. |
+| Apple packaging | Produce reproducible device and simulator packages from the generated Swift bindings. |
+| Android packaging | Add a Kotlin build script beside the iOS script, package the selected Android ABIs from the generated Kotlin bindings and validate them on devices. |
 
-Gated on maintainer approval; per CONTRIBUTING.md an approved design issue (RFC) is step zero.
+Compare contract/delegate returned bytes and errors against desktop fixtures. Test runaway execution, memory growth, engine shutdown, host-call cancellation and repeated startup.
 
-- Land the CONNECT variant of 1.3 and the three work items of 1.4. Extend the pin tests so all three selectors provably skip thin edges, and add deterministic tests covering reconnects, shedding, timeouts, malformed messages, and downgrade attempts.
-- Switch the Phase 1 app from an ordinary join to a thin request (one changed start profile, 1.3) and re-run the Phase 1 measurements.
+Start the device resource budget from Core's constants and replace each with a measured value:
 
-At the end of this phase the product works: a real thin peer on iOS and Android.
+| Budget item | Starting value | Source |
+| --- | --- | --- |
+| Memory per Wasm instance | 256 MiB | Core engine limits |
+| Maximum contract state | 50 MiB | Core state store |
+| Module cache size | Read from cgroup limits, which iOS does not provide. Set an explicit size for mobile | Core module cache |
 
-## 4. Future improvement: a delegate trust anchor
+The SDK bindings share protocol fixtures across browser and native builds. AppKit's [data and actions plan](../appkit/data-actions.md) defines declarative execution and typed application delegate protocols separately.
 
-A trust anchor would let one of the user's devices hold chosen delegate secrets for the others, which send it their signing and decryption requests. Either direction works: a desktop can anchor for a phone, or a phone for a desktop. Nothing in this plan needs it, so it is out of scope; every device runs its own instance holding its own secrets.
+## 4. Thin-peer network role
 
-If it becomes worth building, the constraints are known:
+A thin peer opens a terminal connection to a serving full peer. That connection carries its reads, writes and subscriptions. The full peer performs onward routing, hosting and update distribution.
 
-- Opt-in and per delegate.
-- Moves custody of a secret; never copies it.
-- Requests are defined by the delegate and sit behind typed, revocable grants; no generic "sign anything" call.
-- Its costs (a round trip to the other device, waiting when that device is unreachable, loss with that device) land wherever the user opts in.
+```mermaid
+flowchart LR
+    App["Bob's reader or native application"] --> Host["Trusted host"]
+    Host --> SDK["Native Rust stdlib and bindings"]
+    SDK --> Thin["Embedded thin peer"]
+    Thin -->|"Own reads, writes and subscriptions"| Full["Serving full peer"]
+    Full --> Network["Freenet routing and hosting"]
+    Network --> Full
+    Full -->|"Requested updates"| Thin
+```
 
-Pairing, grant lifecycle, revocation, and enrolling a replacement device make it a plan of its own.
+Add versioned role negotiation and retain the accepted role for the connection's lifetime. Full peers handle onward routing, fallback routing, hosting and subscription roots. Send updates down the edge only for its authorized active subscriptions. Clean up downstream demand on disconnect.
 
-## 5. References
+| Core area | Required change |
+| --- | --- |
+| Connect operation | Negotiate role and protocol compatibility in request and response. |
+| Connection manager | Register persistent terminal edges and preserve their negotiated role. |
+| Ring | Assign hosting and subscription roots to full peers and maintain serving connections for thin peers. |
+| Subscribe operation | Manage terminal subscriptions, downstream delivery and unsubscribe. |
+| Connection lifecycle | Preserve role on completion and release state on disconnect. |
+| Configuration and node construction | Apply role-specific topology rules and serving-peer settings. |
 
-- Whitepaper vocabulary (peer, joiner, acceptance): [freenet/paper-1](https://github.com/freenet/paper-1), routing section
-- Ring, hosting, and subscriptions: freenet-core `docs/architecture/ring/README.md`
-- Operations (GET/PUT/UPDATE/SUBSCRIBE): freenet-core `docs/architecture/operations/README.md`
-- Client API exposure and trust model: freenet-core `docs/client-api-exposure.md`
-- Delegate secrets at rest: freenet-core `docs/secrets-at-rest.md`
-- Demand-driven memory/storage discussion: freenet-core issue [#4651](https://github.com/freenet/freenet-core/issues/4651)
-- Prior maintainer intent for embedded mobile nodes: discussions [#811](https://github.com/freenet/freenet-core/discussions/811) and [#420](https://github.com/freenet/freenet-core/discussions/420)
+Thin-peer connections are open to peers with compatible protocols when serving capacity is available.
+
+This role is AppKit's proposed Core extension. File it as a role-design proposal in freenet-core and track negotiation, terminal edges, subscription delivery and carrier acceptance against that proposal. The full-peer baseline stays the supported profile until the proposal lands. Related Core behavior the proposal must preserve: [GET routing for subscribed contracts #4222](https://github.com/freenet/freenet-core/issues/4222) and [placement migration #4440](https://github.com/freenet/freenet-core/issues/4440).
+
+## 5. Connectivity and lifecycle
+
+Use native network-change callbacks to reconnect after Wi-Fi/cellular changes. A peer's ring location is hashed from its external address, and the join verifies it from the observed address. A network change therefore gives the node a new location. Treat reconnect as a rejoin through a gateway followed by re-issued subscriptions, and test it as such. Supported networks must pass direct-transport or fallback tests for carrier NAT and UDP filtering.
+
+Connectivity tests cover [carrier restrictions](https://github.com/freenet/freenet-core/discussions/5051) and serving capacity on mobile networks. A relay fallback for symmetric NAT is open Core work: [#2925](https://github.com/freenet/freenet-core/issues/2925) closed without an implementation and the carrier discussion still asks for one. Recovery after suspend and resume needs the lifecycle coordinator to drive it, per [wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951).
+
+```mermaid
+stateDiagram-v2
+    [*] --> Stopped
+    Stopped --> Starting: App enters foreground
+    Starting --> Running: Core and storage ready
+    Running --> Reconnecting: Network changes
+    Reconnecting --> Running: Rejoin through a gateway and re-issue subscriptions
+    Running --> Stopping: App backgrounds
+    Reconnecting --> Stopping: App backgrounds
+    Starting --> Stopping: App backgrounds
+    Stopping --> Stopped: Release runtime and stores
+    Starting --> Failed: Startup fails
+    Reconnecting --> Failed: Recovery budget exhausted
+    Failed --> Starting: User or bounded retry
+```
+
+The host saves application journals before teardown. The SDK then finishes or cancels transport work, invalidates old callbacks and releases Core resources. On foreground, the host can show verified cached data while Core starts. It refreshes state and restores subscriptions before the domain delegate reconciles queued writes.
+
+Use a single lifecycle coordinator for start, stop, reconnect and shutdown. Test termination during every transition, calls made during shutdown, port release, store-lock release and repeated restart. Treat a platform notification as a hint to refresh, and read order evidence from the contract.
+
+## 6. Storage and recovery
+
+| Store | Contents | Owner |
+| --- | --- | --- |
+| Core stores | Validated contract execution state and delegate state | Core/SDK |
+| App database | Drafts, verified caches and canonical operation journals | Host, scoped by app and user |
+| Protected secret store | Delegate secrets under Core's key encryption key | Core secrets store with a new iOS Keychain or Android Keystore backend |
+| Recovery package | Declared keys, encrypted records and coverage manifest | Identity plan under user control |
+
+Core's key-encryption-key backends are systemd credential, file and an opt-in OS keyring for macOS and Windows. Add an iOS Keychain backend and an Android Keystore backend as new Core work. Delegates sign inside Wasm, so delegate keys live in Wasm memory rather than in hardware handles. A hardware-signing adapter is also new Core work. Until both ship, the plan's key-protection claim covers SDK-managed keys wrapped by a platform-protected key encryption key. Provide typed results for locked devices, invalidated keys and unsupported signing algorithms. [Apple key protection](https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave) and [Android Keystore](https://developer.android.com/privacy-and-security/keystore) have different capabilities, so the adapter must match the chosen key algorithm.
+
+The host retains a recovery inventory for application-owned contracts, including original code and parameters, verified copies and operation references. The host coordinates bounded repair after refresh, using application-owned domain adapters and the existing migration library through the boundary proved by Atlas. The SDK matches reads, writes and authorized delegate operations to their requests. The application defines and tests its migration policy. Before republishing an owned recoverable record, it checks identity and merge rules.
+
+For Alice's sale, the retained inventory contains her listing and pickup agreement. The payment service retains payment evidence, and the publisher retains exact archives and signed container envelopes. Each owner keeps a recoverable copy. A successful PUT records submission. Read back and verify the accepted bytes. Core serves GET from locally cached state, including on an isolated node, so record whether the observation came from local storage or from an independently exercised network path. Verify remote retrievability separately before claiming distribution, and retain recovery copies under the stated retention policy. A separate retrieval is a point-in-time observation. Retention and repair handle ongoing durability.
+
+[Identity and sync](../identity/README.md) owns delegate migration and cross-device enrollment. Integrate deferred delegate reads, durable subscription demand and initial-state notifications through the Core dependencies listed in the [identity plan](../identity/README.md#6-delivery-and-acceptance).
+
+## 7. Delivery plan
+
+| Phase | Delivers | Done when |
+| --- | --- | --- |
+| 0. Feasibility | Rust-backed browser/native bindings and one declarative Atlas action | Measured SDK and SDUI results establish adapter work, compatibility and acceptance budgets. |
+| 1. Embedded baseline | Full-peer native API and lifecycle | Reliable real-device read/write/subscribe and repeated start/stop. |
+| 2. Native storage and authority | Scoped stores, protected key operations, authenticated host sessions | Access stays scoped to each app, and pending application data survives termination. |
+| 3. SDK and reader integration | Shared Rust native libraries, generated bindings and declarative readers | Custom apps and readers pass equivalent action and protocol fixtures on iOS and Android. |
+| 4. Thin role and carrier support | Role-design proposal accepted upstream, negotiation, terminal delivery and tested network paths | Thin peers carry their own application traffic, and supported carrier cases meet configured budgets. |
+| 5. Production package | Reproducible bindings, diagnostics and device measurements | Mobile packages pass recovery, concurrency and resource tests. |
+
+Phases 2 and 3 proceed alongside phase 4 after the embedded baseline. Marketplace's mobile launch requires the selected production role and supported network profile to pass. If the thin-peer proposal is still open at launch, the full-peer profile is the production role.
+
+Core dependencies for this plan: [session admission #5264](https://github.com/freenet/freenet-core/issues/5264), the Unsubscribe client request, request correlation in stdlib, delegate messaging in `crates/mobile`, iOS and Android key-encryption-key backends, and the thin-peer role proposal.
+
+## 8. Acceptance cases
+
+- Concurrent requests match the correct response, including notifications arriving between responses.
+- A timeout after remote acceptance returns an unresolved result and lets the host and domain delegate reconcile before retry.
+- Releasing one screen's view leaves another screen's subscription active through host reference counting.
+- Reconnect after a network change rejoins through a gateway and re-issues every active subscription.
+- Backgrounding during checkout preserves the order reference, and resume obtains the signed payment result.
+- A killed process releases ports and storage locks on restart and rejects callbacks from its old session.
+- Lost network copies can be repaired from authorized retained data with original operation identities.
+- Startup time, peak memory, foreground CPU, idle and active traffic, reconnect latency and bytes per common operation meet the limits for each supported device and network.
+- Full-peer and thin-peer profiles each define their resource limits and supported devices and networks.
+
+Regression tests cover [response correlation #5048](https://github.com/freenet/freenet-core/issues/5048), [streaming PUT #5458](https://github.com/freenet/freenet-core/issues/5458), [UPDATE lookup #5475](https://github.com/freenet/freenet-core/pull/5475), [timeout uncertainty #3465](https://github.com/freenet/freenet-core/issues/3465), [wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951) and [missed updates #4681](https://github.com/freenet/freenet-core/issues/4681).
