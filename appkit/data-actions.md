@@ -124,15 +124,28 @@ Example: Bob's request is `prepareOffer` at protocol version 1 with request ID 1
 
 ### What Freenet provides today
 
+`Get { key, return_contract_code, subscribe }` returns `GetResponse { key, contract, state }`. `Subscribe { key, summary }` returns `SubscribeResponse`, then an `UpdateNotification { key, update }` for each change. `NotFound` reports a missing instance. No response carries a timestamp, so freshness is whatever the client records. Responses match requests by variant and contract key, with no request ID ([#5048](https://github.com/freenet/freenet-core/issues/5048)).
+
+A subscription ends with the client connection. Core lists `ContractRequest::Unsubscribe` as upcoming, and its delegate-side unsubscribe variants trace to [#5600](https://github.com/freenet/freenet-core/issues/5600). Core serves `Get` from local cache when it holds the state, as the [mobile plan](../freenet-mobile/README.md#6-storage-and-recovery) records.
+
 ### What AppKit proposes
 
-Definitions bind logical resources such as `marketplace.listings` and `identity.profile` to declared contracts and delegates. Views such as `listingDetails` declare input and output types. The host performs bounded queries and the domain delegate interprets the returned records. Large search uses bounded region/category index shards. A delegate may return a proposed shard reference, which the host checks against declared resource and query limits before fetching it.
+Definitions bind logical resources such as `marketplace.listings` and `identity.profile` to declared contracts and delegates. Views such as `listingDetails` declare input and output types and a maximum age. The host performs bounded queries and the domain delegate interprets the returned records. Large search uses bounded region and category index shards. A delegate may return a proposed shard reference, which the host checks against declared resource and query limits before fetching it.
 
-Value states are `loading`, `ready`, `stale`, `missing`, `error` and `permission_required`. `ready` means a verified snapshot received through the selected provider. Permission prompts belong to the host.
+| Value state | Meaning | Alice sees on her listing |
+| --- | --- | --- |
+| `loading` | The first read is in flight | A placeholder where the price goes |
+| `ready` | A verified snapshot arrived through the selected provider | The current price |
+| `stale` | The host-recorded time exceeds the view's maximum age | The price with "seen 7 minutes ago" |
+| `missing` | The contract or record is absent | "Listing withdrawn" |
+| `error` | The read failed after the declared retries | A retry control |
+| `permission_required` | The host needs a grant before reading | The host's permission prompt |
 
-Core's get response and update notification carry the key, contract and state. Freshness is therefore the host-recorded time it received the response, or a publisher timestamp the application encodes in contract state and declares in its view schema. A view declares a maximum age. `stale` means the recorded time exceeds that age, so the reader shows the value with its observation time and the host refreshes it.
+Freshness is the host-recorded time it received the response, or a publisher timestamp the application encodes in contract state and declares in the view schema. `stale` means that time exceeds the maximum age, so the reader shows the value with its observation time and the host refreshes it. Permission prompts belong to the host.
 
-The host reference-counts underlying subscriptions. Releasing a view releases its demand. Other active views retain their subscriptions. A client subscription to Core ends with the client connection: stdlib 0.10 has Put, Update, Get and Subscribe, and Core lists Unsubscribe as upcoming. When that request ships, the host's reference count decides when to send it. Background shutdown follows the SDK lifecycle and invalidates late callbacks.
+The host reference-counts subscriptions. Releasing a view releases its demand, and other active views keep theirs. When Unsubscribe ships, the reference count decides when to send it. Background shutdown follows the SDK lifecycle and invalidates late callbacks.
+
+Example: `listingDetails` declares a maximum age of five minutes. Alice opens her skateboard listing on the train. The host last received the listing seven minutes ago, so the reader shows the price with "seen 7 minutes ago" and the host refreshes when the network returns.
 
 ## 5. Values and local storage
 
