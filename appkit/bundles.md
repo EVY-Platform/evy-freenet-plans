@@ -39,7 +39,7 @@ Direct links, QR codes, Atlas and catalogues identify an application by its `app
 
 Example: the QR code on Alice's skateboard listing and every Marketplace release Bob installs name the same `app_ref`. Bob's phone fetches that container and checks its signature before it shows the "Marketplace" label from the code.
 
-[Identity](../identity/README.md#7-publisher-continuity) defines the mutually acknowledged transfer when a publisher changes its key or validator. Hosts keep the transfer evidence and ask before moving private access.
+The [migration plan](../migration/README.md#4-publisher-continuity) defines the mutually acknowledged transfer when a publisher changes its key or validator. Hosts keep the transfer evidence and ask before moving private access.
 
 AppKit adds these files to the archive:
 
@@ -112,19 +112,15 @@ EVY Developer and source projects use this same path. Attribution controls accep
 
 `fdev build` writes each contract's Wasm to `contracts/<code_hash>.wasm` with `dependencies.json`.
 
-Contract and delegate identity uses the same derivation as `app_ref`: Core hashes the component's code and its own parameter bytes. Application contracts and delegates choose their own parameter encoding.
-
-Successor pointers come from `freenet-migrate`, a library outside Core that applications link themselves.
+Contract and delegate keys derive from code and parameters the same way as `app_ref`, as the [migration plan](../migration/README.md#1-component-identity-and-re-keying) details.
 
 ### What AppKit proposes
 
 The definition's contract/delegate references field lists each contract under `contracts/` and each delegate under `delegates/` with its code, parameter rules and supported protocols. It also declares the initialization actions that [section 4](#4-host-execution-from-the-definition) runs.
 
-Fixtures specify each component's parameter encoding, every host derives the same key from those fixtures, and migrations preserve the parameter bytes byte for byte.
-
 Example: the Marketplace offer contract's key is the hash of its Wasm plus its parameter bytes. Bob's phone and Alice's laptop derive the same key from the bundle before either sends an offer, and the shared fixtures check that every host agrees.
 
-Hosts link `freenet-migrate` and resolve the verified code hash with the component's actual parameters, keeping the resolver's minimum accepted version. Applications own their migration adapters, as the [migration plan](../migration/README.md#2-contract-carry-forward) specifies. A pointer locates a component. The adapter recovers its data.
+The [migration plan](../migration/README.md) fixes parameter encodings, resolves successor pointers and carries state across re-keys.
 
 ## 4. Host execution from the definition
 

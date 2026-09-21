@@ -6,7 +6,7 @@ Application publishing supports optional attribution. The contributor-funded Mar
 
 ## 1. Products and identities
 
-A product has an economic `ProductId` mapped to authorized application container identities. The service verifies publisher authority when approving each mapping and retains its signed history. Publisher transfers follow [identity continuity](../identity/README.md#7-publisher-continuity), and this service approves the successor mapping separately. Marketplace and River have separate products. The generic Freenet mobile app can host both.
+A product has an economic `ProductId` mapped to authorized application container identities. The service verifies publisher authority when approving each mapping and retains its signed history. Publisher transfers follow [publisher continuity](../migration/README.md#4-publisher-continuity), and this service approves the successor mapping separately. Marketplace and River have separate products. The generic Freenet mobile app can host both.
 
 | Identifier | Meaning |
 | --- | --- |

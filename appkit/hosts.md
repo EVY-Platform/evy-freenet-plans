@@ -152,7 +152,7 @@ The host manages app sessions and combines authorized requests for the same live
 
 Backgrounding saves drafts and pending operations, cancels local work and invalidates callbacks from the previous session. Each resumed app gets fresh session authority. Queue transactions preserve committed work across forced termination.
 
-Host storage contains verified bundles, cached screen data, drafts, preferences, pending operations and saved navigation that remains compatible with the installed copy. Core stores delegate state. The [identity plan](../identity/README.md) defines protected keys and recovery coverage. Test locked-device access, invalidated keys, device replacement and delegate upgrades through the application's [export and import round trip](../identity/README.md#4-delegate-upgrades).
+Host storage contains verified bundles, cached screen data, drafts, preferences, pending operations and saved navigation that remains compatible with the installed copy. Core stores delegate state. The [identity plan](../identity/README.md) defines protected keys and recovery coverage. Test locked-device access, invalidated keys, device replacement and delegate upgrades through the application's [export and import round trip](../migration/README.md#3-delegate-secret-export-and-import).
 
 Refresh application containers and active contracts within resource budgets after displaying trusted cached state. The host may restore missing application data through authorized domain recovery actions. Recovering [cold state](https://github.com/freenet/freenet-core/issues/4642) requires an available hosting copy.
 
@@ -196,7 +196,7 @@ Offline devices act when they receive and verify the status. Show the last obser
 
 Keep the working copy and evidence needed by unresolved operations. Retain a compatible recovery copy where storage allows. Remove unused copies to stay within the configured storage limit. Retrieve archives from the publisher or mirrors using exact digests and verify their envelopes and container identity. Preserve the latest observed version and status when reopening a compatible earlier copy. A later publication containing earlier application code must still pass current compatibility checks.
 
-Publisher transfers use [identity continuity](../identity/README.md#7-publisher-continuity). Obtain approval before moving private access to the successor container, preserve transfer evidence and resume interrupted local migration from its journal.
+Publisher transfers use [publisher continuity](../migration/README.md#4-publisher-continuity). Obtain approval before moving private access to the successor container, preserve transfer evidence and resume interrupted local migration from its journal.
 
 ## 7. Photos, files and external services
 

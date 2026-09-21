@@ -186,7 +186,7 @@ The host retains a recovery inventory for application-owned contracts, including
 
 For Alice's sale, the retained inventory contains her listing and pickup agreement. The payment service retains payment evidence, and the publisher retains exact archives and signed container envelopes. Each owner keeps a recoverable copy. A successful PUT records submission. Read back and verify the accepted bytes. Core serves GET from locally cached state, including on an isolated node, so record whether the observation came from local storage or from an independently exercised network path. Verify remote retrievability separately before claiming distribution, and retain recovery copies under the stated retention policy. A separate retrieval is a point-in-time observation. Retention and repair handle ongoing durability.
 
-[Identity and sync](../identity/README.md) owns delegate migration and cross-device enrollment. Integrate deferred delegate reads, durable subscription demand and initial-state notifications through the Core dependencies listed in the [identity plan](../identity/README.md#6-delivery-and-acceptance).
+[Identity and recovery](../identity/README.md) owns cross-device enrollment, [device sync](../identity/device-sync.md) owns synchronization and the [migration plan](../migration/README.md) owns delegate migration. Integrate deferred delegate reads, durable subscription demand and initial-state notifications through the Core dependencies listed in the [device sync plan](../identity/device-sync.md#2-core-dependencies).
 
 ## 7. Delivery plan
 

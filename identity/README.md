@@ -1,8 +1,8 @@
-# Identity, recovery and device sync
+# Identity and recovery
 
 Alice loses her phone while a skateboard sale is awaiting pickup. Recovery should restore her authority to finish that sale and decrypt its pickup details. The recovery screen must explain which records it can restore and which still require another device or service.
 
-This plan owns user key protection, recovery coverage, delegate migration and opt-in device sync. [Bundles](../appkit/bundles.md) defines container and publication references. This plan owns publisher transfers and approval to move private access. [Hosts](../appkit/hosts.md) enforce access. The [mobile SDK](../freenet-mobile/README.md) integrates Core storage and native key systems.
+This plan owns user key protection and recovery coverage. The [migration plan](../migration/README.md) owns delegate upgrades and publisher transfers, and [device sync](device-sync.md) is a parallel track with its own gate. [Bundles](../appkit/bundles.md) defines container and publication references. [Hosts](../appkit/hosts.md) enforce access. The [mobile SDK](../freenet-mobile/README.md) integrates Core storage and native key systems.
 
 ## 1. Separate identities and authority
 
@@ -77,92 +77,15 @@ Recovery requires the secret and an available package. Publish the package's sto
 
 Contributor key recovery uses this plan's recovery package. [Attribution](../attribution/README.md) decides which evidence it accepts before it rebinds a contributor lineage, and payout changes remain subject to the financial service's checks. The financial service requires verified recovery evidence before transferring a balance.
 
-## 4. Delegate upgrades
 
-Treat the delegate's full code-and-parameter identity as the access boundary. Requests route by delegate key and parameters. A new delegate version has a new key and starts with an empty secret store.
 
-The baseline is application-controlled migration. The predecessor delegate answers an export request, and the successor imports through the application. The migration library's delegate path follows this shape, so use it where its interfaces fit. Plaintext secrets transit the application during that round trip. State that exposure in the application's privacy documentation. Every AppKit delegate implements this export and import path. A delegate without it strands its secrets on re-key.
-
-```mermaid
-sequenceDiagram
-    participant Host as Marketplace host
-    participant Old as Predecessor delegate
-    participant New as Successor delegate
-    Host->>Host: Verify the new bundle and ask Alice to approve the upgrade
-    Host->>Old: Export request
-    Old-->>Host: Exported secrets, validated by the domain adapter
-    Host->>New: Import request with the exported secrets
-    New-->>Host: Import result
-    Host->>New: Read back and validate
-    Host->>Host: Journal completion, then retire the predecessor
-```
-
-| Path | Authority | Executable API | Status |
-| --- | --- | --- | --- |
-| Application export and import | The application, under the user's approval in the host | Delegate messages through Core's client API and `freenet-migrate` delegate adapters | Baseline |
-| Core-mediated provenance, deposit and merge | Core, from node-observed container installation | Proposed in [RFC #5255](https://github.com/freenet/freenet-core/issues/5255), with authorization, deposit and merge work still to define | Separately gated implementation |
-
-The migration record identifies the predecessor, successor, namespace, approving user and migration revision. The host journals it. Preserve a recoverable copy until readback and application validation complete. Resume interrupted migrations idempotently.
-
-Test a malicious successor, copied parameters, a caller-selected namespace, replayed approval and concurrent migrations. Retain original encoding information so an upgrade can find records created under earlier domain protocol versions. Define consent, selection policy and completeness checks before moving secrets.
-
-[PR #5199](https://github.com/freenet/freenet-core/pull/5199) disabled Core's copy-forward of secrets to a successor, and that constraint stays. Regression tests confirm that the application round trip is the only path that moves secrets. Launch gate: whichever approved path protects private access passes these tests before Marketplace enables protected operations.
-
-## 5. Opt-in device synchronization
-
-Build continuous sync as a parallel track based on [RFC #5587](https://github.com/freenet/freenet-core/issues/5587). A user selects which applications and private data join the sync group. Enrollment requires proof from the user's recovery or already authorized device authority.
-
-For example, Alice edits the pickup time on her phone while her offline laptop still holds the previous agreement. Sync preserves both signed proposals and lets Marketplace show the conflict. Marketplace resolves the competing proposals under its agreement rules.
-
-- Authenticate the caller's full delegate identity through Core before binding it to a stable sync namespace.
-- Encrypt records before publication and authenticate namespace, revision and encryption-key epoch. That epoch is a counter inside the sync group's records within one contract instance.
-- Preserve concurrent siblings and deletion records, so a late device cannot resurrect deleted private data.
-- Keep device enrollment, revocation and encryption-key epochs explicit. Removing a device rotates future access under the group's policy.
-- Show which earlier material a revoked device could read. Key rotation protects future updates, while earlier copies remain on that device.
-- Support bidirectional phone, tablet and desktop updates, including long offline periods.
-- Give foreground sync byte, time and retry budgets. Use configurable bounded shards and measure small-record updates on cellular links.
-- Publish signed membership transitions and preserve conflicts in competing device-list updates until authorized resolution.
-- Keep recoverable encrypted copies and report incomplete synchronization. Network contracts provide best-effort availability.
-
-Resident delegates can continue work only while their hosting peer runs. Mobile background suspension still follows the SDK lifecycle.
-
-## 6. Delivery and acceptance
+## 4. Delivery and acceptance
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
 | 1. Caller and key boundaries | Scoped signing, protected stores and Core-authenticated delegate calls | One app cannot claim another app's namespace or use a stale session. |
 | 2. Local recovery | Encrypted export/import, key coverage and application journals | Device-loss fixtures recover Alice's order without duplicating her request. |
-| 3. Delegate migration | Application export and import round trip and resumable readback | Interrupted upgrades preserve recoverable secrets and reject unauthorized successors. |
-| 4. Device sync, parallel track | Enrollment, encrypted records, concurrent changes and revocation | Offline devices converge without losing conflicts, reviving deletions or granting revoked future access. |
 
-Phases 1 through 3 apply to the Marketplace launch profile. Phase 4 has a separate release gate.
+Both phases apply to the Marketplace launch profile. [Device sync](device-sync.md) has a separate release gate.
 
 Run tests for wrong recovery secrets, corrupt/truncated packages, unsupported versions, device lock, key invalidation, reinstall, interrupted import, explicit key deletion and exhausted storage. Check pending operations against the current contract state before retry. Confirm recovery restores only its declared coverage and that failed deletion remains visible.
-
-Core dependencies include [private cross-peer sync #4560](https://github.com/freenet/freenet-core/issues/4560), [delegate contract operations reaching the network #5542](https://github.com/freenet/freenet-core/issues/5542), [resident delegates #5467](https://github.com/freenet/freenet-core/issues/5467) and [delegate subscription persistence #5493](https://github.com/freenet/freenet-core/pull/5493). All four are open or proposed. Test these integrations through the [mobile SDK acceptance cases](../freenet-mobile/README.md#8-acceptance-cases).
-
-## 7. Publisher continuity
-
-Routine updates retain the container validator code and publisher key. A change to either creates a successor container identity. The initial AppKit transfer convention uses matching statements authenticated by the two containers' normal signatures.
-
-Launch uses the stock website container. Its parameters are a single Ed25519 verifying key, its update rule accepts only a strictly higher version, and each accepted update replaces the whole state. Three consequences follow:
-
-| Container property | Consequence for this plan |
-| --- | --- |
-| Parameters are one verifying key, hashed into the identity | Adding a recovery key creates a successor identity. Publisher key loss is therefore final, and the publisher recovers from tested backups |
-| Whole-state replacement per version | A transfer is the highest-version signed predecessor state a host has observed. Every later predecessor version carries the transfer statement, because a routine update without it would replace it |
-| One accepted state per version | Two signed states at one version are a compromise signal. Hosts stop automatic transfer and the publisher resolves it outside the network |
-
-1. Publish and verify the successor container.
-2. Publish a higher version of the predecessor containing a transfer statement with the full predecessor and successor identities, a unique transfer ID and purpose.
-3. Publish the successor's acknowledgement of those exact fields. The application definition carries the transfer or acknowledgement as optional metadata.
-4. The host verifies both signed snapshots, retains the evidence and asks the user before moving private data or permissions.
-5. Journal the approved local migration, verify its result and retain recovery evidence. New permission scopes require new grants. Moving delegate secrets uses the [application export and import path](#4-delegate-upgrades).
-
-After a same-version divergence, the publisher publishes a higher predecessor version that names the competing digests and the selected successor. Hosts resume automatic transfer from that version.
-
-A transfer link offers migration. Keep references to the user's current container and data throughout the transfer. Keep previously verified withdrawal records. Running the successor requires user approval, active application status and successful compatibility checks.
-
-Attribution separately authorizes each product-to-container mapping. Existing payments retain their original references through the transfer. Protect publisher keys with tested backups and restore one in a fixture before launch. A custom container validator whose parameters carry a recovery key is a later option that would itself be a successor identity.
-
-Test forged transfers, mismatched acknowledgements, conflicting successors, interruption, copied container parameters and expanded permissions. Restore a publisher backup in a fixture and prove it can sign a valid update to the original container.

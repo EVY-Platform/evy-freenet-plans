@@ -2,7 +2,7 @@
 
 Peer reputation is an optional research project for proving application activity while protecting private evidence. An application can request a claim about an unfamiliar peer while the peer keeps its pass and receipt history private. [Marketplace](../marketplace/README.md) can use these claims alongside its seller checks.
 
-[Identity and sync](../identity/README.md) owns protected keys, enrollment and recovery. [Hosts](../appkit/hosts.md) authenticate the calling application and enforce grants. This plan owns claims, private witnesses, verification and privacy policy. [Declared application actions](../appkit/actions-and-delegates.md) request scoped proof operations. SDUI and custom native clients receive the same results through that interface.
+[Identity and recovery](../identity/README.md) owns protected keys, enrollment and recovery. [Hosts](../appkit/hosts.md) authenticate the calling application and enforce grants. This plan owns claims, private witnesses, verification and privacy policy. [Declared application actions](../appkit/actions-and-delegates.md) request scoped proof operations. SDUI and custom native clients receive the same results through that interface.
 
 The examples below describe proposed integrations. Each source application must implement rules for accepting activity and issuing receipts before a proof can verify that activity.
 
