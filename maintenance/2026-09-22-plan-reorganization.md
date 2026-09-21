@@ -1,6 +1,6 @@
 # Reorganization plan: reading order and one topic per plan
 
-Status: planned on 2026-09-22, not started. Assumes [PR #1](https://github.com/EVY-Platform/evy-freenet-plans/pull/1) is merged, so section numbers below refer to the restructured `appkit/data-actions.md`.
+Status: executed on 2026-09-22 in [PR #2](https://github.com/EVY-Platform/evy-freenet-plans/pull/2), after [PR #1](https://github.com/EVY-Platform/evy-freenet-plans/pull/1) merged. Section numbers below refer to the restructured `appkit/data-actions.md` as it stood before the split. The optional move in [6.8](#68-optional-bundles-section-4-into-hosts) was declined in favor of the pointer sentence in hosts section 6.
 
 Reorder the roadmap so a reader meets generic and customer-visible concepts first and granular mechanics later. Split the plans that carry more than two topics. Give each cross-cutting topic one home. Every move in this plan is a move or a split. No sentence is deleted unless another plan already states it, and each such case is named.
 
