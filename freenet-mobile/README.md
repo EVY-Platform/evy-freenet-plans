@@ -50,7 +50,7 @@ Publish required adapters, unsupported operations and API compatibility changes 
 | Identity integration | Recovery authority, protected key operations and authorized migration | Restore Alice's access after replacing her phone. |
 | Services | Payment and remuneration ledgers and bridge recovery | Publish a verified payment result while Bob's phone sleeps. |
 
-The [data and actions](../appkit/data-actions.md), [hosts](../appkit/hosts.md) and [identity](../identity/README.md) plans define these interfaces. Hosts retain pending-order journals and use application delegates for domain reconciliation. Payment and remuneration services manage fees.
+The [actions](../appkit/actions-and-delegates.md), [data](../appkit/data-and-operations.md), [hosts](../appkit/hosts.md) and [identity](../identity/README.md) plans define these interfaces. Hosts retain pending-order journals and use application delegates for domain reconciliation. Payment and remuneration services manage fees.
 
 ## 2. Embedded node and native API
 
@@ -113,37 +113,12 @@ Start the device resource budget from Core's constants and replace each with a m
 | Maximum contract state | 50 MiB | Core state store |
 | Module cache size | Read from cgroup limits, which iOS does not provide. Set an explicit size for mobile | Core module cache |
 
-The SDK bindings share protocol fixtures across browser and native builds. AppKit's [data and actions plan](../appkit/data-actions.md) defines declarative execution and typed application delegate protocols separately.
+The SDK bindings share protocol fixtures across browser and native builds. AppKit's [actions plan](../appkit/actions-and-delegates.md) defines declarative execution and typed application delegate protocols separately.
 
 ## 4. Thin-peer network role
 
-A thin peer opens a terminal connection to a serving full peer. That connection carries its reads, writes and subscriptions. The full peer performs onward routing, hosting and update distribution.
+A thin peer opens a terminal connection to a serving full peer that routes, hosts and distributes updates for it. This is AppKit's proposed Core extension, specified in the [thin-peer proposal](thin-peer-proposal.md). The full-peer profile stays the production role until the proposal lands.
 
-```mermaid
-flowchart LR
-    App["Bob's reader or native application"] --> Host["Trusted host"]
-    Host --> SDK["Native Rust stdlib and bindings"]
-    SDK --> Thin["Embedded thin peer"]
-    Thin -->|"Own reads, writes and subscriptions"| Full["Serving full peer"]
-    Full --> Network["Freenet routing and hosting"]
-    Network --> Full
-    Full -->|"Requested updates"| Thin
-```
-
-Add versioned role negotiation and retain the accepted role for the connection's lifetime. Full peers handle onward routing, fallback routing, hosting and subscription roots. Send updates down the edge only for its authorized active subscriptions. Clean up downstream demand on disconnect.
-
-| Core area | Required change |
-| --- | --- |
-| Connect operation | Negotiate role and protocol compatibility in request and response. |
-| Connection manager | Register persistent terminal edges and preserve their negotiated role. |
-| Ring | Assign hosting and subscription roots to full peers and maintain serving connections for thin peers. |
-| Subscribe operation | Manage terminal subscriptions, downstream delivery and unsubscribe. |
-| Connection lifecycle | Preserve role on completion and release state on disconnect. |
-| Configuration and node construction | Apply role-specific topology rules and serving-peer settings. |
-
-Thin-peer connections are open to peers with compatible protocols when serving capacity is available.
-
-This role is AppKit's proposed Core extension. File it as a role-design proposal in freenet-core and track negotiation, terminal edges, subscription delivery and carrier acceptance against that proposal. The full-peer baseline stays the supported profile until the proposal lands. Related Core behavior the proposal must preserve: [GET routing for subscribed contracts #4222](https://github.com/freenet/freenet-core/issues/4222) and [placement migration #4440](https://github.com/freenet/freenet-core/issues/4440).
 
 ## 5. Connectivity and lifecycle
 
@@ -186,7 +161,7 @@ The host retains a recovery inventory for application-owned contracts, including
 
 For Alice's sale, the retained inventory contains her listing and pickup agreement. The payment service retains payment evidence, and the publisher retains exact archives and signed container envelopes. Each owner keeps a recoverable copy. A successful PUT records submission. Read back and verify the accepted bytes. Core serves GET from locally cached state, including on an isolated node, so record whether the observation came from local storage or from an independently exercised network path. Verify remote retrievability separately before claiming distribution, and retain recovery copies under the stated retention policy. A separate retrieval is a point-in-time observation. Retention and repair handle ongoing durability.
 
-[Identity and sync](../identity/README.md) owns delegate migration and cross-device enrollment. Integrate deferred delegate reads, durable subscription demand and initial-state notifications through the Core dependencies listed in the [identity plan](../identity/README.md#6-delivery-and-acceptance).
+[Identity and recovery](../identity/README.md) owns cross-device enrollment, [device sync](../identity/device-sync.md) owns synchronization and the [migration plan](../migration/README.md) owns delegate migration. Integrate deferred delegate reads, durable subscription demand and initial-state notifications through the Core dependencies listed in the [device sync plan](../identity/device-sync.md#2-core-dependencies).
 
 ## 7. Delivery plan
 

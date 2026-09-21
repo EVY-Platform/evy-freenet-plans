@@ -124,24 +124,21 @@ sequenceDiagram
 | Plan | What for |
 | --- | --- |
 | [Application bundles](appkit/bundles.md) | Bob opens a signed Freenet container holding definitions, screens and domain artifacts. |
-| [Application data and actions](appkit/data-actions.md) | Readers coordinate declared actions, delegates prepare domain results and hosts track pending work. |
-| [SDUI](appkit/sdui.md) | A publisher describes screens once. Readers display them using browser, iPhone and Android controls. |
 | [Hosts](appkit/hosts.md) | The host verifies bundles, manages installed copies and asks for access in a trusted screen. |
-| [Freenet mobile SDK](freenet-mobile/README.md) | A phone embeds Freenet, reconnects and follows the contracts its apps use. |
-| [Identity, recovery and device sync](identity/README.md) | Alice recovers the keys and private records needed to finish her sale. |
-| [Attribution](attribution/README.md) | Accepted contributions have recorded authors, reviews and allocation weights. |
-| [Payments](payment/README.md) | The payment service signs the payment result for the agreed order. |
-| [Remuneration](remuneration/README.md) | The service allocates funded contributor fees once and accounts for refunds. |
-| [EVY Developer platform](evy/README.md) | Developers build SDUI screens, publish bundles and manage contributions and earnings. |
-| [Atlas sample](atlas-sample/README.md) | Atlas search and publication work through web, SDUI and custom native interfaces. |
+| [Identity and recovery](identity/README.md) | Alice recovers the keys and private records needed to finish her sale. |
 | [Freenet mobile app](freenet-mobile-app/README.md) | People discover and open compatible Freenet applications in one mobile app. |
 | [Marketplace](marketplace/README.md) | People buy and sell nearby, arrange fulfillment and pay through the shared platform. |
-
-Start with the [SDK feasibility stage](freenet-mobile/README.md#0-feasibility-and-existing-evidence). Exercise reads, subscriptions, updates and delegate requests through the TypeScript SDK, the Rust browser build, and Swift and Kotlin bindings. Compare the Rust-backed browser build that the web SDUI reader uses against the TypeScript SDK for startup, download size and memory. Measure native library size, memory, copying, subscription traffic and lifecycle recovery.
-
-Use Atlas to test SDK reuse and declarative SDUI separately. Prove one action through SDUI and a custom native interface while preserving the published index identity. Record adapter work, unsupported operations and API changes, then set acceptance budgets before wider adoption. Publish its web files, definitions, domain artifacts and SDUI through the existing container format. Test offline use, an incompatible update and a component migration. Then complete EVY's export and contribution workflow, followed by Marketplace payments.
-
-Optional extension: [peer reputation](reputation-proofs/README.md) where a person can prove a supported application claim while limiting disclosure.
+| [SDUI](appkit/sdui.md) | A publisher describes screens once. Readers display them using browser, iPhone and Android controls. |
+| [Actions and delegates](appkit/actions-and-delegates.md) | A tap on a declared action runs bounded steps and asks the application's delegate to prepare the result. |
+| [Data and pending operations](appkit/data-and-operations.md) | Screens read verified views, keep drafts offline and track each submitted update to its outcome. |
+| [Payments](payment/README.md) | The payment service signs the payment result for the agreed order. |
+| [EVY Developer platform](evy/README.md) | Developers build SDUI screens, publish bundles and manage contributions and earnings. |
+| [Attribution](attribution/README.md) | Accepted contributions have recorded authors, reviews and allocation weights. |
+| [Remuneration](remuneration/README.md) | The service allocates funded contributor fees once and accounts for refunds. |
+| [Freenet mobile SDK](freenet-mobile/README.md) | A phone embeds Freenet, reconnects and follows the contracts its apps use. |
+| [Upgrades and migration](migration/README.md) | Contracts, delegate secrets and publisher keys survive code and key changes. |
+| [Atlas sample](atlas-sample/README.md) | Atlas search and publication work through web, SDUI and custom native interfaces. |
+| [Peer reputation](reputation-proofs/README.md) | A person proves a supported application claim while limiting disclosure. |
 
 ## Risks and limitations
 

@@ -1,7 +1,5 @@
 # EVY Developer platform
 
-Dependencies: [Bundles](../appkit/bundles.md), [Data and actions](../appkit/data-actions.md), [SDUI](../appkit/sdui.md), [Hosts](../appkit/hosts.md), [Attribution](../attribution/README.md), [Payments](../payment/README.md), and [Remuneration](../remuneration/README.md).
-
 EVY Developer combines drag-and-drop SDUI authoring with contribution review, attribution, earnings and payout workflows. Its export tools bundle web files, an application definition, declarative actions, domain artifacts and SDUI for ordinary Freenet publication.
 
 The visual builder lets people create, preview, validate and publish AppKit applications by assembling screens, flows, data bindings and actions. The builder uses Freenet container identity and publication interfaces, local project storage, and the attribution service API for contribution review and archive certification. The builder uses React, the AppKit protocols for declared actions and typed delegate operations, and Freenet publication.
@@ -99,7 +97,7 @@ Readable views: listings, listingById
 Actions: makeOffer, acceptOffer
 ```
 
-Queries follow the [declared-views rule](../appkit/data-actions.md). Definitions bound queries and identify allowed indexes. The host fetches the declared records and delegates interpret the results. The builder exposes the typed query arguments and limits. SDUI expressions perform only bounded presentation formatting and visibility checks over returned views.
+Queries follow the [declared-views rule](../appkit/data-and-operations.md#1-reads-views-and-freshness). Definitions bound queries and identify allowed indexes. The host fetches the declared records and delegates interpret the results. The builder exposes the typed query arguments and limits. SDUI expressions perform only bounded presentation formatting and visibility checks over returned views.
 
 ## 6. Preview
 

@@ -2,7 +2,7 @@
 
 Marketplace is the final product in the roadmap. It runs inside the [Freenet mobile app](../freenet-mobile-app/README.md) and supports nearby discovery, offers, payment, and structured pickup, delivery, and shipping arrangements. Marketplace chooses declarative SDUI for its mobile launch, and declares a custom web target alongside it.
 
-Marketplace uses [bundles](../appkit/bundles.md), [data and actions](../appkit/data-actions.md), [SDUI](../appkit/sdui.md), [hosts](../appkit/hosts.md), [mobile SDK](../freenet-mobile/README.md), and [identity and sync](../identity/README.md). [Attribution](../attribution/README.md), [Payment](../payment/README.md), [Remuneration](../remuneration/README.md), and [EVY Developer](../evy/README.md) handle contribution review, payment collection and contributor payouts. [Atlas](../atlas-sample/README.md) proves platform integration before Marketplace starts. [Peer reputation](../reputation-proofs/README.md) is optional.
+Marketplace uses [bundles](../appkit/bundles.md), [actions and delegates](../appkit/actions-and-delegates.md), [data and pending operations](../appkit/data-and-operations.md), [SDUI](../appkit/sdui.md), [hosts](../appkit/hosts.md), [mobile SDK](../freenet-mobile/README.md), [identity and recovery](../identity/README.md), and the [migration plan](../migration/README.md). [Attribution](../attribution/README.md), [Payment](../payment/README.md), [Remuneration](../remuneration/README.md), and [EVY Developer](../evy/README.md) handle contribution review, payment collection and contributor payouts. [Atlas](../atlas-sample/README.md) proves platform integration before Marketplace starts. [Peer reputation](../reputation-proofs/README.md) is optional.
 
 Alice lists a skateboard for 80 dollars in her suburb. Bob offers 70 and proposes Saturday pickup. Alice signs accepted terms. Bob pays through Checkout after verifying those terms. The app reveals the agreed meeting details only to the participants. They each confirm the exchange. Pending, conflicting, and disputed outcomes remain visible with their evidence.
 
@@ -135,15 +135,6 @@ Marketplace owns the following versioned operations. SDUI invokes their declared
 
 Pickup uses proposed time windows and an encrypted meeting place. Delivery uses a service window, delivery fee and encrypted recipient details. Shipping uses a service choice, shipping charge and encrypted destination. Seller response and participant confirmation are separate signed actions. The UI presents these as request cards and forms.
 
-Each domain record carries its schema version, application identity, logical request ID, author, recipient, order and listing reference, terms revision and causal predecessor. Four rules give it an identity:
-
-1. Derive the record ID from a domain-separated canonical encoding of every unsigned field, excluding the record ID and the signature.
-2. Sign the content together with that derived ID.
-3. After encryption and envelope signing, derive the storage entry digest from the complete final envelope bytes.
-4. Validators recompute each identity at the boundary where it applies.
-
-A retry preserves the logical operation ID and the original signed bytes. A counterproposal creates a new record. Participant journals retain observed conflicting variants within their disclosed evidence limits.
-
 ```mermaid
 sequenceDiagram
     participant Buyer
@@ -164,38 +155,8 @@ sequenceDiagram
     Seller->>Order: Confirm handover
 ```
 
-### Public first contact and bounded transport
+The [fulfillment requests plan](fulfillment-requests.md) defines record identity, the admission and continuation contracts and the encryption profile.
 
-Each listing advertises a seller-signed current request generation. V1 permits public first contact through a bounded admission contract, then moves the conversation to a continuation page the seller grants. Both contracts merge by deterministic set union followed by their selection rule. These constants form the v1 wire profile, and the maximum canonical state size is tested from the codec.
-
-| Contract | Record limit | Capacity | Selection rule |
-| --- | --- | --- | --- |
-| Public admission | 4 KiB including signed envelope and padded ciphertext | 64 records | Keep the lowest full content digests |
-| Granted continuation | 4 KiB per record | 16 slots per participant | Keep the two lowest storage digests per slot |
-
-This bounds storage and makes replicas converge. Admission remains vulnerable to competition for the available slots. A sender can grind digests or fill the area and displace an honest request. The reader reports `Awaiting seller receipt`, `Request absent from current set`, or `Admission saturated` according to observed evidence. The host keeps the original signed request locally and retries within budgets. Delivery status requires a signed seller receipt. The seller can open a new request generation so clients can retry. A sustained attack can fill that generation too.
-
-Once the seller admits a request, it issues a signed grant bound to the application, page identity and generation, permitted participant writer, order and request ID, slot range, schema version and maximum record size.
-
-A replica can receive continuation records before the grant that authorizes them. Every delta carries the grant record together with the operations that reference it. A delta whose grant is absent is rejected in full, so the sender re-offers it with the grant attached. Discarding only the unauthorized part would lose records that a later grant makes valid.
-
-Two distinct records in one slot prove that its writer signed competing records. Set the slot to `Conflicted` and block the corresponding domain transition. Every retained conflict witness passes the same writer, grant and signature checks as an ordinary record. Extra observed variants can survive in participant journals within disclosed local limits.
-
-Both participants sign a successor-page reference and agreed checkpoint when capacity is exhausted. Recovery and dispute access depend on retained network copies and recovery-covered participant journals.
-
-Full-state and delta validation apply the same encoding, signature, grant, digest and size rules. Property tests must prove associativity, commutativity, idempotence, batch invariance and maximum encoded size for both admission and continuation contracts. Empty bootstrap state has explicit handling. Eviction follows the digest selection rule. Contract expiry requires explicit time evidence or signed participant action.
-
-### Encryption, acceptance and recovery
-
-Use one reviewed, versioned cryptographic profile. Bind routing and context fields to authenticated encryption, derive keys separately by direction, and independently sign domain records. Participant signatures establish authorship. Keep encryption/signing keys in delegates or platform-protected storage.
-
-Limits apply before expensive decoding and decryption. Encrypt permitted attachments separately and address them by ciphertext digest. Keep names, previews and sensitive metadata encrypted. Enforce count, byte and decode limits in the trusted host. Describe ciphertext retention, compromised-key handling and forward-secrecy expectations in the profile.
-
-A signed admission receipt means the recipient verified and persisted the record locally. It differs from accepting the proposed terms, making payment, dispatching goods or confirming delivery. Update the processed-operation marker and resulting local state atomically. Retrying a previously processed record returns the same result. Side effects use their own stable operation IDs.
-
-Sender queues survive restart and uncertain submission. The host re-fetches records, obtains delegate reconciliation results and republishes eligible pending records within its budgets, including a bounded previous-generation window. A local retry deadline stops local attempts. Appointment times express the participants' agreed schedule. Contract expiry requires explicit time evidence or signed participant action.
-
-Recovery, cross-device transfer and the [forget operation](../identity/README.md#2-protected-keys-and-records) follow the identity plan. Confirm persistence of private order evidence before payment. Forgetting an active order warns that its keys or evidence may be needed for fulfillment or a claim. The domain delegate filters records from blocked keys before presentation and acknowledgment. Cache deterministic malformed-record refusals so repeated updates cannot trigger endless key derivation. Per-session CPU, download and storage budgets remain effective during a flood.
 
 ## 6. Payments and contributor funding
 
@@ -227,7 +188,7 @@ SDUI covers browse/search, listing details/editor, store profiles, offers, fulfi
 
 Subscribe to viewed listings, active orders and pending request generations. Repair those subscriptions after reconnect. Cache saved/owned listings, active trades and durable pending operations. Show stale, pending, conflicted and unavailable states with their observed evidence. Devices that run only in the foreground can serve or repair data while the application is open.
 
-Contract code changes produce new instance identities. Register predecessor hashes and original parameter encodings with the existing migration library, persist actual instance references and implement the [application migration adapters](../appkit/data-actions.md#9-application-migrations). Choose a recovery policy per contract. Snapshot records use the newest compatible generation. Combining signed-event histories requires tests for merging, deletion markers and conflicts. Validate recovered state, publish it and verify readback before recording success.
+Contract code changes produce new instance identities. Register predecessor hashes and original parameter encodings with the existing migration library, persist actual instance references and implement the [application migration adapters](../migration/README.md#2-contract-carry-forward). Choose a recovery policy per contract. Snapshot records use the newest compatible generation. Combining signed-event histories requires tests for merging, deletion markers and conflicts. Validate recovered state, publish it and verify readback before recording success.
 
 Index/pointer updates follow verified publication. Local bundle installation, shared contract migration and delegate-secret transfer each retain their own progress and recovery evidence. Migration fixtures include a seller who has been offline across several application versions, mixed-version participants, full continuation pages and private key/delegate migration. Every application checks protocol compatibility before adopting published definitions or domain artifacts.
 

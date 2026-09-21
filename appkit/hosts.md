@@ -1,7 +1,5 @@
 # AppKit hosts
 
-Dependencies: [bundles](bundles.md), [data and actions](data-actions.md), [SDUI](sdui.md), [mobile SDK](../freenet-mobile/README.md).
-
 An AppKit host coordinates an application's declared actions, checks its permissions and saves its local data. It verifies the installed copy before starting the application. A reader turns the application's SDUI screen description into controls people can use.
 
 For example, Alice opens Marketplace on her phone and offers $40 for a skateboard. The reader displays the offer form. The application delegate checks her amount and prepares the offer. The host checks the app's permission to submit the offer and saves the pending operation. Freenet Core handles the requested shared-state update.
@@ -23,7 +21,7 @@ These are reusable parts. The [Freenet mobile app](../freenet-mobile-app/README.
 
 A contract defines rules for shared data. A delegate performs approved private operations, such as signing. The broker checks application requests before passing them to Core, local storage or device services.
 
-The [SDUI plan](sdui.md) defines screen descriptions and readers. The [data and actions plan](data-actions.md) defines application actions and pending-operation rules. The [bundle plan](bundles.md) defines packaged metadata and Freenet publication. This plan owns installation, update selection, execution and access.
+The [SDUI plan](sdui.md) defines screen descriptions and readers. The [actions plan](actions-and-delegates.md) defines application actions, and the [data plan](data-and-operations.md) defines pending-operation rules. The [bundle plan](bundles.md) defines packaged metadata and Freenet publication. This plan owns installation, update selection, execution and access.
 
 ## 2. Who controls what
 
@@ -146,7 +144,7 @@ flowchart TD
     G --> H["Show confirmed result or keep pending"]
 ```
 
-An update counts as accepted once it merges locally and a later read or update notification shows it in the contract state. Marketplace defines what that result means for the buyer and seller. The [operation lifecycle](data-actions.md#6-submitting-updates-and-pending-operations) defines retries, conflicts and unresolved submissions.
+An update counts as accepted once it merges locally and a later read or update notification shows it in the contract state. Marketplace defines what that result means for the buyer and seller. The [operation lifecycle](data-and-operations.md#3-submitting-updates-and-pending-operations) defines retries, conflicts and unresolved submissions.
 
 ### Storage and lifecycle implementation
 
@@ -154,7 +152,7 @@ The host manages app sessions and combines authorized requests for the same live
 
 Backgrounding saves drafts and pending operations, cancels local work and invalidates callbacks from the previous session. Each resumed app gets fresh session authority. Queue transactions preserve committed work across forced termination.
 
-Host storage contains verified bundles, cached screen data, drafts, preferences, pending operations and saved navigation that remains compatible with the installed copy. Core stores delegate state. The [identity plan](../identity/README.md) defines protected keys and recovery coverage. Test locked-device access, invalidated keys, device replacement and delegate upgrades through the application's [export and import round trip](../identity/README.md#4-delegate-upgrades).
+Host storage contains verified bundles, cached screen data, drafts, preferences, pending operations and saved navigation that remains compatible with the installed copy. Core stores delegate state. The [identity plan](../identity/README.md) defines protected keys and recovery coverage. Test locked-device access, invalidated keys, device replacement and delegate upgrades through the application's [export and import round trip](../migration/README.md#3-delegate-secret-export-and-import).
 
 Refresh application containers and active contracts within resource budgets after displaying trusted cached state. The host may restore missing application data through authorized domain recovery actions. Recovering [cold state](https://github.com/freenet/freenet-core/issues/4642) requires an available hosting copy.
 
@@ -170,7 +168,7 @@ flowchart LR
     Stage --> Switch[Commit installed copy and start fresh session]
 ```
 
-Record both the latest verified publication and the installed copy, including when the host observed each. Every session uses one archive for its actions, screens and schemas and records the exact delegate identities it invokes. Invalidate callbacks from the previous session when switching copies. Product discovery screens call these host operations.
+Record both the latest verified publication and the installed copy, including when the host observed each. Every session uses one archive for its actions, screens and schemas and records the exact delegate identities it invokes. Invalidate callbacks from the previous session when switching copies. Product discovery screens call these host operations. The [bundle plan](bundles.md#4-host-execution-from-the-definition) lists the initialization actions the host runs from the definition and the installation and session identifiers it assigns.
 
 | Observation or condition | Host behavior |
 | --- | --- |
@@ -184,7 +182,7 @@ Record both the latest verified publication and the installed copy, including wh
 | Ordinary website | Open through the Freenet browser shell |
 | Arbitrary contract | Open the contract inspection view |
 
-Run local database migrations against staged or recoverable storage and read back the result before committing installation. The [data and actions plan](data-actions.md#9-application-migrations) assigns domain adapters to the application and migration orchestration to the host, while [identity](../identity/README.md#4-delegate-upgrades) owns secret-access authorization. Shared contracts evolve independently of the local installation transaction. A cached definition can run only with compatible executor steps, delegates and local/shared state schemas.
+Run local database migrations against staged or recoverable storage and read back the result before committing installation. The [migration plan](../migration/README.md#2-contract-carry-forward) assigns domain adapters to the application and migration orchestration to the host, and its [delegate section](../migration/README.md#3-delegate-secret-export-and-import) owns secret-access authorization. Shared contracts evolve independently of the local installation transaction. A cached definition can run only with compatible executor steps, delegates and local/shared state schemas.
 
 ### Withdrawal and reinstatement
 
@@ -198,7 +196,7 @@ Offline devices act when they receive and verify the status. Show the last obser
 
 Keep the working copy and evidence needed by unresolved operations. Retain a compatible recovery copy where storage allows. Remove unused copies to stay within the configured storage limit. Retrieve archives from the publisher or mirrors using exact digests and verify their envelopes and container identity. Preserve the latest observed version and status when reopening a compatible earlier copy. A later publication containing earlier application code must still pass current compatibility checks.
 
-Publisher transfers use [identity continuity](../identity/README.md#7-publisher-continuity). Obtain approval before moving private access to the successor container, preserve transfer evidence and resume interrupted local migration from its journal.
+Publisher transfers use [publisher continuity](../migration/README.md#4-publisher-continuity). Obtain approval before moving private access to the successor container, preserve transfer evidence and resume interrupted local migration from its journal.
 
 ## 7. Photos, files and external services
 
@@ -219,6 +217,14 @@ Network policy differs by target:
 | --- | --- | --- |
 | Browser | Fixed by Core's Content Security Policy. `default-src` and `connect-src` allow only the node's origin plus `blob:` and `data:`. Fetch, XHR, WebSocket and image loads to other origins are blocked. Only popups escape | Checkout opens Stripe in a popup or redirect. Listing photos are bundled in the archive or served by the node |
 | Native | The host's own policy over approved adapters | Checkout opens the system browser or an in-app browser session. Media loads through the approved adapter |
+
+For attachments, validate size and media policy before staging. Encrypt the bytes when the application requires confidentiality. Store content-addressed bytes, authenticate the metadata and return a verified content reference. Publish the reference only after required upload evidence exists. Product policy defines availability repair.
+
+Pickers return scoped handles. The granted operations, the session and its lifetime bound application access. Preview, image loading and external URL actions follow broker policy, including implicit network requests.
+
+Applications may declare completion evidence for the [remuneration plan](../remuneration/README.md). The adapter forwards that evidence with the operation ID and the bindings the payment fixed at checkout, which the host retains and remuneration verifies. A newer application version submitting evidence for an older operation uses the original bindings.
+
+Example: Alice adds a skateboard photo. The host validates it, stores it as a content-addressed blob the node serves and returns a verified reference the listing embeds. Bob pays through a popup. On return the host reads the order contract and forwards completion evidence with Bob's operation ID.
 
 Local imports and exports use authenticated host operations. EVY Developer handles application-definition imports. Application delegates convert domain records, and hosts check destination authority before import. Show unsupported records and require valid signed operations before importing shared state.
 

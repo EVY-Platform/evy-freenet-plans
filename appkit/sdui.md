@@ -1,7 +1,5 @@
 # SDUI
 
-Dependencies: [bundles](bundles.md), [data and actions](data-actions.md), [hosts](hosts.md).
-
 SDUI describes an application's screens as data. A reader turns that description into working controls in a browser, on iPhone or on Android. For example, a listing screen describes a photo gallery, price, amount field and Make offer button. Each reader displays those controls using its platform's layout and accessibility support.
 
 SDUI shares screen definitions across platforms and lets authors build them in EVY Developer. Readers execute declared action steps through their hosts. The web reader uses the Rust-backed browser SDK. Custom web applications use the TypeScript SDK or a linked Rust build. Native readers and custom native applications use the native library with Swift/Kotlin bindings. The [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) lists every target.
@@ -75,7 +73,7 @@ The following example illustrates how the button supplies arguments to the decla
 }
 ```
 
-Publication and loading check action names, argument types and data paths against the action schema. The action definition names bounded steps and a typed delegate request for domain preparation. The host checks permissions and validates the delegate result before submission. Contracts enforce shared-state rules.
+Publication and loading check action names, argument types and data paths against the action schema. The [action definition](actions-and-delegates.md#2-declared-actions) names bounded steps and a typed delegate request for domain preparation. The host checks permissions and validates the delegate result before submission. Contracts enforce shared-state rules.
 
 Display expressions support presence checks, fallback values, boolean comparisons, string checks and locale-aware formatting. They calculate values without side effects. Set limits for input size, nesting and evaluation steps. The host fetches bounded index shards. Application delegates interpret domain records, prepare screen data and calculate business values. Shared test cases define null and missing-value behavior and number conversions.
 
