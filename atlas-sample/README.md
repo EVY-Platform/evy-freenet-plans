@@ -26,7 +26,7 @@ Then prove `addProducts` through a declarative SDUI action and a custom native c
 | Local drafts, saved items and pending operations | App-scoped host storage | Records survive restart and uncertain submission |
 | Screens and navigation | SDUI reader or custom native/web UI | Controls invoke compatible domain actions |
 
-Implement the [typed delegate convention](../appkit/data-actions.md#3-delegate-requests-and-results) for Atlas. The delegate returns typed views or prepared bytes. The host validates each result and any requested resource before continuing. Acceptance covers `loadIndex`, search, refresh and `addProducts`. Supporting these actions in the generic reader requires compatible definitions and delegates.
+Implement the [typed delegate convention](../appkit/actions-and-delegates.md#3-delegate-requests-and-results) for Atlas. The delegate returns typed views or prepared bytes. The host validates each result and any requested resource before continuing. Acceptance covers `loadIndex`, search, refresh and `addProducts`. Supporting these actions in the generic reader requires compatible definitions and delegates.
 
 ## 3. Publish the sample bundle
 

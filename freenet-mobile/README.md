@@ -50,7 +50,7 @@ Publish required adapters, unsupported operations and API compatibility changes 
 | Identity integration | Recovery authority, protected key operations and authorized migration | Restore Alice's access after replacing her phone. |
 | Services | Payment and remuneration ledgers and bridge recovery | Publish a verified payment result while Bob's phone sleeps. |
 
-The [data and actions](../appkit/data-actions.md), [hosts](../appkit/hosts.md) and [identity](../identity/README.md) plans define these interfaces. Hosts retain pending-order journals and use application delegates for domain reconciliation. Payment and remuneration services manage fees.
+The [actions](../appkit/actions-and-delegates.md), [data](../appkit/data-and-operations.md), [hosts](../appkit/hosts.md) and [identity](../identity/README.md) plans define these interfaces. Hosts retain pending-order journals and use application delegates for domain reconciliation. Payment and remuneration services manage fees.
 
 ## 2. Embedded node and native API
 
@@ -113,7 +113,7 @@ Start the device resource budget from Core's constants and replace each with a m
 | Maximum contract state | 50 MiB | Core state store |
 | Module cache size | Read from cgroup limits, which iOS does not provide. Set an explicit size for mobile | Core module cache |
 
-The SDK bindings share protocol fixtures across browser and native builds. AppKit's [data and actions plan](../appkit/data-actions.md) defines declarative execution and typed application delegate protocols separately.
+The SDK bindings share protocol fixtures across browser and native builds. AppKit's [actions plan](../appkit/actions-and-delegates.md) defines declarative execution and typed application delegate protocols separately.
 
 ## 4. Thin-peer network role
 

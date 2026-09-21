@@ -1,6 +1,6 @@
 # Application bundles
 
-A publisher packages an application in an ordinary Freenet website container. The signed archive holds the application definition, actions, screens, assets and contract/delegate artifacts. [Hosts](hosts.md) install that content, [Data and actions](data-actions.md) define declarative execution and delegate interfaces, and [SDUI](sdui.md) defines screens.
+A publisher packages an application in an ordinary Freenet website container. The signed archive holds the application definition, actions, screens, assets and contract/delegate artifacts. [Hosts](hosts.md) install that content, [Actions and delegates](actions-and-delegates.md) define declared actions and delegate interfaces, [Data and pending operations](data-and-operations.md) define reads and submitted updates, and [SDUI](sdui.md) defines screens.
 
 | Section | What Freenet provides today | What AppKit proposes |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ Fixtures specify each component's parameter encoding, every host derives the sam
 
 Example: the Marketplace offer contract's key is the hash of its Wasm plus its parameter bytes. Bob's phone and Alice's laptop derive the same key from the bundle before either sends an offer, and the shared fixtures check that every host agrees.
 
-Hosts link `freenet-migrate` and resolve the verified code hash with the component's actual parameters, keeping the resolver's minimum accepted version. Applications own their migration adapters, as the [data and actions plan](data-actions.md#9-application-migrations) specifies. A pointer locates a component. The adapter recovers its data.
+Hosts link `freenet-migrate` and resolve the verified code hash with the component's actual parameters, keeping the resolver's minimum accepted version. Applications own their migration adapters, as the [migration plan](../migration/README.md#2-contract-carry-forward) specifies. A pointer locates a component. The adapter recovers its data.
 
 ## 4. Host execution from the definition
 

@@ -124,7 +124,8 @@ sequenceDiagram
 | Plan | What for |
 | --- | --- |
 | [Application bundles](appkit/bundles.md) | Bob opens a signed Freenet container holding definitions, screens and domain artifacts. |
-| [Application data and actions](appkit/data-actions.md) | Readers coordinate declared actions, delegates prepare domain results and hosts track pending work. |
+| [Actions and delegates](appkit/actions-and-delegates.md) | A tap on a declared action runs bounded steps and asks the application's delegate to prepare the result. |
+| [Data and pending operations](appkit/data-and-operations.md) | Screens read verified views, keep drafts offline and track each submitted update to its outcome. |
 | [SDUI](appkit/sdui.md) | A publisher describes screens once. Readers display them using browser, iPhone and Android controls. |
 | [Hosts](appkit/hosts.md) | The host verifies bundles, manages installed copies and asks for access in a trusted screen. |
 | [Freenet mobile SDK](freenet-mobile/README.md) | A phone embeds Freenet, reconnects and follows the contracts its apps use. |
