@@ -137,7 +137,7 @@ Definitions bind logical resources such as `marketplace.listings` and `identity.
 | `loading` | The first read is in flight | A placeholder where the price goes |
 | `ready` | A verified snapshot arrived through the selected provider | The current price |
 | `stale` | The host-recorded time exceeds the view's maximum age | The price with "seen 7 minutes ago" |
-| `missing` | The contract or record is absent | "Listing withdrawn" |
+| `missing` | The contract or record is absent | "Listing not found" |
 | `error` | The read failed after the declared retries | A retry control |
 | `permission_required` | The host needs a grant before reading | The host's permission prompt |
 
@@ -306,10 +306,31 @@ Example: the Marketplace publisher rebuilds the offer contract. The build fails 
 
 ## 10. Reference recap
 
+| Reference | Status | Names | Explained in |
+| --- | --- | --- | --- |
+| Contract and delegate key | Existing | One contract or delegate, from its code hash and parameters | [Section 1](#1-who-does-what) |
+| `MessageOrigin` | Existing | The attested caller of a delegate message | [Section 3](#3-delegate-requests-and-results) |
+| `UpdateResponse` summary | Existing | The local node's view after a merge | [Section 6](#6-submitting-updates-and-pending-operations) |
+| Action definition and step version | Proposed | One declared action and the executor primitives it uses | [Section 2](#2-declared-actions) |
+| Delegate protocol version and request ID | Proposed | One typed delegate exchange | [Section 3](#3-delegate-requests-and-results) |
+| Logical resource and view | Proposed | A declared contract binding and a typed read over it | [Section 4](#4-reads-views-and-freshness) |
+| Storage namespace | Proposed | Where one app's local data for one user and installation lives | [Section 5](#5-values-and-local-storage) |
+| Operation ID | Proposed | One user action across retries, restarts and recovery | [Section 6](#6-submitting-updates-and-pending-operations) |
+| Verified content reference | Proposed | One content-addressed blob | [Section 7](#7-device-and-service-adapters) |
+| Completion evidence | Proposed | Proof of a qualifying operation for remuneration | [Section 7](#7-device-and-service-adapters) |
+| Recovery policy | Proposed | How one domain carries state across generations | [Section 9](#9-application-migrations) |
+
+`app_ref`, `publication_ref` and the installation and session identifiers belong to the [bundle recap](bundles.md#7-reference-recap).
+
 ## 11. Acceptance
 
-Use the [feasibility stage](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) to measure SDK bindings separately from declarative/delegate orchestration. Run real delegate integration tests alongside deterministic previews. Verify a new compatible SDUI definition works without application-specific code compiled into the reader. Equivalent domain behavior across targets comes from shared protocol fixtures rather than from an identical SDK implementation.
+- Reads, subscriptions, updates and delegate requests pass the same protocol fixtures through the Rust browser build, Swift and Kotlin, measured in the [feasibility stage](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) separately from declarative and delegate orchestration.
+- Real delegate integration tests run alongside deterministic previews, and a new compatible SDUI definition works without application-specific code compiled into the reader.
+- Request correlation, instance ID updates and subscription repair pass the [mobile SDK acceptance cases](../freenet-mobile/README.md#8-acceptance-cases).
+- Fixtures cover canonical records, signing inputs, typed errors, schema mismatches, codec errors, stale caches, duplicate responses, request isolation and late completions. Property tests cover domain conversions and reconciliation. Formatting fixtures supply identical locale, time zone and current time.
+- Force termination, lock, permission revocation and network change preserve recoverable drafts and operation identity.
+- Hosts reject cross-app access, forged caller IDs, malformed delegate results, undeclared targets and excessive action work.
+- SDUI and custom native interfaces complete equivalent fixture actions through their target's SDK and the same domain protocols.
+- Migration fixtures pass for skipped versions, late predecessors, deletions, conflicts, interrupted readback and mixed-version participants.
 
-Test request correlation, instance-ID updates and subscription repair through the [mobile SDK acceptance cases](../freenet-mobile/README.md#8-acceptance-cases). Acceptance covers canonical records, signing inputs, typed errors, schema mismatches, codec errors, stale caches, duplicate responses, request isolation and late completions. Run property tests for domain conversions and reconciliation. Formatting fixtures supply identical locale, time zone and current time.
-
-Force termination, lock, permission revocation and network change must preserve recoverable drafts and operation identity. Reject cross-app access, forged caller IDs, malformed delegate results, undeclared targets and excessive action work. SDUI and custom native interfaces complete equivalent fixture actions through their target's SDK and the same domain protocols.
+References: [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [delegate interface](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs), [freenet-migrate](https://github.com/freenet/freenet-migrate).
