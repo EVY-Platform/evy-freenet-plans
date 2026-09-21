@@ -16,7 +16,13 @@ errors, warnings = [], []
 
 # The cleanup plan and this script describe files that later tasks create, so they are
 # exempt from both checks.
-SKIP = {"AGENTS.md", "maintenance/2026-09-17-consistency-cleanup.md", "maintenance/check-plans.py"}
+SKIP = {
+    "AGENTS.md",
+    "maintenance/2026-09-17-consistency-cleanup.md",
+    "maintenance/2026-09-22-data-actions-refactor.md",
+    "maintenance/2026-09-22-plan-reorganization.md",
+    "maintenance/check-plans.py",
+}
 
 for f in files:
     if f in SKIP:
