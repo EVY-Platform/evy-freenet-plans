@@ -94,15 +94,31 @@ Example: Carol's Make offer button names `marketplace.makeOffer` with the listin
 
 ### What Freenet provides today
 
+`DelegateRequest::ApplicationMessages` carries the delegate key, its parameters and a list of inbound messages. An `ApplicationMessage` holds opaque payload bytes, a `DelegateContext` of at most 409,600 bytes and a processed flag. The application and its delegate agree on what the payload means.
+
+The delegate's `process` function receives an `Option<MessageOrigin>`. `WebApp(contract id)` names the calling web app when Core resolved its session token. `Delegate(key)` names a calling delegate and replaces any web app origin for that call.
+
+The delegate replies with `OutboundDelegateMsg` values, which reach the client as `HostResponse::DelegateResponse`. It can also ask Core to get, put, update, subscribe to and unsubscribe from contracts, message another delegate and prompt the user with `RequestUserInput`.
+
+Core delivers a delegate's output to local clients by locality, so two unattested local clients on one node see the same output. Core-authenticated app sessions are open work in [#5264](https://github.com/freenet/freenet-core/issues/5264). The mobile crate exposes no delegate operation yet, and the [mobile plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) lists it as a feasibility deliverable.
+
 ### What AppKit proposes
 
-The host performs reads and submits updates through the SDK. Delegates receive the supplied records and return results through Core's delegate messaging API. Implement application adapters for domain codecs, canonical signing inputs and view projections. Validate source identities and signatures required by each domain. A delegate's proposed update still passes host authorization and contract validation.
+A typed request and result convention inside the payload bytes:
 
-Specify deterministic encoding, typed errors, request correlation and ownership of transferred bytes for the delegate convention and each language binding. Bound large payloads and measure copying across bindings. Reject conflicting request-ID reuse, unknown handles and completions from expired sessions. Delegate requests and results carry their protocol version. Fixtures define their exact encodings.
+| Field | Request | Result |
+| --- | --- | --- |
+| Protocol version | The delegate protocol the session selected | Echoed |
+| Request ID | Unique within the session | Echoed |
+| Body | Typed arguments and bounded record bytes the host read | A typed projection, prepared operation bytes or a defined error |
 
-The host assigns the container identity, verified content reference, user, installation and session generation. It protects these fields from changes by application content. The content reference is the publication reference for a downloaded definition or the certified native artifact reference selected under the [bundle plan](bundles.md).
+Fixtures define the exact encodings. Each language binding specifies deterministic encoding, typed errors, request correlation and ownership of transferred bytes. Bound large payloads and measure copying across bindings. Reject conflicting request ID reuse, unknown handles and completions from expired sessions.
 
-Core attaches only the originating app's contract id, or another delegate's key, to a delegate message. Delegate policy keys on that id alone. User, installation and session generation are host bookkeeping that the host enforces before a request reaches Core. A delegate treats copies of those fields inside message bytes as unverified data.
+Delegate policy keys on the `MessageOrigin` contract id. The host assigns the container identity, verified content reference, user, installation and session generation, as [hosts section 2](hosts.md#2-who-controls-what) and [bundles section 4](bundles.md#4-host-execution-from-the-definition) describe, and enforces them before a request reaches Core. A delegate treats copies of those fields inside the payload as unverified data.
+
+Application adapters supply domain codecs, canonical signing inputs and view projections, and validate the source identities and signatures each domain requires. A delegate's prepared update still passes host authorization and contract validation.
+
+Example: Bob's request is `prepareOffer` at protocol version 1 with request ID 17, the listing ID, the amount 8000 minor units of USD and the listing record bytes the host read. The Marketplace delegate checks the listing's minimum, signs the offer and returns prepared update bytes. Core stamps the message with `WebApp(Marketplace contract id)`. An amount below the minimum returns the typed error `below_minimum`, which the reader shows on the form.
 
 ## 4. Reads, views and freshness
 
