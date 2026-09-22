@@ -18,7 +18,7 @@ The launch product is a Marketplace for buying and selling locally. It arranges 
 
 ## The approach at a glance
 
-Developers can build JavaScript/TypeScript or Rust clients today. These plans add SDUI readers and reusable Swift/Kotlin integrations for native mobile applications. The diagram shows the supported paths by target. The [SDK paths table](freenet-mobile/README.md#0-feasibility-and-existing-evidence) is the canonical list.
+Developers can build JavaScript/TypeScript or Rust clients today. These plans add SDUI readers and reusable Swift/Kotlin integrations for native mobile applications.
 
 ```mermaid
 flowchart LR

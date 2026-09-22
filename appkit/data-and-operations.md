@@ -84,7 +84,7 @@ resource_reference, canonical_payload, base_summary_if_required
 created_time, retry_policy, status, completion_evidence
 ```
 
-`app_ref` and the originating content reference come from [bundles section 2](bundles.md#2-publishing-and-evidence). The operation ID identifies one user action across retries, restarts and device recovery. The [mobile plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) keeps SDK request correlation separate from it.
+`app_ref` and the originating content reference come from [bundles section 4](bundles.md#4-publishing-and-evidence). The operation ID identifies one user action across retries, restarts and device recovery. The [mobile plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) keeps SDK request correlation separate from it.
 
 ```mermaid
 stateDiagram-v2

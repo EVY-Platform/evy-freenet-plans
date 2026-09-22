@@ -13,7 +13,7 @@ Marketplace rebuilds its offer contract. Bob's phone must find Alice's listing u
 
 ### What Freenet provides today
 
-A contract or delegate key is BLAKE3 over the code hash and parameter bytes, the same derivation as [`app_ref`](../appkit/bundles.md#1-the-website-container), so a rebuild creates a new key and leaves state under the old one. Application contracts and delegates choose their own parameter encoding. Successor pointers come from `freenet-migrate`, a library outside Core that applications link themselves. The [whitepaper](https://github.com/freenet/paper-1/blob/main/sections/07-status.tex) states the consequence: components are content addressed, a new version is published under a new key, and Core has no upgrade protocol.
+A contract or delegate key is BLAKE3 over the code hash and parameter bytes, the same derivation as [`app_ref`](../appkit/bundles.md#1-identity-and-discovery), so a rebuild creates a new key and leaves state under the old one. Application contracts and delegates choose their own parameter encoding. Successor pointers come from `freenet-migrate`, a library outside Core that applications link themselves. The [whitepaper](https://github.com/freenet/paper-1/blob/main/sections/07-status.tex) states the consequence: components are content addressed, a new version is published under a new key, and Core has no upgrade protocol.
 
 ### What AppKit proposes
 

@@ -168,7 +168,7 @@ flowchart LR
     Stage --> Switch[Commit installed copy and start fresh session]
 ```
 
-Record both the latest verified publication and the installed copy, including when the host observed each. Every session uses one archive for its actions, screens and schemas and records the exact delegate identities it invokes. Invalidate callbacks from the previous session when switching copies. Product discovery screens call these host operations. The [bundle plan](bundles.md#4-host-execution-from-the-definition) lists the initialization actions the host runs from the definition and the installation and session identifiers it assigns.
+Record both the latest verified publication and the installed copy, including when the host observed each. Every session uses one archive for its actions, screens and schemas and records the exact delegate identities it invokes. Invalidate callbacks from the previous session when switching copies. Product discovery screens call these host operations. The bundle plan lists the [initialization actions](bundles.md#3-contracts-delegates-and-initialization) the host runs from the definition and the [installation and session identifiers](bundles.md#5-installing-a-copy) it assigns.
 
 | Observation or condition | Host behavior |
 | --- | --- |

@@ -58,7 +58,7 @@ Example: Bob taps Make offer. The executor runs the declared steps, the host che
 
 ### What Freenet provides today
 
-A web application orchestrates its own requests. Its JavaScript or Rust code sends `ClientRequest::ContractOp` and `ClientRequest::DelegateOp` over the client API and matches the responses itself. The website container holds `index.html` and the code it loads, per [bundles section 1](bundles.md#1-the-website-container).
+A web application orchestrates its own requests. Its JavaScript or Rust code sends `ClientRequest::ContractOp` and `ClientRequest::DelegateOp` over the client API and matches the responses itself. The website container holds `index.html` and the code it loads, per [bundles section 2](bundles.md#2-the-archive-and-its-definition).
 
 ### What AppKit proposes
 
@@ -104,7 +104,7 @@ A typed request and result convention inside the payload bytes:
 
 Fixtures define the exact encodings. Each language binding specifies deterministic encoding, typed errors, request correlation and ownership of transferred bytes. Bound large payloads and measure copying across bindings. Reject conflicting request ID reuse, unknown handles and completions from expired sessions.
 
-Delegate policy keys on the `MessageOrigin` contract id. The host assigns the container identity, verified content reference, user, installation and session generation, as [hosts section 2](hosts.md#2-who-controls-what) and [bundles section 4](bundles.md#4-host-execution-from-the-definition) describe, and enforces them before a request reaches Core. A delegate treats copies of those fields inside the payload as unverified data.
+Delegate policy keys on the `MessageOrigin` contract id. The host assigns the container identity, verified content reference, user, installation and session generation, as [hosts section 2](hosts.md#2-who-controls-what) and [bundles section 5](bundles.md#5-installing-a-copy) describe, and enforces them before a request reaches Core. A delegate treats copies of those fields inside the payload as unverified data.
 
 Application adapters supply domain codecs, canonical signing inputs and view projections, and validate the source identities and signatures each domain requires. A delegate's prepared update still passes host authorization and contract validation.
 
