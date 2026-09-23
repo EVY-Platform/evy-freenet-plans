@@ -1,6 +1,6 @@
 # Atlas sample application
 
-Use Atlas to prove the per-target SDK paths and declarative SDUI before building the generic Freenet mobile app. Bob searches for applications, opens a result and saves it. A publisher adds a listing. SDUI and a custom native interface must produce equivalent records through their targets' SDKs and shared protocol fixtures.
+Use Atlas to prove the per-target SDK paths and declarative SDUI before building the generic Freenet mobile app. Bob searches for applications, opens a result and saves it. A publisher adds an application to the index. SDUI and a custom native interface must produce equivalent records through their targets' SDKs and shared protocol fixtures.
 
 ## 1. Existing evidence and compatibility
 
@@ -30,18 +30,19 @@ Implement the [typed delegate convention](../appkit/actions-and-delegates.md#3-d
 
 ## 3. Publish the sample bundle
 
-The sample bundle contains web assets, an application definition, declarative actions, typed schemas, SDUI and required delegate artifacts. Its custom browser build keeps Atlas's Rust client, and the web reader uses the Rust-backed browser SDK. The installed native readers and custom SwiftUI sample package the same native SDK and bindings.
+The sample bundle contains Atlas's web app, the web reader build, an application definition, declarative actions, typed schemas, SDUI and required delegate artifacts. Atlas's `index.html` keeps its Rust client and places a `<freenet-web>` element where the SDUI screens go. The web reader uses the Rust-backed browser SDK. The installed native readers and custom SwiftUI sample package the same native SDK and bindings.
 
-Add the definitions and SDUI to the ordinary website archive and use existing Freenet publication with [bundle validation](../appkit/bundles.md). Test a mobile-only variant with a static landing page. Preserve the index validator and parameters independently of UI and delegate changes.
+Add the definitions, SDUI and reader build to the ordinary website archive and use existing Freenet publication with [bundle validation](../appkit/bundles.md). Test a second variant whose `index.html` loads only the web reader. Preserve the index validator and parameters independently of UI and delegate changes.
 
 ```mermaid
 flowchart LR
     Source["Shared Rust freenet-stdlib source"] -.->|"Compile"| Browser["Browser SDK build"]
     Source -.->|"Compile"| Native["Native SDK with Swift / Kotlin bindings"]
-    Bundle["Verified Atlas definitions and SDUI"] -.-> Web["Web reader and host"]
-    Bundle -.-> Mobile["iOS / Android readers and hosts"]
+    Bundle["Verified Atlas bundle with definitions, SDUI and web reader"] -.-> Web["Web reader loaded by index.html"]
+    Bundle -.-> Mobile["iOS / Android readers built into the apps"]
     Web --> Browser
-    CustomWeb["Atlas custom web app"] --> Browser
+    CustomWeb["Atlas custom web app in index.html"] -->|"Embeds"| Web
+    CustomWeb --> Browser
     Mobile --> Native
     Custom["Custom SwiftUI sample"] --> Native
     Browser --> Core["Freenet Core"]
@@ -58,25 +59,25 @@ The SDUI covers search/results, details, saved items and publisher submission. R
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
-| 0. Feasibility | stdlib bump to Core's version, then Rust-browser, TypeScript, Swift and Kotlin SDK operations plus one declarative action | Measurements establish adapter work, supported operations, compatibility changes and adoption budgets |
+| 0. Feasibility | stdlib bump to Core's version, then Rust-browser, TypeScript, Swift and Kotlin SDK operations plus one declarative action | Measurements establish adapter work, supported operations, compatibility changes, adoption budgets and the size the web reader adds to each bundle |
 | 1. Compatibility fixtures | Pinned author key, pointer record, index code hash and canonical signed records | Tests detect any unintended identity or record change |
 | 2. Domain delegate | Typed views and prepared update results | Deterministic and live Core tests cover search, refresh and publication |
 | 3. Native proof | Native SDK with a custom SwiftUI sample | Read, refresh and publish work against embedded Core with scoped keys |
 | 4. Shared screens | Web, iOS and Android SDUI readers | Equivalent action results and canonical records across targets |
-| 5. Bundle installation | Ordinary website container with AppKit definitions | Web/mobile-only fixtures open, incompatible updates preserve a usable copy and component migration passes |
+| 5. Bundle installation | Ordinary website container with AppKit definitions | Custom web and reader-only fixtures open in a browser and in the native readers, incompatible updates preserve a usable copy and component migration passes |
 
 Use embedded full-peer operation for early native integration. Complete feasibility before expanding browser SDK migration or consumer-product adoption.
 
 ## 5. Acceptance cases
 
 - Bob opens a verified cached index while refresh is pending, and the UI labels its observation time.
-- Malformed listings and delegate results cannot substitute publisher authority, target identity or permissions.
+- Malformed index records and delegate results cannot substitute publisher authority, target identity or permissions.
 - Publication retries preserve operation identity and exact signed bytes after timeout or termination. Changed content creates a successor operation.
 - Reopening rejects callbacks from the previous session. Closing one view preserves another view's subscription through host reference counting, since the Core subscription ends with the connection until Unsubscribe ships.
 - SDK builds pass shared protocol fixtures. SDUI and custom native actions produce equivalent domain records and signing inputs.
 - The TypeScript SDK keeps its API, and the Rust-backed browser build is measured against it.
 - A new compatible SDUI action opens without application-specific code compiled into the reader. Unsupported steps and protocols fail before activation.
-- Web-only and combined bundles open their declared entry points. Native links identify separately distributed applications.
+- The custom web and reader-only fixtures open in a browser, and native readers render both from `ui/sdui/ui.json`. Native links identify separately distributed applications.
 - The pinned author key, pointer record and index code hash remain unchanged.
 - Measurements separate SDK transport/bindings, Core execution, declarative actions and rendering. Large records and rapid subscription events stay within the agreed budgets.
 

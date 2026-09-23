@@ -1,10 +1,10 @@
 # EVY Developer platform
 
-EVY Developer combines drag-and-drop SDUI authoring with contribution review, attribution, earnings and payout workflows. Its export tools bundle web files, an application definition, declarative actions, domain artifacts and SDUI for ordinary Freenet publication.
+EVY Developer combines drag-and-drop SDUI authoring with contribution review, attribution, earnings and payout workflows. Its export tools bundle the web app, the web reader, an application definition, declarative actions, domain artifacts and SDUI for ordinary Freenet publication.
 
 The visual builder lets people create, preview, validate and publish AppKit applications by assembling screens, flows, data bindings and actions. The builder uses Freenet container identity and publication interfaces, local project storage, and the attribution service API for contribution review and archive certification. The builder uses React, the AppKit protocols for declared actions and typed delegate operations, and Freenet publication.
 
-Example: Carol wants a "Make offer" screen. Carol drags an input and a button onto a page, binds the input to `local:draft.amount`, attaches `marketplace.makeOffer` to the button, previews it in a phone frame, and submits a proposal. The attribution service reviews and accepts the work before certification and publication. Carol receives funded credit when a qualifying paid operation supplies the evidence required by its checkout policy.
+Example: Carol wants an "Invite member" screen. Carol drags an input and a button onto a page, binds the input to `local:draft.invitee`, attaches `river.inviteMember` to the button, previews it in a phone frame, and submits a proposal. The attribution service reviews and accepts the work before certification and publication. Carol receives funded credit when a product with paid operations uses the capability, per [remuneration](../remuneration/README.md).
 
 Hand-written definitions and other builders use the same protocol. Every client creates and verifies the same records.
 
@@ -29,20 +29,19 @@ Import schemas through released `freenet-appkit` packages. A person composes scr
 
 | A project holds | In Carol's project |
 | --- | --- |
-| Application interfaces and their requirements | Custom web, SDUI and native targets selected independently |
-| Custom web entry point and built assets | Publisher-supplied web build |
+| Application interfaces and their requirements | A web app, with SDUI and native targets added to it |
+| Web entry point and built assets | River's Rust web build, with a `<freenet-web>` element on the invite page |
 | Declarative actions, typed views and delegate descriptors | Required for SDUI; available to custom applications using the same domain protocols |
 | Optional SDUI targets and overrides | Shared screens with platform presentation overrides |
 | Artifact hashes, source evidence and prepared archive | Reviewed checkpoint and exact domain artifact digests |
-| Product identity and metadata | Marketplace container and draft display version |
-| Flows, pages, components | The "Make offer" page |
-| Routes and parameters | `listing/{listingId}/offer` |
-| Theme and localization | The Marketplace theme, English and French strings |
-| Logical contract and delegate bindings | `marketplace.orders`, `identity` |
-| Permissions | Open Stripe Checkout, read photos |
-| Sample data and preview scenarios | Alice's skateboard listing, an offline scenario |
-| Capability catalogue | `marketplace.offer.negotiate` |
-| Product proposals, contributor claims, attribution drafts | Carol's proposal for the offer screen |
+| Product identity and metadata | River container and draft display version |
+| Flows, pages, components | The "Invite member" page |
+| Routes and parameters | `room/{roomId}/invite` |
+| Theme and localization | The River theme, English and French strings |
+| Logical contract and delegate bindings | `river.room`, `identity` |
+| Sample data and preview scenarios | Alice's room Skate club, an offline scenario |
+| Capability catalogue | `river.member.invite` |
+| Product proposals, contributor claims, attribution drafts | Carol's proposal for the invite screen |
 
 Local signing keys live in protected native stores or delegates. The payment service holds the payment processor credentials.
 
@@ -52,7 +51,7 @@ Each edit has a stable local operation ID:
 
 | Operation | Carol's edit |
 | --- | --- |
-| CreateEntity | Adds the amount input |
+| CreateEntity | Adds the invitee input |
 | SetProperty | Sets the button title |
 | InsertChild | Places the input above the button |
 | MoveChild | Swaps their order |
@@ -91,10 +90,10 @@ The builder explains each term in plain language and shows the underlying techni
 Carol selects declared data sources and delegate protocols, then binds controls to typed views and actions. The builder validates each bounded action sequence against reader capabilities and delegate descriptors. Hosts coordinate reads and submissions. Application delegates own domain decoding, projections and prepared updates. Presentation bindings provide bounded formatting and navigation.
 
 ```text
-Data source: Marketplace listings
+Data source: River rooms
 Kind: Declared view
-Readable views: listings, listingById
-Actions: makeOffer, acceptOffer
+Readable views: roomList, members
+Actions: inviteMember, acceptInvite
 ```
 
 Queries follow the [declared-views rule](../appkit/data-and-operations.md#1-reads-views-and-freshness). Definitions bound queries and identify allowed indexes. The host fetches the declared records and delegates interpret the results. The builder exposes the typed query arguments and limits. SDUI expressions perform only bounded presentation formatting and visibility checks over returned views.
@@ -106,7 +105,7 @@ The builder embeds the released reader and declarative executor with typed deleg
 - responsive web sizes plus iOS and Android semantic frames
 - light, dark, and high-contrast themes
 - offline, loading, stale, empty, error, and permission-denied states
-- sample identity and Marketplace data, plus typed delegate-result fixtures
+- sample identity and a sample River room, plus typed delegate-result fixtures
 - recorded user-flow playback
 
 Mobile frames approximate layout only. Final native conformance runs through real SwiftUI and Compose test applications.
@@ -121,13 +120,13 @@ Validation runs continuously while Carol edits:
 | Artifact integrity and source mapping | Candidate bytes differ from reviewed checkpoint |
 | Platform profiles and optional SDUI | The requested target lacks a required host operation |
 | Schema and component requirements | The button has no title |
-| Unknown actions, functions, and component types | `marketplace.makeOfer` is misspelled |
-| Missing data bindings and routes | The offer page has no route |
-| Permission declarations | The page writes an order without declaring the order contract |
+| Unknown actions, functions, and component types | `river.inviteMembr` is misspelled |
+| Missing data bindings and routes | The invite page has no route |
+| Contract and delegate references | The page submits an invitation without declaring the `river.room` contract |
 | Unreachable pages and broken references | A page nothing navigates to |
 | Accessibility labels and form errors | An icon button without a label |
 | Unsupported reader versions | A component newer than the installed readers |
-| Oversized inline data or unbounded collection assumptions | A list bound to all listings with no index |
+| Oversized inline data or unbounded collection assumptions | A list bound to all messages with no index |
 | Attribution readiness | An open challenge, unaddressed review feedback, or missing size validation on a attributed change the archive includes ([enforced workflow](../attribution/README.md#3-enforced-workflow)) |
 
 Each check reports an error or a warning. Errors block publishing. Warnings require acknowledgement or policy approval.
@@ -138,11 +137,18 @@ The builder provides the proposal, review, size-validation and challenge screens
 
 ## 9. Publishing
 
-Export web files, the application definition, actions, domain artifacts, schemas and optional SDUI into an ordinary Freenet application archive. Mobile-only projects include a static browser landing page. Native distribution links identify separately installed applications. Validate each declared interface against the bundled requirements. The canvas edits SDUI. Publishers edit web source in their chosen tools.
+Export the web app, the application definition, actions, domain artifacts, schemas and optional SDUI into an ordinary Freenet application archive, per [application bundles](../appkit/bundles.md#1-the-archive-and-its-definition). When the project ships SDUI, the export copies the web reader build into `ui/sdui/web/`.
 
-Use the existing Freenet container signing and publication path described by [application bundles](../appkit/bundles.md). Add definition, action, delegate-interface and screen validation plus the prepared-archive input or certification hook required by that plan. Preserve custom web entry points and relative assets. SDUI declares reader requirements. The application definition declares common entry points, permissions and action/delegate requirements.
+| Project | `index.html` in the export |
+| --- | --- |
+| Has its own web build | The publisher's page, with a `<freenet-web>` element wherever an SDUI screen goes |
+| Has no web build | A page EVY writes that loads only the web reader |
 
-Marketplace's workflow obtains a separate signed contribution record for the prepared archive, then publishes those exact bytes. Follow the [attribution sequence](../attribution/README.md#4-bundle-integration) for acceptance, certification and publication verification. Retain the prepared archive, contribution record and signed envelope for retry. After a timeout, check whether publication succeeded before submitting another version. A changed archive needs matching certification. Read back and verify the published archive, record whether the readback came from the publishing node or an independent node, and check retrieval from an independent node before advertising it. Enable new checkout after the services confirm eligibility.
+Native distribution links identify separately installed applications. Validate each declared interface against the bundled requirements. The canvas edits SDUI. Publishers edit web source in their chosen tools.
+
+Use the existing Freenet container signing and publication path described by [application bundles](../appkit/bundles.md). Add definition, action, delegate-interface and screen validation plus the prepared-archive input or certification hook required by that plan. Preserve custom web entry points and relative assets. SDUI declares reader requirements. The application definition declares action and delegate requirements.
+
+A participating product's workflow obtains a separate signed contribution record for the prepared archive, then publishes those exact bytes. Follow the [attribution sequence](../attribution/README.md#4-bundle-integration) for acceptance, certification and publication verification. Retain the prepared archive, contribution record and signed envelope for retry. After a timeout, check whether publication succeeded before submitting another version. A changed archive needs matching certification. Read back and verify the published archive, record whether the readback came from the publishing node or an independent node, and check retrieval from an independent node before advertising it. Enable paid use after the services confirm eligibility.
 
 Show project checkpoints, prepared archive digests, contribution records and published container versions as distinct records. Keep publisher signing keys protected. Provide publisher-transfer and status controls through the identity and host rules, and retain archive backups under the publisher's stated retention policy.
 
@@ -157,7 +163,7 @@ Real-time collaboration is optional and opt-in per project. It uses separate bou
 - checkpoints periodically
 - drops local presence hints after a fixed age
 
-Local editing and checkpoint publication work independently of real-time collaboration. Authoring membership controls project changes. Mutable projects and their retention policies are separate from exact published archives and application permissions.
+Local editing and checkpoint publication work independently of real-time collaboration. Authoring membership controls project changes. Mutable projects and their retention policies are separate from exact published archives.
 
 Large binary assets use content references and upload progress.
 
@@ -184,7 +190,8 @@ Testing includes:
 - accessibility testing of the builder itself
 - publish-and-open tests using released readers
 - custom web packaging and browser opening using the web target's declared artifacts
-- combined-bundle tests where adding or updating SDUI preserves the custom web entry point
+- embedded-reader tests where adding or updating SDUI keeps the custom web entry point
+- reader-only tests where the `index.html` EVY writes opens the SDUI screens in a browser
 - migration tests against representative EVY applications
 - attribution tests for invalid totals, incomplete chains, size tiebreaks, challenges, and conflicting publications
 
@@ -195,7 +202,7 @@ Testing includes:
 | 3. Binding and capability editor | Declared views, bounded actions, delegate descriptors and local presentation state | Unbounded query assumptions are blocked at edit time |
 | 4. Local drafts and checkpoint persistence | Offline journals, deterministic coalescing, bounded save and publish batches, optional collaboration sessions | Concurrent edits converge and conflicts are visible, and a burst-edit fixture stays within fixed update-count and byte budgets |
 | 5. Real reader preview | Web reader embed plus mobile semantic frames | Preview uses the released reader |
-| 6. Publishing workflow | Validate archive, certify when required, sign, publish and verify | A new user publishes web, mobile-only and combined fixtures. Certified bytes match published bytes, readback records the publication, and native links identify separately distributed apps |
+| 6. Publishing workflow | Validate archive, certify when required, sign, publish and verify | A new user publishes a custom web fixture, a reader-only fixture and a custom web fixture that embeds the reader. Certified bytes match published bytes, readback records the publication, and native links identify separately distributed apps |
 
 ## 13. Contribution and earnings workspace
 

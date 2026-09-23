@@ -33,7 +33,7 @@ A pass is a membership commitment in the trust-graph contract, held by one node'
 
 Bob uses peer B to post in River, then later sends Alice a message through Mail. Peer B already has a pass in the trust graph and keeps its credentials private. The proposed proof lets a verifier check active membership while hiding the pass identifier. Connection metadata remains governed by the network threat model.
 
-1. Bob submits a River message. Peer B adds a proof that it controls an active pass and authorizes this exact message in this room. Changing the message or attachments makes the proof fail.
+1. Bob submits a River message. Peer B adds a proof that it controls an active pass and authorizes this exact message in this room. Changing the message makes the proof fail.
 
 2. River checks Bob's signature, the peer's proof, and the message against its rules. It records the valid message and proof and credits the action once.
 
@@ -135,11 +135,11 @@ These sources inform the proof design and its acceptance tests.
 | Private receipt prototype | Distinct events bind to one hidden pass, with source validation and recovery fixtures |
 | Proof-system assessment | Complete-flow benchmarks, privacy analysis, mobile memory/time limits and an explicit selected profile |
 | Host integration | Application/user grants, protected witnesses, session cancellation and request-history enforcement |
-| Optional product adapter | Optional Marketplace claim issuance and purpose-bound verification |
+| Optional product adapter | Optional River claim issuance and purpose-bound verification |
 
 Tests cover replay to another recipient, changed actions/attachments, duplicate event credit, fabricated activity, related sponsors, shared credentials, revoked or stale membership evidence, narrowed anonymity pools, repeated thresholds, exhausted budgets and restored witness state. Verify both update admission and full-state validation when proofs enter public contracts.
 
-Measure proof generation and verification on target mobile devices and under hosted concurrency. The selected profile sets limits for proof size, peak memory and full-state validation cost. Tests verify those limits and the behavior when they are exceeded. Missing, declined, stale and invalid proofs have distinct results. Ordinary Marketplace flows, mobile access, payment and remuneration must pass with the optional adapter disabled.
+Measure proof generation and verification on target mobile devices and under hosted concurrency. The selected profile sets limits for proof size, peak memory and full-state validation cost. Tests verify those limits and the behavior when they are exceeded. Missing, declined, stale and invalid proofs have distinct results. Ordinary River flows, mobile access and the payment and remuneration services must pass with the optional adapter disabled.
 
 Applications own the rules for refunds, complaints, account balances and sanctions. Each reputation claim states its source-defined evidence and limits. For example, 20 days of River activity proves participation under River's rules.
 

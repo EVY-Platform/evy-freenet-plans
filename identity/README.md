@@ -1,6 +1,6 @@
 # Identity and recovery
 
-Alice loses her phone while a skateboard sale is awaiting pickup. Recovery should restore her authority to finish that sale and decrypt its pickup details. The recovery screen must explain which records it can restore and which still require another device or service.
+Alice loses her phone while members of "Skate club" wait for her reply. Recovery should restore the room key and signing key the chat delegate holds for her, and the room secret that decrypts the room's messages. The recovery screen must explain which records it can restore and which still require another device or service.
 
 This plan owns user key protection and recovery coverage. The [migration plan](../migration/README.md) owns delegate upgrades and publisher transfers, and [device sync](device-sync.md) is a parallel track with its own gate. [Bundles](../appkit/bundles.md) defines container and publication references. [Hosts](../appkit/hosts.md) enforce access. The [mobile SDK](../freenet-mobile/README.md) integrates Core storage and native key systems.
 
@@ -8,9 +8,9 @@ This plan owns user key protection and recovery coverage. The [migration plan](.
 
 | Identity | Example | Who controls it |
 | --- | --- | --- |
-| Application | Marketplace's full container identity | Its verified container code and publisher-key parameters |
-| Publisher signer | The key signing a Marketplace container update | Publisher-controlled signing and tested key backup |
-| Application user | Alice's seller identity, a host-layer identity above Core | Alice through her enrolled key and recovery policy |
+| Application | River's full container identity | Its verified container code and publisher-key parameters |
+| Publisher signer | The key signing a River container update | Publisher-controlled signing and tested key backup |
+| Application user | Alice's member identity in River, a host-layer identity above Core | Alice through her enrolled key and recovery policy |
 | Contributor | Carol's accepted work and review roles | Contributor identity plus Attribution's verified registration |
 | Device | Alice's phone or laptop | Explicit enrollment by the user |
 | Node transport | A peer connecting to the Freenet network | Node installation |
@@ -35,19 +35,19 @@ Record the key algorithm and recovery method for each key. Hardware-backed signi
 | --- | --- | --- |
 | User identity and authorized device list | Identity delegate under user authority | Restore encrypted recoverable key material or authorize a successor using the recovery authority. |
 | Delegate secrets | Core secret store | Restore only into the delegate with the same key, through Core's FNSX export bundle. |
-| Pickup address and private agreement | Application's encrypted records | Restore content keys and retained encrypted records together. |
-| Draft listing | Host's app-scoped database | Include in an explicit application backup. |
-| Submitted purchase request | Application operation journal | Preserve canonical payload, original ID, agreement references and observed outcome. |
-| Payment result | Payment service and signed contract | Refresh from the authority and reconcile with retained references. |
+| Private room messages | Room contract, encrypted under the room secret per River's [privacy model](https://github.com/freenet/river/blob/main/README.md#privacy-model) | Restore the room secret with the chat delegate's secrets, then read the encrypted messages from the room contract. |
+| Outbound DM plaintext | The chat delegate's secret store | Restore with the delegate's other secrets through Core's FNSX export bundle. |
+| Pending reply | Application operation journal | Preserve canonical payload, original ID, room reference and observed outcome. |
+| Room members and bans | Room contract state | Refresh from the room contract and reconcile with retained references. |
 | Publisher signing key | Publisher's own recovery system | Follow publisher lineage, kept separate from consumer account recovery. |
 
 On locked-device or invalidated-key errors, return a typed access state. Preserve pending operations and the original identity while the user restores access.
 
-An explicit forget operation identifies the selected private records and keys, removes them from the protected local stores and verifies the result. Report any failed deletion. Explain the effect on active orders and which encrypted network copies, exported recovery packages or other enrolled devices remain. Exported copies and shared information remain with their recipients after local key deletion.
+An explicit forget operation identifies the selected private records and keys, removes them from the protected local stores and verifies the result. Report any failed deletion. Explain the effect on rooms the user owns or has joined and which encrypted network copies, exported recovery packages or other enrolled devices remain. Exported copies and shared information remain with their recipients after local key deletion.
 
 ## 3. Customer-controlled recovery
 
-Use an encrypted recovery package protected by a customer-held recovery secret as the baseline. For delegate secrets, the package wraps Core's encrypted FNSX export bundle and its import path, keyed to the same delegate key, rather than defining a parallel format. Core's export decrypts each secret to build that bundle, so a hosted operator sees plaintext during export. State that exposure in the hosted profile. Setup includes a recovery check so Alice proves she can reopen a sample package before relying on it. The package carries a format version, its creation time, its coverage and integrity checks.
+Use an encrypted recovery package protected by a customer-held recovery secret as the baseline. River's CLI exports and imports a River identity today with `riverctl identity export` and `riverctl identity import`, per [cli/README.md](https://github.com/freenet/river/blob/main/cli/README.md). The host's package adds the coverage, versioning and integrity checks below. For delegate secrets, the package wraps Core's encrypted FNSX export bundle and its import path, keyed to the same delegate key, rather than defining a parallel format. Core's export decrypts each secret to build that bundle, so a hosted operator sees plaintext during export. State that exposure in the hosted profile. Setup includes a recovery check so Alice proves she can reopen a sample package before relying on it. The package carries a format version, its creation time, its coverage and integrity checks.
 
 The package includes:
 
@@ -55,7 +55,7 @@ The package includes:
 - Recoverable key material, with purpose and namespace recorded for each entry.
 - Encrypted private records or verified references to copies whose availability is separately stated.
 - Original contract code and parameter references required to locate retained records.
-- Application schema versions, pending operation IDs and publication progress.
+- Delegate protocol versions, pending operation IDs and publication progress.
 - A coverage report listing hardware-bound keys, missing records and service-managed accounts.
 
 Use an authenticated encryption format with a versioned, reviewed cryptographic profile. Derive separate keys for separate purposes. Bound sizes before decoding, authenticate the complete metadata and reject unsupported profiles. Keep the recovery secret and any plaintext equivalent separate from the package.
@@ -65,12 +65,12 @@ flowchart TD
     Start["Alice opens recovery on a new phone"] --> Unlock["Unlock encrypted recovery package"]
     Unlock --> Verify["Check integrity, identity lineage and coverage"]
     Verify --> Enroll["Enroll a new device and restore authorized keys"]
-    Enroll --> Records["Restore private records and pending request IDs"]
-    Records --> Refresh["Read current order and payment evidence"]
-    Refresh --> Decide{"Does the original request already exist?"}
+    Enroll --> Records["Restore the chat delegate secrets and pending message IDs"]
+    Records --> Refresh["Read the current Skate club room state"]
+    Refresh --> Decide{"Is her pending reply already in the room?"}
     Decide -->|Yes| Show["Show its verified outcome"]
     Decide -->|Unresolved| Reconcile["Keep it pending and reconcile"]
-    Decide -->|Safe to retry| Retry["Retry the original signed request"]
+    Decide -->|Safe to retry| Retry["Retry the original signed reply"]
 ```
 
 Recovery requires the secret and an available package. Publish the package's storage location and retention responsibility to the user. A lost secret plus loss of all enrolled devices can make the covered identity unrecoverable. Explain that consequence during setup.
@@ -84,8 +84,8 @@ Contributor key recovery uses this plan's recovery package. [Attribution](../att
 | Phase | Delivers | Done when |
 | --- | --- | --- |
 | 1. Caller and key boundaries | Scoped signing, protected stores and Core-authenticated delegate calls | One app cannot claim another app's namespace or use a stale session. |
-| 2. Local recovery | Encrypted export/import, key coverage and application journals | Device-loss fixtures recover Alice's order without duplicating her request. |
+| 2. Local recovery | Encrypted export/import, key coverage and application journals | Device-loss fixtures recover Alice's rooms and secrets without duplicating a message. |
 
-Both phases apply to the Marketplace launch profile. [Device sync](device-sync.md) has a separate release gate.
+Both phases apply to the [Marketplace](../marketplace/README.md) launch profile. [Device sync](device-sync.md) has a separate release gate.
 
 Run tests for wrong recovery secrets, corrupt/truncated packages, unsupported versions, device lock, key invalidation, reinstall, interrupted import, explicit key deletion and exhausted storage. Check pending operations against the current contract state before retry. Confirm recovery restores only its declared coverage and that failed deletion remains visible.

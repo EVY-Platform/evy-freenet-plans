@@ -1,6 +1,6 @@
 # Neighborhood marketplace
 
-Marketplace is the final product in the roadmap. It runs inside the [Freenet mobile app](../freenet-mobile-app/README.md) and supports nearby discovery, offers, payment, and structured pickup, delivery, and shipping arrangements. Marketplace chooses declarative SDUI for its mobile launch, and declares a custom web target alongside it.
+Marketplace is the final product in the roadmap. It runs inside the [Freenet mobile app](../freenet-mobile-app/README.md) and supports nearby discovery, offers, payment, and structured pickup, delivery, and shipping arrangements. Marketplace chooses declarative SDUI for its mobile launch. Its `index.html` loads the web reader, so a browser shows the same screens, and custom web pages are optional.
 
 Marketplace uses [bundles](../appkit/bundles.md), [actions and delegates](../appkit/actions-and-delegates.md), [data and pending operations](../appkit/data-and-operations.md), [SDUI](../appkit/sdui.md), [hosts](../appkit/hosts.md), [mobile SDK](../freenet-mobile/README.md), [identity and recovery](../identity/README.md), and the [migration plan](../migration/README.md). [Attribution](../attribution/README.md), [Payment](../payment/README.md), [Remuneration](../remuneration/README.md), and [EVY Developer](../evy/README.md) handle contribution review, payment collection and contributor payouts. [Atlas](../atlas-sample/README.md) proves platform integration before Marketplace starts. [Peer reputation](../reputation-proofs/README.md) is optional.
 
@@ -10,9 +10,10 @@ Alice lists a skateboard for 80 dollars in her suburb. Bob offers 70 and propose
 flowchart TD
     Bundle[Signed Marketplace container] -.-> Actions[Declarative action definitions]
     Bundle -.-> UI[SDUI screens]
-    Bundle -.-> Web[Custom web application]
-    UI --> Reader[Platform reader and host]
+    Bundle -.-> Web["index.html with the web reader and optional custom pages"]
+    UI --> Reader[Web or native reader and host]
     Actions -.-> Reader
+    Web --> Reader
     Reader --> SDK[SDK for each target]
     Web --> SDK
     Native[Dedicated native app] --> SDK
@@ -35,18 +36,18 @@ freenet-marketplace/
   common/                 canonical types, validation and codecs
   contracts/              stores, listings, indexes, requests, orders, disputes
   delegates/              domain projections, prepared updates, signing and recovery
-  actions/                declarative operations and data bindings
   sdui/                   screens, bindings, themes and localization
-  web/                    optional custom web UI and built assets
-  schemas/                actions, views, events and private payloads
+    actions/              declarative operations and data bindings
+    schemas/              actions, views, events and private payloads
+  web/                    index.html that loads the web reader, plus optional custom pages
   bundle/                 application definition and prepared archive
   fixtures/               contract, delegate, SDK, host and product scenarios
   docs/                   privacy, moderation and operating policies
 ```
 
-Readers render SDUI and execute bounded action steps through their hosts. Marketplace delegates decode records, project domain views, prepare canonical updates and perform protected signing/encryption. Contracts enforce shared-state rules. Each target's SDK carries Freenet requests: the TypeScript SDK for the custom web app, the Rust-backed browser build for the web reader, and native libraries for readers and the dedicated native app, per the [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evidence). Custom applications use the same domain protocols.
+Readers render SDUI and execute bounded action steps through their hosts. Marketplace delegates decode records, project domain views, prepare canonical updates and perform protected signing/encryption. Contracts enforce shared-state rules. Each target's SDK carries Freenet requests: the TypeScript SDK for custom web pages, the Rust-backed browser build for the web reader, and native libraries for readers and the dedicated native app, per the [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evidence). Custom applications use the same domain protocols.
 
-The container signature authenticates the archive. Its application definition declares permissions, reader requirements, contract/delegate protocols and action/view schemas. Separate signed contribution records bind the archive digest to accepted work. Publishing works through EVY Developer or command-line tools. Marketplace's SDUI, optional custom web UI and native UI produce equivalent domain actions and views.
+The container signature authenticates the archive. Its application definition declares reader requirements, contract/delegate protocols and action/view schemas. Separate signed contribution records bind the archive digest to accepted work. Publishing works through EVY Developer or command-line tools. Marketplace's SDUI in the web and native readers, its optional custom web pages and the dedicated native app produce equivalent domain actions and views.
 
 ## 2. Stores, identity and private data
 
@@ -89,7 +90,7 @@ An accepted order binds the buyer, seller, originating request, listing revision
 
 Keep signed events and derive order status from them. Concurrent incompatible events produce `Conflicted`. Resolving an economic commitment requires the affected parties' signed agreement or evidence from the authority defined for that particular payment operation.
 
-Each order is its own contract instance with bounds in the v1 wire profile. Without them a participant could fill an order to the 50 MiB state ceiling and make it unmergeable for every co-host.
+The Marketplace delegate creates each order as its own contract instance with a `Put` when `makeOffer` runs. Each instance has bounds in the v1 wire profile. Without them a participant could fill an order to the 50 MiB state ceiling and make it unmergeable for every co-host.
 
 | Rule | Value |
 | --- | --- |
@@ -168,7 +169,7 @@ Use the [Payment state mapping](../payment/README.md#4-payment-states) for pendi
 
 The contributor-funded product integrates Attribution and Remuneration. Register stable capabilities such as `marketplace.listing.publish`, `marketplace.offer.negotiate`, `marketplace.fulfillment.agree` and `marketplace.order.transition`. Contribution records cover action definitions, delegates, contracts and SDUI under the allocation policy. Usage evidence identifies validated domain outcomes, and every target supplies the same evidence.
 
-The Payment plan controls fee amounts and processor-cost treatment. Remuneration controls allocation and payout. Financial reconciliation covers refunds, chargebacks, duplicate operation IDs and failed fulfillment. The host stops the application after verifying its withdrawal. The payment service controls new-checkout eligibility. Existing orders retain their payment terms. Trusted host controls can retrieve order status and supported recovery actions while the application session is stopped.
+The Payment plan controls fee amounts and processor-cost treatment. Remuneration controls allocation and payout. Financial reconciliation covers refunds, chargebacks, duplicate operation IDs and failed fulfillment. The payment service controls new-checkout eligibility. Existing orders retain their payment terms.
 
 ## 7. Moderation, disputes and optional reputation
 

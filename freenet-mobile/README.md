@@ -1,6 +1,6 @@
 # Freenet mobile SDK
 
-Embed Freenet in iOS and Android applications. When Bob opens Marketplace, the SDK connects his phone, reads the skateboard listing and follows updates to his order. Application delegates interpret domain records for declarative SDUI. Custom applications can also interpret records in their own code. The SDK manages the node and carries authorized requests. Opening a custom web target from mobile uses that target's own session and permissions.
+Embed Freenet in iOS and Android applications. When Bob opens River, the SDK connects his phone, reads "Skate club" and follows updates to the room. Application delegates interpret domain records for declarative SDUI. Custom applications can also interpret records in their own code. The SDK manages the node and carries authorized requests. Opening a custom web target from mobile uses that target's own session and permissions.
 
 The first native integrations run an embedded full peer. The thin-peer role in [section 4](#4-thin-peer-network-role) is AppKit's proposed Core extension and awaits upstream agreement.
 
@@ -44,13 +44,13 @@ Publish required adapters, unsupported operations and API compatibility changes 
 | Part | Owns | Example |
 | --- | --- | --- |
 | Mobile SDK | Embedded Core, connections, request outcomes, native bindings and node lifecycle | Restart the node when Bob returns to the app. |
-| AppKit host | Verified app sessions, grants, scoped storage, runtime limits and application session lifecycle | Permit Marketplace to follow Bob's order. |
-| Action executor and domain delegates | Declarative orchestration, decoding and reconciliation | Reconcile Bob's pickup request before the host retries its saved operation. |
-| Core | Contract validation and delegate state/secret namespaces | Reject an invalid seller signature. |
+| AppKit host | Verified app sessions, grants, scoped storage, runtime limits and application session lifecycle | Permit River to follow Bob's room. |
+| Action executor and domain delegates | Declarative orchestration, decoding and reconciliation | Reconcile Bob's pending reply before the host retries its saved operation. |
+| Core | Contract validation and delegate state/secret namespaces | Reject a message whose author signature is invalid. |
 | Identity integration | Recovery authority, protected key operations and authorized migration | Restore Alice's access after replacing her phone. |
-| Services | Payment and remuneration ledgers and bridge recovery | Publish a verified payment result while Bob's phone sleeps. |
+| Services | Payment and remuneration ledgers and bridge recovery | Publish a verified [payment](../payment/README.md) result for a product with paid operations while the user's phone sleeps. |
 
-The [actions](../appkit/actions-and-delegates.md), [data](../appkit/data-and-operations.md), [hosts](../appkit/hosts.md) and [identity](../identity/README.md) plans define these interfaces. Hosts retain pending-order journals and use application delegates for domain reconciliation. Payment and remuneration services manage fees.
+The [actions](../appkit/actions-and-delegates.md), [data](../appkit/data-and-operations.md), [hosts](../appkit/hosts.md) and [identity](../identity/README.md) plans define these interfaces. Hosts retain pending-operation journals and use application delegates for domain reconciliation. Payment and remuneration services manage fees.
 
 ## 2. Embedded node and native API
 
@@ -64,7 +64,7 @@ The native API must cover:
 | Read and publish contract | Validate code, original parameters and returned instance identity. |
 | Update contract | Return a correlated outcome and preserve uncertainty after timeout. |
 | Subscribe and release | Return owned subscription handles. The host reference-counts demand and releases it when the count reaches zero. |
-| Register and call delegate | Require an authenticated app session and declared grant. |
+| Register and call delegate | Require an authenticated app session and a current grant recorded by the host. |
 | Observe events | Include request/session identity, typed errors and lifecycle changes. |
 | Cancel request | Stop local work where possible and state whether submission may already have happened. |
 
@@ -85,7 +85,7 @@ Until Unsubscribe ships, a subscription to Core ends with the client connection.
 
 Create a trusted in-process host-to-Core path for production app sessions. It binds the verified container identity, content reference, user and session to each privileged call. Route application requests through that path. Every privileged call requires caller authentication, including calls over a loopback socket. [Core session admission](https://github.com/freenet/freenet-core/issues/5264) defines that boundary and remains open. Implement and test it before enabling protected operations.
 
-SDK request IDs correlate transport work once the correlation deliverable above lands. Application operation IDs identify actions such as Bob's purchase and survive retries, restarts and device recovery. Return both when relevant so each network request remains linked to the same purchase.
+SDK request IDs correlate transport work once the correlation deliverable above lands. Application operation IDs identify actions such as Bob's message and survive retries, restarts and device recovery. Return both when relevant so each network request remains linked to the same message.
 
 ## 3. Runtime and packaging
 
@@ -144,7 +144,7 @@ stateDiagram-v2
 
 The host saves application journals before teardown. The SDK then finishes or cancels transport work, invalidates old callbacks and releases Core resources. On foreground, the host can show verified cached data while Core starts. It refreshes state and restores subscriptions before the domain delegate reconciles queued writes.
 
-Use a single lifecycle coordinator for start, stop, reconnect and shutdown. Test termination during every transition, calls made during shutdown, port release, store-lock release and repeated restart. Treat a platform notification as a hint to refresh, and read order evidence from the contract.
+Use a single lifecycle coordinator for start, stop, reconnect and shutdown. Test termination during every transition, calls made during shutdown, port release, store-lock release and repeated restart. Treat a platform notification as a hint to refresh, and read message evidence from the room contract.
 
 ## 6. Storage and recovery
 
@@ -159,7 +159,7 @@ Core's key-encryption-key backends are systemd credential, file and an opt-in OS
 
 The host retains a recovery inventory for application-owned contracts, including original code and parameters, verified copies and operation references. The host coordinates bounded repair after refresh, using application-owned domain adapters and the existing migration library through the boundary proved by Atlas. The SDK matches reads, writes and authorized delegate operations to their requests. The application defines and tests its migration policy. Before republishing an owned recoverable record, it checks identity and merge rules.
 
-For Alice's sale, the retained inventory contains her listing and pickup agreement. The payment service retains payment evidence, and the publisher retains exact archives and signed container envelopes. Each owner keeps a recoverable copy. A successful PUT records submission. Read back and verify the accepted bytes. Core serves GET from locally cached state, including on an isolated node, so record whether the observation came from local storage or from an independently exercised network path. Verify remote retrievability separately before claiming distribution, and retain recovery copies under the stated retention policy. A separate retrieval is a point-in-time observation. Retention and repair handle ongoing durability.
+For Alice's room, the retained inventory contains the "Skate club" room contract state and her chat delegate secrets. The publisher retains exact archives and signed container envelopes. Each owner keeps a recoverable copy. A successful PUT records submission. Read back and verify the accepted bytes. Core serves GET from locally cached state, including on an isolated node, so record whether the observation came from local storage or from an independently exercised network path. Verify remote retrievability separately before claiming distribution, and retain recovery copies under the stated retention policy. A separate retrieval is a point-in-time observation. Retention and repair handle ongoing durability.
 
 [Identity and recovery](../identity/README.md) owns cross-device enrollment, [device sync](../identity/device-sync.md) owns synchronization and the [migration plan](../migration/README.md) owns delegate migration. Integrate deferred delegate reads, durable subscription demand and initial-state notifications through the Core dependencies listed in the [device sync plan](../identity/device-sync.md#2-core-dependencies).
 
@@ -174,7 +174,7 @@ For Alice's sale, the retained inventory contains her listing and pickup agreeme
 | 4. Thin role and carrier support | Role-design proposal accepted upstream, negotiation, terminal delivery and tested network paths | Thin peers carry their own application traffic, and supported carrier cases meet configured budgets. |
 | 5. Production package | Reproducible bindings, diagnostics and device measurements | Mobile packages pass recovery, concurrency and resource tests. |
 
-Phases 2 and 3 proceed alongside phase 4 after the embedded baseline. Marketplace's mobile launch requires the selected production role and supported network profile to pass. If the thin-peer proposal is still open at launch, the full-peer profile is the production role.
+Phases 2 and 3 proceed alongside phase 4 after the embedded baseline. The mobile launch of [Marketplace](../marketplace/README.md) requires the selected production role and supported network profile to pass. If the thin-peer proposal is still open at launch, the full-peer profile is the production role.
 
 Core dependencies for this plan: [session admission #5264](https://github.com/freenet/freenet-core/issues/5264), the Unsubscribe client request, request correlation in stdlib, delegate messaging in `crates/mobile`, iOS and Android key-encryption-key backends, and the thin-peer role proposal.
 
@@ -184,7 +184,7 @@ Core dependencies for this plan: [session admission #5264](https://github.com/fr
 - A timeout after remote acceptance returns an unresolved result and lets the host and domain delegate reconcile before retry.
 - Releasing one screen's view leaves another screen's subscription active through host reference counting.
 - Reconnect after a network change rejoins through a gateway and re-issues every active subscription.
-- Backgrounding during checkout preserves the order reference, and resume obtains the signed payment result.
+- Backgrounding while a message is pending preserves its operation ID, and resume reads the room state that confirms it.
 - A killed process releases ports and storage locks on restart and rejects callbacks from its old session.
 - Lost network copies can be repaired from authorized retained data with original operation identities.
 - Startup time, peak memory, foreground CPU, idle and active traffic, reconnect latency and bytes per common operation meet the limits for each supported device and network.

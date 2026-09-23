@@ -73,7 +73,7 @@ Credit requires validated completion evidence. Repeated renders, new event IDs a
 5. Commit the payment and event IDs, evidence decision, snapshot, policy, and credit entries in one database transaction. Enforce the payment's fee cap across all allocations.
 6. Acknowledge processing after commit. Retry with the same event ID.
 
-Store uniqueness constraints on event IDs, processor fee receipts, and payment-capability-recipient allocations. Two bridge workers receiving the same claim produce one credit result. Retain pending, credited, rejected, and conflicted states with reasons. After application withdrawal or commercial suspension, process existing payments under their recorded settlement policy. Late events retain their payment, content, contribution-record and policy bindings and follow the published claim cutoff.
+Store uniqueness constraints on event IDs, processor fee receipts, and payment-capability-recipient allocations. Two bridge workers receiving the same claim produce one credit result. Retain pending, credited, rejected, and conflicted states with reasons. After commercial suspension, process existing payments under their recorded settlement policy. Late events retain their payment, content, contribution-record and policy bindings and follow the published claim cutoff.
 
 Each payment funds its own qualifying usage. Fabricated activity can recover at most that payment's contributor fee through remuneration. Processing costs and fraud losses still require payment controls, funded separately by the payment service's operating budget. Payment controls also cover processor losses and subsidies.
 

@@ -2,7 +2,7 @@
 
 Parent: [Identity and recovery](README.md).
 
-Alice edits the pickup time on her phone while her offline laptop still holds the previous agreement. Sync preserves both signed proposals and lets Marketplace show the conflict. Marketplace resolves the competing proposals under its agreement rules.
+Alice hides her direct message thread with Bob on her phone while her offline laptop sends Bob a new direct message. Both devices change the same `OutboundDmStore` record, which River's chat delegate uses for outbound message plaintext and hidden threads ([chat_delegate.rs](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs)). Sync preserves both revisions. River's rule resolves them: a thread stays hidden only while its hide time is at or after the latest message in it, so the laptop's new message shows the thread again on both devices.
 
 ## 1. Enrollment and encryption
 
@@ -32,4 +32,4 @@ Core dependencies include [private cross-peer sync #4560](https://github.com/fre
 | --- | --- | --- |
 | Device sync | Enrollment, encrypted records, concurrent changes and revocation | Offline devices converge without losing conflicts, reviving deletions or granting revoked future access. |
 
-This track has its own release gate, separate from the Marketplace launch profile in the [identity plan](README.md#4-delivery-and-acceptance).
+This track has its own release gate, separate from the [Marketplace](../marketplace/README.md) launch profile in the [identity plan](README.md#4-delivery-and-acceptance).

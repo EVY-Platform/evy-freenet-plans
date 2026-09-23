@@ -13,7 +13,7 @@ A product has an economic `ProductId` mapped to authorized application container
 | ProductId | Economic product identity mapped to authorized containers |
 | PublicationRef | Container identity, version and archive digest defined by the bundle plan |
 | ContributionRecordId | Immutable signed certification of exact archive or native-build contents |
-| CapabilityId | Credited behavior, such as `marketplace.listing.publish` |
+| CapabilityId | Credited behavior, such as `river.message.send` |
 | ProposalId | Submitted work and its revision history |
 | AcceptanceId | Accepted evidence revision, size, shares and policy |
 | SnapshotId | Immutable resolved contribution weights for a certified artifact |
@@ -42,7 +42,7 @@ Contributors authenticate signed requests with their key. Repository proposals p
 | Step | What happens | Carol |
 | --- | --- | --- |
 | Create a key | The contributor generates a signing key in the builder or host. Every proposal, review, estimate, and resolution is signed with it | The key in Carol's builder |
-| Submit a proposal | The contributor signs the proposal and links the pull request. The service returns a one-time PIN derived from the proposal and the key, valid for 24 hours | Carol submits her Make offer screen proposal and receives `AT-7Q4K` |
+| Submit a proposal | The contributor signs the proposal and links the pull request. The service returns a one-time PIN derived from the proposal and the key, valid for 24 hours | Carol submits her Invite member screen proposal and receives `AT-7Q4K` |
 | Prove PR ownership | The contributor puts the PIN in the pull request description. The repository integration reads it on the next webhook, records "PR ownership verified" for the key in the audit history, and ignores later edits to the description | Carol adds `AT-7Q4K` to her PR description |
 | Add a payout identity | Before the first payout, the contributor completes the legal identity and payout details that [remuneration](../remuneration/README.md#6-double-spend-prevention-and-payouts) holds. Accepted units remain contribution weights. Funded balances accumulate separately while payout registration is pending | Carol adds hers after her first accepted proposal |
 
@@ -138,7 +138,7 @@ A failed publish leaves a retryable certification record. After an uncertain pub
 
 Native builds receive their own artifact certification and publisher/distribution evidence under the product's declared verification policy. They can share contribution weights with a reviewed SDUI bundle. The service validates that mapping. A client-supplied build digest remains a claim until it passes the policy's evidence checks.
 
-Each snapshot records the capabilities present in its certified contents. Contribution history survives capability removal and restored application code. Payments keep their original contribution record and snapshot through updates and publisher transfers. The product's signed settlement configuration selects the eligible record for new checkout and prevents clients from choosing arbitrary historical weights.
+Each snapshot records the capabilities present in its certified contents. Contribution history survives capability removal and restored application code. Payments keep their original contribution record and snapshot through updates and publisher transfers. The product's signed settlement configuration selects the eligible record for new paid operations and prevents clients from choosing arbitrary historical weights.
 
 Retain records, snapshots, source mappings, exact artifacts and signed publication evidence through the configured support and transaction-evidence periods. Restore fixtures must verify a historical payment after the live container has advanced and the publisher's primary archive is unavailable.
 
@@ -158,7 +158,7 @@ Carol and another contributor, Dave, improve a database path used by ten capabil
 | Validator pool | 0.4 |
 | Total | 8 |
 
-Each capability receives one tenth of these weights. The proposal conserves its size across both products. Contributor units measure accepted work. They become funded credits only when remuneration validates an eligible paid operation.
+Each capability receives one tenth of these weights. The proposal conserves its size across both products. Contributor units measure accepted work. They become funded credits when [remuneration](../remuneration/README.md) validates an eligible paid operation. Funding comes from products with paid operations, such as Marketplace.
 
 ## 6. Interface to remuneration
 
@@ -169,7 +169,7 @@ For a verified publication or native artifact and capability, the service return
 - The immutable snapshot and resolved recipient weights.
 - The contribution policy version and the product's current eligibility for new commercial operations.
 
-Historical lookups retain the original evidence and weights. Withdrawal or commercial suspension governs new checkout. Existing payments follow their recorded terms and settlement policy.
+Historical lookups retain the original evidence and weights. Commercial suspension governs new paid operations. Existing payments follow their recorded terms and settlement policy.
 
 Checkout fixes these bindings as the [payment plan](../payment/README.md#2-checkout-flow) specifies, and delayed processing or application updates retain them. Remuneration stores them with payment IDs and credits, enforces funding caps, and owns reversals and payouts.
 

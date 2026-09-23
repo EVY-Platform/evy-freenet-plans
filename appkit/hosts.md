@@ -1,267 +1,219 @@
 # AppKit hosts
 
-An AppKit host coordinates an application's declared actions, checks its permissions and saves its local data. It verifies the installed copy before starting the application. A reader turns the application's SDUI screen description into controls people can use.
+A host is the program that runs a Freenet app for the user. In a browser, the host is the page that Freenet Core, the program that runs a Freenet node, wraps around every web app. On a phone, the host is an app with Core built in through the [mobile SDK](../freenet-mobile/README.md).
 
-For example, Alice opens Marketplace on her phone and offers $40 for a skateboard. The reader displays the offer form. The application delegate checks her amount and prepares the offer. The host checks the app's permission to submit the offer and saves the pending operation. Freenet Core handles the requested shared-state update.
+AppKit adds what a host needs to run an app from its bundle, the signed package a publisher ships:
 
-These are reusable parts. The [Freenet mobile app](../freenet-mobile-app/README.md) combines them with discovery and onboarding. [EVY Developer](../evy/README.md) uses them to preview applications. A dedicated native application can provide its own screens and use the same native SDK and domain protocols.
+- setting the app up the first time it opens
+- keeping track of each time the app runs (a session)
+- asking the user for permissions and remembering each answer (a grant)
+- saving work that has not reached the network yet
+- giving the app access to phone features such as notifications
 
-## 1. How the parts fit together
+[SDUI](sdui.md) covers screens described as data and the readers that draw them. [Actions](actions-and-delegates.md) covers what buttons do and the app's delegates. [Data](data-and-operations.md) covers saved and unsent changes, and [bundles](bundles.md) covers the package itself. This plan covers installing, sessions, permissions and device access.
 
-| Part | Responsibility | Example |
+## 1. Who controls what
+
+| Who | Responsibility | River example |
 | --- | --- | --- |
-| SDUI document | Describes screens and connects controls to actions | An amount field and a Make offer button |
-| Reader | Displays those screens, handles navigation and supports accessibility | Shows the form using browser, iPhone or Android controls |
-| Action executor and application delegate | Execute declared steps and apply domain rules | The delegate prepares the offer. The executor supplies its result to the screen |
-| Host | Installs definitions, coordinates requests, checks access and saves local data | Saves Alice's pending offer and checks permission before sending it |
-| Platform SDK | Carry authorized Freenet requests and responses | Submit the prepared offer and follow its status |
-| Freenet Core | Runs the local delegate and validates shared state | The local delegate prepares the offer. Peers validate and merge it under the Marketplace contract |
-| Identity subsystem | Protects keys and defines account recovery | Uses the device's protected key storage |
-| Consumer product | Provides discovery, the installed app list and onboarding | Lets Alice find and open Marketplace |
+| Host | Installs apps, sets them up, tracks sessions, checks permissions and saves unsent work | Checks that River may send Alice's reply, and keeps the reply until it reaches the room |
+| Host screens | Screens built into the host itself, such as the install screen, permission prompts and recovery settings. Only the host draws them, so users can trust what they say | The prompt that asks Alice whether River may send her notifications |
+| Reader | Draws the app's screens from the publisher's screen description and passes button taps to the host, per [SDUI](sdui.md) | Draws the conversation and its message box |
 
-A contract defines rules for shared data. A delegate performs approved private operations, such as signing. The broker checks application requests before passing them to Core, local storage or device services.
+Every request carries who made it, so the host can check the right permission. Two parts add that information:
 
-The [SDUI plan](sdui.md) defines screen descriptions and readers. The [actions plan](actions-and-delegates.md) defines application actions, and the [data plan](data-and-operations.md) defines pending-operation rules. The [bundle plan](bundles.md) defines packaged metadata and Freenet publication. This plan owns installation, update selection, execution and access.
+- Core labels every message sent to a delegate with the app that sent it. The label is the app's Freenet address, or the address of another delegate. The delegate can trust this label because Core adds it, and uses it to decide what to answer. When Bob sends a message, Core labels the request to River's chat delegate as coming from River, per [actions section 3](actions-and-delegates.md#3-delegate-requests-and-results).
+- The host adds which user, which installed copy and which session made the request. Only the host can trust these, because they come from the host rather than from Core. A delegate treats any such detail it finds inside a message as an unchecked claim.
 
-## 2. Who controls what
+Each session remembers the app, its exact version, the user, the installed copy and the permissions it holds, per [bundles section 4](bundles.md#4-installing-a-copy). Each new session gets a new number, and the host ignores requests and replies that carry an older number. In a browser, the app label becomes trustworthy once Core confirms which app is calling, one of the [gates](#gates).
 
-For an SDUI application, the publisher supplies screens, images, action definitions and contract/delegate artifacts. The launcher selects the installed host and reader. The web reader uses the Rust-backed browser SDK. Native readers use the native library with Swift or Kotlin bindings. The [SDK paths table](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) lists every target's SDK and measures the proposed bindings.
+Before any action that needs permission, the host checks that the permission is still granted and that the request targets the right contract or delegate. The delegate then applies its own rules.
 
-```mermaid
-flowchart TD
-    subgraph Publisher["Publisher supplies application content"]
-        D["SDUI screen description and assets"]
-        C["Action definitions and domain artifacts"]
-    end
-    subgraph Platform["Trusted platform controls execution and access"]
-        L["Launcher selects host and reader"]
-        R["Reader validates and displays screens"]
-        X["Reader executes bounded action steps"]
-        B["Host broker checks requests and permissions"]
-        P["Host permission and recovery screens"]
-    end
-    L --> R
-    L --> X
-    D --> R
-    C --> X
-    R -->|"User action"| X
-    X -->|"Screen data"| R
-    X -->|"Operation request"| B
-    B --> P
-    B --> SDK["SDK for the reader's target"]
-    SDK --> F["Freenet Core runs the local delegate and validates contract state"]
-    B --> S["App-specific storage and device services"]
-```
+## 2. Browser and native hosts
 
-Arrows show data or requests. The host validates publisher definitions and checks each requested operation. The host protects the app identity display, permission prompts, external-link approval, recovery controls, access revocation and application diagnostics from application changes.
+A bundle can hold two kinds of screens, and a publisher can also ship a phone app:
 
-The host records which app and user made each request, then checks their permissions. Each app session records the verified container identity, publisher, content reference, user, installation, allowed operations and generation number. The generation number identifies the current session. The broker attaches this information to requests. The application supplies the action data and requested resource.
+- Web code: pages the publisher writes in HTML, JavaScript or Wasm, loaded by the bundle's `index.html`.
+- SDUI: screens described as data in `ui/sdui/ui.json`, which a reader draws.
+- Native code: the publisher's own iPhone or Android app.
 
-Core attaches one caller identity to a delegate message: the originating web app's contract id, or another delegate's key. Delegate policy can key on that attested app contract id only. User, installation and session generation are host bookkeeping. The host enforces them before a request reaches Core, and a delegate treats any copy of them inside message bytes as unverified data. Whether the app contract id itself is trustworthy depends on the Core-authenticated admission path in [section 3](#3-browser-hosting).
-
-At every protected operation, the host checks permissions and contract or delegate parameter rules. Removing permission ends active access. Queued work must pass a new permission check before execution. Delegates also apply their own operation rules. Installed dedicated native applications have their own trust and account-enrollment requirements.
-
-## 3. Browser hosting
-
-A publisher can offer several ways to open an application. Each is an application interface with its own compatibility and access requirements.
-
-| Browser target | What supplies the screen | How it runs |
+| Host function | Browser | Phone |
 | --- | --- | --- |
-| Custom web | The publisher's HTML, JavaScript and browser Wasm | A Core web container with browser restrictions and approved web API access |
-| Web SDUI | A reader served from a contract displays the publisher's SDUI. It is sandboxed like any other web app | Core's shell page is its host. The reader executes declared steps through the Rust-backed browser SDK |
+| Host | The page Core wraps around every web app. It holds the node's access key and relays the app's messages to the node | SDUI: the Freenet mobile app<br>Native code: the publisher's own app |
+| What runs | Web code: the publisher's pages<br>SDUI: the web reader that ships in the bundle<br>Core loads both from the bundle inside a sandbox, a browser frame cut off from other sites and the rest of the browser | SDUI: the reader built into the Freenet mobile app draws the screens with the phone's own buttons and lists, per [SDUI section 7](sdui.md#7-reader-implementations)<br>Native code: the publisher's own screens |
+| What buttons do | SDUI: the reader runs the steps the bundle declares, such as "read the room, ask the delegate to sign, send". Heavy work runs in the background<br>Web code: its own code talks to Freenet directly | SDUI: the reader in the Freenet mobile app runs the declared steps<br>Native code: its own code talks to Freenet directly |
+| Library for talking to Freenet | SDUI: a browser library built from Freenet's Rust code, bundled with the web reader<br>Web code: Freenet's TypeScript library, or its Rust library compiled into the app | One Freenet library written in Rust, used from Swift on iPhone and Kotlin on Android. It also runs Core inside the app |
+| Messages to delegates | SDUI and web code send the same messages to the app's delegates, per [actions section 3](actions-and-delegates.md#3-delegate-requests-and-results) | SDUI and native code send the same messages |
+| Sessions | One per open page. Web code and SDUI screens on that page share it | One each time the app starts |
+| Confirming which app is calling | Core confirms it, once that [gate](#gates) ships | Core runs inside the app and checks each call directly, per the [mobile SDK plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
+| Saved work | Browser storage that survives closing the tab, once that [gate](#gates) ships. Until then, saved work lasts only while the tab is open, and the host tells the user so | An on-device database: SQLite on iPhone, Room on Android |
+| Protecting keys | Core encrypts keys with a master key kept in the computer's key store or a protected file | Core encrypts keys with a master key kept in the iPhone Keychain or Android Keystore, once that [gate](#gates) ships |
+| Permission prompts | Core's page draws them, for web code and SDUI alike. Anything that looks like a prompt inside the sandbox is part of the app | SDUI: the Freenet mobile app draws them<br>Native code: the publisher's app draws its own |
+| Network | The sandbox lets the app talk only to its own node. Loading anything from other websites fails, except opening a new window. Payment therefore opens in a new window, and images and media ship in the bundle or come from the node | SDUI: the Freenet mobile app decides, and apps reach the network only through its approved features<br>Native code: the publisher's app decides |
 
-Custom JS/TS web applications use the existing TypeScript SDK. Rust browser applications link Rust stdlib into their Wasm build. Their screens and web adapters remain publisher-controlled. The launcher shows the selected target and keeps each target's sessions, keys and permissions separate. Opening a web target applies Core's existing capability-specific controls. AppKit's proposed operation grants for web targets depend on the permission lifecycle gate below.
+The [mobile SDK plan](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) lists which library each kind of app uses, and [how the phone library is packaged](../freenet-mobile/README.md#3-runtime-and-packaging).
 
-### Browser capabilities and gates
+River today is web code. Its screens are written in Rust and compiled to run in the browser, on desktop and phone ([ui/Cargo.toml](https://github.com/freenet/river/blob/main/ui/Cargo.toml)). Its screens and its chat delegate ship inside its bundle ([ui/freenet.toml](https://github.com/freenet/river/blob/main/ui/freenet.toml)). River loads nothing from other websites, so the sandbox's network limit never gets in its way. On a phone, River's message alerts go through the host's notification feature, and copied invite links through its clipboard feature.
 
-Core's shell grants capabilities one mechanism at a time. AppKit's declared operation grants sit on top of them and ship only when the general permission lifecycle does.
+The same app opened in a browser and on a phone keeps separate keys and permissions in each. Web code stays under the publisher's control, and Core's existing browser permissions apply to it.
 
-| Capability | Core today | AppKit needs | Gate |
-| --- | --- | --- | --- |
-| Delegate user prompts | Core's permission UI for delegate `RequestUserInput` prompts | The same prompts | Available |
-| Iframe embedding | A fixed allowlist constant in the client API | Declared embed permissions | Permission lifecycle |
-| Manifest-driven permissions | Merged as [#4086](https://github.com/freenet/freenet-core/pull/4086) and reverted in [#4090](https://github.com/freenet/freenet-core/pull/4090) on 20 May 2026 over CSRF and silent capability expansion | Declared operation grants with persistence and revocation | Permission lifecycle, tracked in [#4014](https://github.com/freenet/freenet-core/issues/4014) and the roadmap in [discussion #5380](https://github.com/freenet/freenet-core/discussions/5380) |
-| Cross-origin network | Blocked by Content Security Policy. `default-src` and `connect-src` allow only the node's origin plus `blob:` and `data:`. Popups escape | Popup or redirect for payment. Media bundled in the archive or served by the node | Fixed by CSP. A permission grant changes nothing here |
-| Durable storage | Opaque origin with no durable storage | Durable opaque-origin storage | [#5165](https://github.com/freenet/freenet-core/issues/5165) and [#5254](https://github.com/freenet/freenet-core/issues/5254) |
-| Caller authentication | The shell mints app-identity tokens on request for a supplied contract identity | Core-authenticated app sessions | [#5264](https://github.com/freenet/freenet-core/issues/5264) |
+For an app that uses AppKit permissions, Core's page:
 
-Release gate: the general permission lifecycle, including persistence and revocation, ships before web SDUI enables protected operations. Each permission names the layer that grants it and how Core stops another route from bypassing it.
+- Checks that the app's files match the exact signed version.
+- Ties the app's permissions to its connection and starts a session that expires.
+- Gives the app storage that survives closing the tab.
+- Checks permissions, and rejects fake app labels, reused sessions and old session numbers.
+- Applies the same checks to every other way into the node that gives the same access.
+- Confirms who each message comes from, matches each reply to its request and cancels work that takes too long.
+- Checks delegate answers before the reader shows them or sends them on.
 
-### Browser implementation
+On a phone, each app session gets only the actions its bundle declares.
 
-Custom web builds use Freenet website publication. Bundle verification checks the entry point and declared executable assets. Test relative assets, browser Wasm loading, reloads, navigation, storage and declared API access through the Core web container.
+### Features missing in Freenet for AppKit to work
 
-Everything Core serves from a contract gets an opaque origin and an unconditional sandbox. It holds no tokens and no durable storage. The trusted browser surface is Core's shell page, which holds the auth token and proxies WebSockets. For the browser target, web SDUI is therefore an ordinary sandboxed web app and Core's shell is its host. Moving the reader into the shell would be a Core change with a named owner, and this plan proceeds without it. For web SDUI the shell must:
+| Feature | Where | Core today | AppKit needs | Tracked in |
+| --- | --- | --- | --- | --- |
+| Prompts from delegates | Browser | Core shows a prompt when a delegate asks the user a question | The same prompts | Available |
+| Embedding other pages | Browser | One fixed allow-list for every app, built into Core | A permission per app | Declared permissions, below |
+| Declared permissions | Browser | Not built yet. The review of an earlier attempt, [#4090](https://github.com/freenet/freenet-core/pull/4090), requires asking again when an app's list changes, and letting users take permissions back | Permissions that are remembered and can be taken back | [#4014](https://github.com/freenet/freenet-core/issues/4014), plan in [discussion #5380](https://github.com/freenet/freenet-core/discussions/5380) |
+| Storage that lasts | Browser | Apps lose their data when the tab closes | Storage that survives closing the tab | [#5165](https://github.com/freenet/freenet-core/issues/5165) and [#5254](https://github.com/freenet/freenet-core/issues/5254) |
+| Confirming which app is calling | Browser | Core's page hands an app ID to any app that asks for one | Core confirms each app itself | [#5264](https://github.com/freenet/freenet-core/issues/5264) |
+| Confirming which app is calling | Phone | The same open work | A direct path inside the app that tags every call with the app, user and session | [#5264](https://github.com/freenet/freenet-core/issues/5264) and [mobile SDK section 2](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
+| Delegates on the phone | Phone | Core's phone library reads, writes, updates and follows contracts, with no delegate support yet | Run the app's delegates on the phone | [Mobile SDK section 2](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
+| Phone key stores | Phone | Core keeps its master key in Linux, macOS or Windows key stores, or in a file | Keep it in the iPhone Keychain and Android Keystore | [Identity section 2](../identity/README.md#2-protected-keys-and-records) |
+| Stop following a contract | Both | The app keeps receiving updates until it disconnects | Stop updates when no screen needs them | Freenet's client library and Core, listed as upcoming |
 
-- Verify the selected container and exact archive snapshot.
-- Bind the app's authority to the broker connection and create an expiring session.
-- Provide durable storage for the hosted application.
-- Check operation scopes and reject forged identities, reused sessions and expired session generations.
-- Apply the same admission checks to every route that grants equivalent access.
+## 3. Installing and updating
 
-The web reader evaluates bounded action definitions, using a worker for expensive decoding and evaluation where needed. The host authenticates message channels, matches replies to requests and cancels overdue work. Freenet calls use the Rust-backed browser SDK. Device and service calls use approved adapters. Validate delegate results before displaying them or submitting prepared updates.
+River publishes a new version that adds Carol's "Invite member" screen, per [bundles section 3](bundles.md#3-publishing-and-evidence).
 
-Core's shell owns every trusted permission screen for the browser target. Prompts the reader draws are application UI inside the sandbox. Each prompt identifies the layer granting access.
-
-The browser plan depends on [per-guest authentication](https://github.com/freenet/freenet-core/issues/5264) and [durable](https://github.com/freenet/freenet-core/issues/5165) [opaque-origin storage](https://github.com/freenet/freenet-core/issues/5254). A mode that keeps data only in tab memory tells the user that closing the tab ends its storage lifetime. The production profile requires Core-authenticated app sessions. Implement and test the selected browser or native admission path before enabling protected operations. Core then binds each delegate request to that admitted session. Durable-storage acceptance cases apply to hosts that provide durable storage.
-
-## 4. Native hosting
-
-On iPhone and Android, the reader and custom applications call the same native Rust library through generated Swift or Kotlin bindings. The mobile SDK manages embedded Core. The reader displays SDUI using the platform's controls, as the [reader implementation](sdui.md#7-reader-implementations) describes.
-
-| Host function | iOS | Android |
-| --- | --- | --- |
-| Execute declared actions | Installed executor with bounded steps | Installed executor with bounded steps |
-| Freenet client library | Native Rust library with Swift bindings | Native Rust library with Kotlin bindings |
-| Save local records | SQLite repository | Room/SQLite repository |
-| Protect keys through the identity subsystem | Keychain-backed key encryption key, a new Core backend | Keystore-backed key encryption key, a new Core backend |
-| Access Core | Embedded SDK through trusted broker | Embedded SDK through trusted broker |
-
-Keep SDK bindings, action execution, storage and rendering separate. Application sessions receive only their declared broker operations. The embedded Core integration checks the caller's identity inside the process, as the [mobile SDK plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) specifies.
-
-The [SDK runtime and packaging plan](../freenet-mobile/README.md#3-runtime-and-packaging) packages the native library and Core runtime. Native delegate execution on devices depends on the mobile crate exposing delegate messaging, register and unregister, which that plan lists as feasibility deliverables. Physical-device tests verify app isolation, caller identity, bounded actions and Core execution limits.
-
-## 5. Saving work and reopening an app
-
-Alice opens a previously saved skateboard listing on the train. The host loads the verified installed copy and cached data before making a network request. The reader marks the listing as awaiting refresh. Alice enters a $40 offer while offline.
-
-| Event | Host and action behavior | What Alice sees |
-| --- | --- | --- |
-| Alice submits offline | The action executor requests durable storage of the operation before showing it as pending | Her $40 offer is pending |
-| Alice switches apps or locks her phone | The host saves drafts and pending work, then follows the SDK background policy | Her work remains saved |
-| The operating system closes the app | Durable storage retains the last committed records | Her offer returns as pending when she reopens the app |
-| Connectivity returns | The host opens a fresh session, checks permissions, refreshes state and obtains the delegate's reconciliation result | Pending status remains until the outcome is known |
-| Confirmation arrives | The host and domain delegate use verified operation evidence to determine the result | The reader displays the confirmed result |
-
-```mermaid
-flowchart TD
-    A["Open saved listing"] --> B["Enter and save $40 offer offline"]
-    B --> C["Show offer as pending"]
-    C --> D["Switch apps, lock phone or close app"]
-    D --> E["Reopen app and restore saved offer"]
-    E --> F["Refresh data and check permissions"]
-    F --> G["Host and delegate check submission and outcome"]
-    G --> H["Show confirmed result or keep pending"]
-```
-
-An update counts as accepted once it merges locally and a later read or update notification shows it in the contract state. Marketplace defines what that result means for the buyer and seller. The [operation lifecycle](data-and-operations.md#3-submitting-updates-and-pending-operations) defines retries, conflicts and unresolved submissions.
-
-### Storage and lifecycle implementation
-
-The host manages app sessions and combines authorized requests for the same live data. The SDK starts and stops the node. The host reference-counts subscriptions and keeps one while any screen or operation needs it. A client subscription to Core ends with the client connection until stdlib and Core ship the Unsubscribe request, which Core lists as upcoming. Closing one app preserves another app's independent activity.
-
-Backgrounding saves drafts and pending operations, cancels local work and invalidates callbacks from the previous session. Each resumed app gets fresh session authority. Queue transactions preserve committed work across forced termination.
-
-Host storage contains verified bundles, cached screen data, drafts, preferences, pending operations and saved navigation that remains compatible with the installed copy. Core stores delegate state. The [identity plan](../identity/README.md) defines protected keys and recovery coverage. Test locked-device access, invalidated keys, device replacement and delegate upgrades through the application's [export and import round trip](../migration/README.md#3-delegate-secret-export-and-import).
-
-Refresh application containers and active contracts within resource budgets after displaying trusted cached state. The host may restore missing application data through authorized domain recovery actions. Recovering [cold state](https://github.com/freenet/freenet-core/issues/4642) requires an available hosting copy.
-
-## 6. Installing and updating applications
-
-Alice opens Marketplace after its publisher adds a new screen. The host verifies the container envelope, derives its full identity and reads the bundled application definition before executing code. It checks the selected interface against the bundled action, delegate and screen schemas.
+1. Bob's host sees a newer version at River's Freenet address.
+2. Before running any of its code, the host checks the publisher's signature and reads the app definition. It runs the safety checks in [bundles section 4](bundles.md#4-installing-a-copy), then checks that its reader supports everything the new screens and actions use.
+3. The chat delegate is the same as before, so the host installs the update straight away. It prepares the new files and its own database changes on the side, checks them, then switches to the new copy in one step.
+4. Bob still has an unsent reply to Alice. The host starts a new session and ignores late replies meant for the old one. The unsent reply keeps its ID and goes out under the new session.
+5. Bob opens the "Invite member" screen in the new version.
 
 ```mermaid
 flowchart LR
-    Fetch[Verify container snapshot] --> Observe[Persist version, digest and status]
-    Observe --> Check[Check interface and permissions]
-    Check --> Stage[Stage files and local storage changes]
-    Stage --> Switch[Commit installed copy and start fresh session]
+    Fetch[Check the signed package] --> Observe[Note the version and file fingerprint]
+    Observe --> Check[Check compatibility and confirm setup]
+    Check --> Stage[Prepare files and storage changes]
+    Stage --> Switch[Switch to the new copy and start a new session]
 ```
 
-Record both the latest verified publication and the installed copy, including when the host observed each. Every session uses one archive for its actions, screens and schemas and records the exact delegate identities it invokes. Invalidate callbacks from the previous session when switching copies. Product discovery screens call these host operations. The bundle plan lists the [initialization actions](bundles.md#3-contracts-delegates-and-initialization) the host runs from the definition and the [installation and session identifiers](bundles.md#5-installing-a-copy) it assigns.
+The host remembers the newest version it has seen and the version it has installed, and when it saw each. A session uses one version's screens and actions from start to end, and notes exactly which delegates it called. The host runs the [setup steps](bundles.md#2-contracts-delegates-and-initialization) the app definition lists and gives each installed copy and session an [ID](bundles.md#4-installing-a-copy).
 
-| Observation or condition | Host behavior |
+| What the host finds | What it does |
 | --- | --- |
-| Compatible active bundle | Prepare local changes, commit the selected copy atomically and start a fresh session |
-| Lower container version | Preserve the latest observation and installed copy. Retry discovery |
-| Same version with a different archive digest | Keep conflict evidence and the accepted copy. Adopt changed content after a later unambiguous signed publication |
-| Unsupported action/delegate protocol or required component | Keep a compatible installed copy and explain the required host update |
-| Missing artifact or interrupted installation | Preserve committed content and recoverable storage, then retry within budgets |
-| Additional permissions | Obtain consent before starting operations that require them |
-| Web or native alternative | Offer its verified opening option for explicit selection |
-| Ordinary website | Open through the Freenet browser shell |
-| Arbitrary contract | Open the contract inspection view |
+| A compatible new version | Prepares it, switches to it in one step and starts a new session |
+| An older version than the one it has | Keeps what it has and checks again later |
+| The same version number with different files | Keeps the copy it accepted and a record of the mismatch. Moves on when a later signed version settles it |
+| Screens, actions or delegate messages newer than the host supports | Keeps the working copy and explains which host update the user needs. The Freenet mobile app offers the web app or the publisher's phone app instead, per its [opening flow](../freenet-mobile-app/README.md#2-opening-an-application) |
+| Missing files, or an install that stopped halfway | Keeps the last working copy and saved data, then tries again |
+| A changed delegate or a new setup step | Shows the install screen with the change, per [bundles section 2](bundles.md#2-contracts-delegates-and-initialization), and switches after the user accepts |
+| A new phone feature | Asks the first time the app uses it, per [section 5](#5-permissions-and-device-access) |
 
-Run local database migrations against staged or recoverable storage and read back the result before committing installation. The [migration plan](../migration/README.md#2-contract-carry-forward) assigns domain adapters to the application and migration orchestration to the host, and its [delegate section](../migration/README.md#3-delegate-secret-export-and-import) owns secret-access authorization. Shared contracts evolve independently of the local installation transaction. A cached definition can run only with compatible executor steps, delegates and local/shared state schemas.
+When an update changes how data is stored:
 
-### Withdrawal and reinstatement
+- The host updates its own database on the side and checks the result before switching.
+- Drafts and private records move from the old delegate to the new one through an [export and import](../migration/README.md#3-delegate-secret-export-and-import), which also decides when the user must approve.
+- The [migration plan](../migration/README.md#2-contract-carry-forward) covers moving shared data to a new contract version. The app supplies the conversion and the host runs it.
+- Shared data such as the room changes on its own schedule, separately from installs. A cached copy of the app runs only while it understands the current data.
+- When an app moves to a new publisher, the host follows [publisher continuity](../migration/README.md#4-publisher-continuity). It asks before moving private data to the new publisher's app, keeps a record of the move and picks up where it left off if interrupted.
 
-Read the application's `active` or `withdrawn` status from the latest verified container snapshot. Persist withdrawal before stopping the application session and its queued operations. Retain user data, payment references and recovery evidence. Trusted host controls provide export, removal and supported service-based order recovery. The withdrawn application session stays stopped across restarts and cached-opening attempts.
+The host keeps the working copy, one backup copy and anything still needed for unsent work, and deletes older copies to stay within its storage limit. Going back to an older copy keeps the record of the newest version seen. A newer release that contains old code still goes through the current compatibility checks.
 
-A later verified active publication starts the compatibility and permission checks for reinstatement. Previously revoked permissions stay revoked. If two signed archives at the same version disagree about withdrawal, keep the app stopped until the publisher resolves the conflict.
+## 4. Saving work and reopening an app
 
-Offline devices act when they receive and verify the status. Show the last observation time. Hosts enforce withdrawal for applications they run. Native distribution channels and payment services apply their own controls.
+Alice opens "Skate club" on the train. The host shows the installed copy and saved messages straight away, before going online, and the reader marks the conversation as waiting to refresh. Alice writes a reply with no signal.
 
-### Storage and historical copies
+| What happens | What the host does | What Alice sees |
+| --- | --- | --- |
+| Alice sends with no signal | Saves the reply to storage that survives restarts, then shows it as pending | Her reply shows as pending |
+| Alice switches apps or locks her phone | Saves drafts and unsent work, then follows the SDK's rules for running in the background | Her draft and pending reply stay saved |
+| The phone closes the app | Everything saved before that survives | Her reply is still pending when she reopens the app |
+| The signal comes back | Starts a new session, rechecks permissions, fetches the latest room and asks the chat delegate whether the reply went through | The reply stays pending until the host knows |
+| The room shows her reply | The host and chat delegate confirm it | Her reply shows as sent |
 
-Keep the working copy and evidence needed by unresolved operations. Retain a compatible recovery copy where storage allows. Remove unused copies to stay within the configured storage limit. Retrieve archives from the publisher or mirrors using exact digests and verify their envelopes and container identity. Preserve the latest observed version and status when reopening a compatible earlier copy. A later publication containing earlier application code must still pass current compatibility checks.
+The reply counts as sent once a later read of the room shows it among the recent messages ([version.rs](https://github.com/freenet/river/blob/main/common/src/room_state/version.rs)). The [data plan](data-and-operations.md#3-submitting-updates-and-pending-operations) covers retries and conflicts.
 
-Publisher transfers use [publisher continuity](../migration/README.md#4-publisher-continuity). Obtain approval before moving private access to the successor container, preserve transfer evidence and resume interrupted local migration from its journal.
+- The SDK starts and stops the node. The host tracks each app's session and combines requests from different screens for the same data.
+- The host follows a contract for updates while any screen or pending action needs it, and stops when none do. Until Freenet's libraries can stop following, updates end only when the app disconnects.
+- Closing one app leaves other apps running.
+- When the app goes to the background, the host saves drafts to the app's delegate, saves unsent work, stops local work and ignores late replies to the old session. Reopening starts a new session. Saved work survives even if the phone kills the app.
+- After showing saved data, the host refreshes the app and its active contracts, within the limits in [actions section 4](actions-and-delegates.md#4-limits-and-security). It can restore missing app data through the app's own recovery actions. Data nobody has fetched for a long time ([cold state](https://github.com/freenet/freenet-core/issues/4642)) comes back only if some peer still keeps a copy.
+- Importing and exporting local data runs through the host. The app's delegate converts the records, and the host checks that the destination may receive them. The host lists records it cannot import, and imports shared data only when it carries valid signatures.
 
-## 7. Photos, files and external services
+Drafts and private records live in the chat delegate's storage, and unsent work and cached screens live with the host, per [data section 2](data-and-operations.md#2-values-and-local-storage). The host also keeps installed bundles and where the user was in the app, while the installed copy still has that screen. The [identity plan](../identity/README.md) covers keys and recovery.
 
-Alice taps Add photo on a listing form. The reader requests the photo operation through the host's device interface. The host checks access and presents the required permission controls. The picker returns access to the selected photo within the granted scope.
+## 5. Permissions and device access
+
+Alice turns on message alerts in "Skate club". The reader asks the host to turn on notifications. The host checks whether River has permission, asks Alice if needed, and the phone's notification feature returns her answer. In the browser, River asks for notification permission once and remembers the answer ([notifications.rs](https://github.com/freenet/river/blob/main/ui/src/components/app/notifications.rs)).
+
+- The app definition lists every permission the app may ask for, per [bundles section 1](bundles.md#1-the-archive-and-its-definition).
+- On a phone, the host asks the first time the app needs a permission it has not been given. Users see prompts only for features they use.
+- In a browser, Core's page reads the same list and decides when to ask, per [#4014](https://github.com/freenet/freenet-core/issues/4014) and [#5254](https://github.com/freenet/freenet-core/issues/5254).
+- The host draws the prompt. It names the app and what it wants, and remembers the answer for that app, user and installed copy. That remembered answer is a grant.
+- The app keeps the grant until the user takes it back in the host's settings. Taking it back stops the feature right away, and unsent work checks again before it runs.
+- If an update adds a permission to the list, the host asks again.
+
+When Bob starts using River:
+
+1. Bob accepts River's install screen. It lists the chat delegate it will install, and notifications as optional.
+2. He joins "Skate club" and sends "Skate session Saturday?". He sees no prompt.
+3. He turns on message alerts. The host asks for notifications now.
 
 | Situation | Result |
 | --- | --- |
-| Alice allows photo selection | The application receives access to the selected photo through a restricted handle |
-| Alice declines access | The reader explains the denial and keeps her form draft |
-| Camera capture is unavailable | The reader may offer photo-library selection when available and authorized |
-| Photo selection is unavailable | The reader explains that selection is unavailable |
+| Alice allows notifications | The host sends her alerts for new messages in "Skate club" through the phone's notifications |
+| Alice declines | The reader explains why alerts are off and keeps her draft |
+| The device has no notifications | The reader explains that alerts are unavailable. River lists notifications as optional, so the room keeps working |
+| Alice copies an invite link | The host copies the link to the clipboard under River's clipboard permission ([ui/Cargo.toml](https://github.com/freenet/river/blob/main/ui/Cargo.toml)) |
 
-Camera, files, notifications, maps, contacts and external links use permission-checked adapters. Each adapter returns a defined result for denial or missing device support. Opening a notification triggers a refresh of verified application state.
-
-Network policy differs by target:
-
-| Target | Network policy | Consequence for Marketplace |
-| --- | --- | --- |
-| Browser | Fixed by Core's Content Security Policy. `default-src` and `connect-src` allow only the node's origin plus `blob:` and `data:`. Fetch, XHR, WebSocket and image loads to other origins are blocked. Only popups escape | Checkout opens Stripe in a popup or redirect. Listing photos are bundled in the archive or served by the node |
-| Native | The host's own policy over approved adapters | Checkout opens the system browser or an in-app browser session. Media loads through the approved adapter |
-
-For attachments, validate size and media policy before staging. Encrypt the bytes when the application requires confidentiality. Store content-addressed bytes, authenticate the metadata and return a verified content reference. Publish the reference only after required upload evidence exists. Product policy defines availability repair.
-
-Pickers return scoped handles. The granted operations, the session and its lifetime bound application access. Preview, image loading and external URL actions follow broker policy, including implicit network requests.
-
-Applications may declare completion evidence for the [remuneration plan](../remuneration/README.md). The adapter forwards that evidence with the operation ID and the bindings the payment fixed at checkout, which the host retains and remuneration verifies. A newer application version submitting evidence for an older operation uses the original bindings.
-
-Example: Alice adds a skateboard photo. The host validates it, stores it as a content-addressed blob the node serves and returns a verified reference the listing embeds. Bob pays through a popup. On return the host reads the order contract and forwards completion evidence with Bob's operation ID.
-
-Local imports and exports use authenticated host operations. EVY Developer handles application-definition imports. Application delegates convert domain records, and hosts check destination authority before import. Show unsupported records and require valid signed operations before importing shared state.
-
-Payment and remuneration clients use approved service adapters with their respective service authority. Their product plans define checkout, earnings and payout behavior.
-
-## 8. Diagnostics
-
-The host supplies status information that helps people understand delays and report failures. Consumer products can also show bundle verification, attribution labeled with its source and contributor information. EVY Developer owns proposal review, earnings and payout screens.
-
-| Diagnostic | Example |
+| Permission | First asked when |
 | --- | --- |
-| Connectivity | Four connected peers |
-| Active applications | Marketplace, three active contracts |
-| Last verified refresh | Two minutes ago |
-| Pending operations | One offer awaiting confirmation |
+| Camera or photos | The app first opens the camera or photo library |
+| Notifications | The user first turns on alerts |
+| Clipboard | The app first copies something |
+| Location and maps | The app first needs the user's location |
+| An outside service | The app first uses that service |
+
+Camera, files, notifications, clipboard, maps, contacts and outside links all go through host features that check the permission first. Each one gives a clear answer when the user says no or the device lacks the feature. A photo picker gives the app the chosen photo only, for that action and that session. Link previews, images and outside links follow the host's network rules, including ones a page loads on its own.
+
+Tapping an alert refreshes the app first. When Alice taps a "Skate club" alert, the host fetches the latest conversation before the reader shows it.
+
+Attachments, such as photos in messages, need a separate file store, which [bundles section 4](bundles.md#4-installing-a-copy) places outside AppKit.
+
+## 6. Diagnostics
+
+The host shows a status page that explains delays and helps people report problems. Consumer apps can also show whether a bundle passed its checks and who contributed to it, with the source of that information.
+
+| Status | Example |
+| --- | --- |
+| Connection | Connected to four peers |
+| Running apps | River, following two contracts: the Skate club room and River's own bundle |
+| Last refresh | Two minutes ago |
+| Unsent work | One reply waiting for confirmation |
 | Storage | 38 MB |
-| Application and compatibility | Verified installed copy with supported action and delegate protocols |
-| Granted access | Listing contract and photo selection |
-| Recoverable errors | Listing data temporarily unavailable |
+| App version | Installed copy checked, and the host supports all its features |
+| Permissions | The Skate club room and notifications |
+| Problems it can recover from | Room data temporarily unavailable |
 
-Export redacted diagnostics with operation IDs and error categories. Protect private keys, request payloads, decrypted records and private references by default.
+When a user exports a report, it includes IDs and error types, and hides private keys, message contents and other private data by default.
 
-## 9. Delivery and acceptance
+## 7. Acceptance
 
-| Area | Done when |
-| --- | --- |
-| Trusted execution | Tests reject forged app identities, broker replacement and requests outside Core permissions |
-| Custom web hosting | Declared web assets load and permitted API requests work inside the Core web container |
-| Web SDUI hosting | Core-admitted sessions under the shell host execute scoped, bounded actions, and the host reports how long saved data lasts |
-| Permission lifecycle gate | Declared grants persist, revoke and cannot be reached through another route before web SDUI enables protected operations |
-| Native hosting | Readers and custom apps use the same native SDK, and Core executes domain delegates on physical devices |
-| Offline lifecycle | Alice's draft and pending offer survive lock, backgrounding and forced termination on durable-storage hosts |
-| Installation | Snapshot consistency, interrupted local migration, withdrawal across restart and compatible recovery pass host fixtures |
-| Permission changes | Revoked access ends active use, and queued requests pass current permission checks |
-| Cross-platform behavior | Web and native SDKs pass protocol fixtures. Declarative actions and custom apps produce equivalent domain results |
-| Resource limits | Measurements cover startup and first cached display. Tests enforce action, storage, subscription and delegate execution limits |
+- Tests reject fake app identities, a fake host connection and requests Core does not allow.
+- Web code loads its files and makes its allowed requests inside Core's sandbox. Tests cover relative file paths, loading Wasm, reloads, navigation, storage and allowed requests.
+- In the browser, SDUI actions run in sessions Core has confirmed and stay within their limits, and the host tells the user how long saved data lasts.
+- Before SDUI in the browser gets actions that need permission, permissions are remembered and can be taken back, and tests reject every other way to the same access.
+- The Freenet mobile app and publisher phone apps use the same phone library. Tests on real phones show delegates running on the device, apps kept apart, callers confirmed and limits enforced.
+- Alice's draft and pending reply survive locking, backgrounding and the phone closing the app, on hosts with storage that lasts.
+- Install tests pass for files that match the exact version, an update interrupted halfway, falling back to a working copy, the same version with different files, replayed content, late updates after time offline, and deleting old copies while work is still pending.
+- Taking back a permission stops the feature right away, and unsent work checks permissions again.
+- Tests cover a locked phone, lost keys, a replaced phone and delegate upgrades through the [export and import](../migration/README.md#3-delegate-secret-export-and-import).
+- The browser and phone libraries pass the same message tests. SDUI screens and publisher code produce the same results.
+- Measurements cover startup time and the time to show saved data. Tests enforce limits on actions, storage, followed contracts and delegate running time.
+- Test cases include harmful bundles, fake messages, actions that take too long, Core stopping midway, late replies, data format changes, fake permission prompts and two apps kept apart.
 
-Include malicious publisher bundles, forged messages, action deadlines, Core interruption, late callbacks, schema migration, imitation permission prompts and isolation between two apps. The [SDUI plan](sdui.md#9-acceptance) owns rendering and accessibility tests. Product plans own onboarding and Marketplace fulfillment tests.
-
-Test same-version conflicts involving withdrawal, replayed active content, delayed offline observations, reinstatement with revoked permissions and archive eviction with pending work. Keep existing-order recovery available through trusted service controls after the application session stops.
+The [SDUI plan](sdui.md#9-acceptance) owns rendering and accessibility tests. Product plans own onboarding tests, and each app owns its own tests, such as River's invitation and ban flows.

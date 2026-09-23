@@ -34,7 +34,7 @@ The client sends the product, order, signed terms digest, currency, and a stable
 
 At checkout, the payment service records the following against the operation and agreed order terms:
 
-- The exact [publication reference](../appkit/bundles.md#7-reference-recap), or the certified native-build reference for a dedicated app.
+- The exact [publication reference](../appkit/bundles.md#6-reference-recap), or the certified native-build reference for a dedicated app.
 - The signed contribution record and attribution snapshot.
 - The settlement policy and the product's signed capability-allocation policy.
 
@@ -42,7 +42,7 @@ The service verifies product authority, publication or distribution evidence, an
 
 `application_content_ref` is a tagged reference to either a container publication or a certified native artifact, with the exact fields defined by the bundle and attribution plans. Persist the verified signed evidence alongside its IDs. The service verifies eligibility under the product policy before accepting the submitted digest and contribution record.
 
-Commercial suspension or application withdrawal stops new checkout according to the product's service policy. Record the authority and latest verified observation used for that decision. Existing attempts, refunds and settlement retain their original bindings. Provide authenticated order-status and recovery operations that trusted host controls can use after the application session stops.
+Commercial suspension stops new checkout according to the product's service policy. Record the authority and latest verified observation used for that decision. Existing attempts, refunds and settlement retain their original bindings.
 
 The app opens the returned Stripe HTTPS URL in a popup or redirect on the browser target, where Core's Content Security Policy blocks every other cross-origin request, and in the system browser or an approved browser session on native. A return link brings the customer back to the order view. Confirm payment through the payment service's signed status. Keep Stripe secret keys and webhook secrets in the payment service's secrets service.
 

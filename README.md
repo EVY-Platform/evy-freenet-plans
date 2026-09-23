@@ -58,7 +58,7 @@ flowchart LR
             NewBrowserWasm["JS/TS UI"]
             NewRustUI["Rust UI<br>(Wasm)"]
             NewDelegateWasm["Delegate code<br>(Wasm)"]
-            NewSDUI[SDUI]
+            NewSDUI["SDUI<br>ui/sdui/ui.json"]
         end
 
         NewState --> NewBrowser[Browser]
@@ -67,7 +67,7 @@ flowchart LR
         NewBrowser --> |SDUI| WebReader["Web SDUI reader"]
         
         NewState --> NativeApp["Native swift/kotlin apps"]
-        NativeApp --> |"SDUI"| MobileReader["Native SDUI readers<br>Used inside iOS/Android app"]
+        NativeApp --> |"SDUI"| MobileReader["Native SDUI readers<br>Built into iOS/Android app"]
 
         NewTS --> NNode
         NewR --> NNode
@@ -94,6 +94,8 @@ flowchart LR
 ```
 
 #### From a developer's change to a contributor payment
+
+A contributor payment needs a paid operation, so this diagram follows the Marketplace sale, the one flow in these plans that carries money. The [running example](#running-example) below covers everything else.
 
 ```mermaid
 sequenceDiagram
@@ -125,7 +127,7 @@ sequenceDiagram
 | --- | --- |
 | [Application bundles](appkit/bundles.md) | Bob opens a signed Freenet container holding definitions, screens and domain artifacts. |
 | [Hosts](appkit/hosts.md) | The host verifies bundles, manages installed copies and asks for access in a trusted screen. |
-| [Identity and recovery](identity/README.md) | Alice recovers the keys and private records needed to finish her sale. |
+| [Identity and recovery](identity/README.md) | Alice recovers the keys and private records that hold her rooms. |
 | [Freenet mobile app](freenet-mobile-app/README.md) | People discover and open compatible Freenet applications in one mobile app. |
 | [Marketplace](marketplace/README.md) | People buy and sell nearby, arrange fulfillment and pay through the shared platform. |
 | [SDUI](appkit/sdui.md) | A publisher describes screens once. Readers display them using browser, iPhone and Android controls. |
@@ -152,7 +154,6 @@ sequenceDiagram
 - [whitepaper](https://github.com/freenet/paper-1)
 - [UI security discussion](https://github.com/freenet/freenet-core/discussions/5380)
 - [Atlas](https://github.com/freenet/atlas)
-- [River's native-client issue](https://github.com/freenet/river/issues/319)
 - [Harvest](https://github.com/freenet/harvest)
 
 Shared-library sources: [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [TypeScript package](https://github.com/freenet/freenet-stdlib/blob/main/typescript/package.json), [UniFFI](https://mozilla.github.io/uniffi-rs/latest/).

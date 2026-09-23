@@ -2,7 +2,7 @@
 
 This plan owns AppKit's declared actions, the delegate convention and the limits the executor runs under. [Data and pending operations](data-and-operations.md) owns reads, local storage and submitted updates. [Hosts](hosts.md) install applications and check permissions, [SDUI](sdui.md) defines screens, and [Bundles](bundles.md) define the signed archive that carries the definitions.
 
-Bob's Make offer button invokes a declared action with his draft amount. The host saves the operation ID, reads the listing and sends the record and typed arguments to the application's delegate. The delegate checks the terms and prepares the signed offer. The host saves the exact prepared bytes, checks submission permission and submits them. A subsequent read or subscription supplies evidence of the result.
+Bob's Send button invokes the declared action `river.sendMessage` with his draft text. The host saves the operation ID, reads the room state and sends the record and typed arguments to the application's delegate. The chat delegate signs the message with Bob's member key and prepares the update. The host saves the exact prepared bytes, checks submission permission and submits them to the room contract. A subsequent read or subscription supplies evidence of the result.
 
 | Section | What Freenet provides today | What AppKit proposes |
 | --- | --- | --- |
@@ -50,19 +50,19 @@ flowchart LR
     H -->|"Views and operation results"| UI
 ```
 
-Host databases hold drafts, caches and pending operations. [Identity and recovery](../identity/README.md) specifies protected key storage, enrollment and migration.
+Host databases hold caches and pending operations, and the application delegate's secret store holds drafts and private records. [Identity and recovery](../identity/README.md) specifies protected key storage, enrollment and migration.
 
-Example: Bob taps Make offer. The executor runs the declared steps, the host checks Marketplace's grant, Core runs the Marketplace delegate, and peers validate the offer under the Marketplace contract.
+Example: Bob taps Send. The executor runs the declared steps, the host checks River's grant, Core runs the chat delegate, and peers validate the message under the room contract.
 
 ## 2. Declared actions
 
 ### What Freenet provides today
 
-A web application orchestrates its own requests. Its JavaScript or Rust code sends `ClientRequest::ContractOp` and `ClientRequest::DelegateOp` over the client API and matches the responses itself. The website container holds `index.html` and the code it loads, per [bundles section 2](bundles.md#2-the-archive-and-its-definition).
+A web application orchestrates its own requests. Its JavaScript or Rust code sends `ClientRequest::ContractOp` and `ClientRequest::DelegateOp` over the client API and matches the responses itself. The website container holds `index.html` and the code it loads, per [bundles section 1](bundles.md#1-the-archive-and-its-definition).
 
 ### What AppKit proposes
 
-Action definitions live in the bundle's `actions/` directory. Each names its resources, input and output schemas and the step versions it needs. Definitions allow bounded sequences and conditional branches, with caps on steps, input sizes, expression depth and concurrent requests. A new action assembled from supported steps arrives in a bundle. A new executor primitive requires a host update.
+Action definitions live in the bundle's `ui/sdui/actions/` directory. Each names its resources, input and output schemas and the step versions it needs. Definitions allow bounded sequences and conditional branches, with caps on steps, input sizes, expression depth and concurrent requests. A new action assembled from supported steps arrives in a bundle. A new executor primitive requires a host update.
 
 | Step | Returns | Detailed in |
 | --- | --- | --- |
@@ -70,15 +70,14 @@ Action definitions live in the bundle's `actions/` directory. Each names its res
 | Read or observe | A verified snapshot, subscription events and the host-recorded response time | [Data plan section 1](data-and-operations.md#1-reads-views-and-freshness) |
 | Call delegate | A typed projection, prepared operation bytes or a defined error | [Section 3](#3-delegate-requests-and-results) |
 | Submit | Merged locally, observed, superseded or unresolved | [Data plan section 3](data-and-operations.md#3-submitting-updates-and-pending-operations) |
-| Local read, write or observe | App and user scoped records and the transaction outcome | [Data plan section 2](data-and-operations.md#2-values-and-local-storage) |
-| Blob put or get | A verified content reference or a bounded byte stream | [Hosts section 7](hosts.md#7-photos-files-and-external-services) |
-| Device or service operation | A scoped handle, a typed result, or a typed denial or unavailable result | [Hosts section 7](hosts.md#7-photos-files-and-external-services) |
+| Local read, write or observe | Host-side records such as preferences and session values, and the transaction outcome | [Data plan section 2](data-and-operations.md#2-values-and-local-storage) |
+| Device or service operation | A scoped handle, a typed result, or a typed denial or unavailable result | [Hosts section 5](hosts.md#5-permissions-and-device-access) |
 | Time and randomness | Host-supplied values, with deterministic substitutes in tests | [Data plan section 2](data-and-operations.md#2-values-and-local-storage) |
 | Cancel or close | Cancellable work stopped, host-side demand released and the session invalidated | [Data plan section 3](data-and-operations.md#3-submitting-updates-and-pending-operations) |
 
-Definitions and schemas load from one verified archive snapshot. A session records the exact delegate code, parameters and protocol versions it selected. Hosts adopt updates after the [installation checks](hosts.md#6-installing-and-updating-applications). Atlas proves the definitions before other products adopt them.
+Definitions and schemas load from one verified archive snapshot. A session records the exact delegate code, parameters and protocol versions it selected. Hosts adopt updates after the [installation checks](hosts.md#3-installing-and-updating). Atlas proves the definitions before other products adopt them.
 
-Example: Carol's Make offer button names `marketplace.makeOffer` with the listing ID and amount. The action's steps read the [`listingDetails` view](data-and-operations.md#1-reads-views-and-freshness), call the Marketplace delegate to prepare the offer and submit the prepared bytes. Carol ships a "Counter offer" action from the same steps in the next bundle. A step that opens the camera needs a host update first. The [SDUI plan](sdui.md#2-connecting-controls-to-data-and-actions) shows how a screen control binds to this action.
+Example: Carol's Invite member screen names `river.inviteMember` with the room and the invitee. The action's steps read the [`members` view](data-and-operations.md#1-reads-views-and-freshness) and call the chat delegate. For `river.createRoom`, the chat delegate prepares the room and asks Core to `Put` the new room contract with the owner's key as parameter, as [section 3](#3-delegate-requests-and-results) allows. Carol ships a "Set nickname" action, `river.setNickname`, from the same steps in the next bundle. A step that opens the camera needs a host update first. The [SDUI plan](sdui.md#2-connecting-controls-to-data-and-actions) shows how a screen control binds to this action.
 
 ## 3. Delegate requests and results
 
@@ -104,11 +103,11 @@ A typed request and result convention inside the payload bytes:
 
 Fixtures define the exact encodings. Each language binding specifies deterministic encoding, typed errors, request correlation and ownership of transferred bytes. Bound large payloads and measure copying across bindings. Reject conflicting request ID reuse, unknown handles and completions from expired sessions.
 
-Delegate policy keys on the `MessageOrigin` contract id. The host assigns the container identity, verified content reference, user, installation and session generation, as [hosts section 2](hosts.md#2-who-controls-what) and [bundles section 5](bundles.md#5-installing-a-copy) describe, and enforces them before a request reaches Core. A delegate treats copies of those fields inside the payload as unverified data.
+Delegate policy keys on the `MessageOrigin` contract id. The host assigns the container identity, verified content reference, user, installation and session generation, as [hosts section 1](hosts.md#1-who-controls-what) and [bundles section 4](bundles.md#4-installing-a-copy) describe, and enforces them before a request reaches Core. A delegate treats copies of those fields inside the payload as unverified data.
 
 Application adapters supply domain codecs, canonical signing inputs and view projections, and validate the source identities and signatures each domain requires. A delegate's prepared update still passes host authorization and contract validation.
 
-Example: Bob's request is `prepareOffer` at protocol version 1 with request ID 17, the listing ID, the amount 8000 minor units of USD and the listing record bytes the host read. The Marketplace delegate checks the listing's minimum, signs the offer and returns prepared update bytes. Core stamps the message with `WebApp(Marketplace contract id)`. An amount below the minimum returns the typed error `below_minimum`, which the form shows.
+Example: River's chat delegate already correlates requests this way. Bob's send is a [`SignMessage`](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs) request with request ID 17, the room key (Alice's owner key) and the serialized `MessageV1` holding "Skate session Saturday?". The delegate signs it with the key it stores for that room and returns `SignResponse` with the same request ID and the 64-byte signature. The action combines both into an [`AuthorizedMessageV1`](https://github.com/freenet/river/blob/main/common/src/room_state/message.rs) and submits it to the room contract. Core stamps the request with `WebApp(River container contract id)`. When the delegate holds no key for the room, `SignResponse` carries an error string, which the conversation screen shows. The convention above adds a protocol version and a typed error to this exchange.
 
 ## 4. Limits and security
 
@@ -141,7 +140,7 @@ Example: a bundle declares an action with ten thousand steps. Validation rejects
 | Action definition and step version | Proposed | One declared action and the executor primitives it uses | [Section 2](#2-declared-actions) |
 | Delegate protocol version and request ID | Proposed | One typed delegate exchange | [Section 3](#3-delegate-requests-and-results) |
 
-Views, storage namespaces and the operation ID belong to the [data plan recap](data-and-operations.md#4-reference-recap). `app_ref`, `publication_ref` and the installation and session identifiers belong to the [bundle recap](bundles.md#7-reference-recap). Contract and delegate keys belong to the [migration plan](../migration/README.md#5-reference-recap).
+Views, storage namespaces and the operation ID belong to the [data plan recap](data-and-operations.md#4-reference-recap). The container `ContractKey`, `publication_ref` and the installation and session identifiers belong to the [bundle recap](bundles.md#6-reference-recap). Contract and delegate keys belong to the [migration plan](../migration/README.md#5-reference-recap).
 
 ## 6. Acceptance
 
