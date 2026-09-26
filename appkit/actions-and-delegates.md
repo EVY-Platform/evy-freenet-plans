@@ -89,6 +89,8 @@ The delegate's `process` function receives an `Option<MessageOrigin>`. `WebApp(c
 
 The delegate replies with `OutboundDelegateMsg` values, which reach the client as `HostResponse::DelegateResponse`. It can also ask Core to get, put, update, subscribe to and unsubscribe from contracts, message another delegate and prompt the user with `RequestUserInput`.
 
+Core also starts a delegate itself when a followed contract changes, and after install and each node start if the delegate asks for it ([#5730](https://github.com/freenet/freenet-core/pull/5730)). Those runs carry no origin, and their replies carry no request ID.
+
 Core delivers a delegate's output to local clients by locality, so two unattested local clients on one node see the same output. Core-authenticated app sessions are open work in [#5264](https://github.com/freenet/freenet-core/issues/5264). The mobile crate exposes no delegate operation yet, and the [mobile plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) lists it as a feasibility deliverable.
 
 ### What AppKit proposes

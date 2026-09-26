@@ -22,10 +22,10 @@ AppKit adds what a host needs to run an app from its bundle, the signed package 
 
 Every request carries who made it, so the host can check the right permission. Two parts add that information:
 
-- Core labels every message sent to a delegate with the app that sent it. The label is the app's Freenet address, or the address of another delegate. The delegate can trust this label because Core adds it, and uses it to decide what to answer. When Bob sends a message, Core labels the request to River's chat delegate as coming from River, per [actions section 3](actions-and-delegates.md#3-delegate-requests-and-results).
+- Core labels every message sent to a delegate with the app that sent it. The label is the app's contract key, or the key of another delegate. The delegate can trust this label because Core adds it, and uses it to decide what to answer. When Bob sends a message, Core labels the request to River's chat delegate as coming from River, per [actions section 3](actions-and-delegates.md#3-delegate-requests-and-results).
 - The host adds which user, which installed copy and which session made the request. Only the host can trust these, because they come from the host rather than from Core. A delegate treats any such detail it finds inside a message as an unchecked claim.
 
-Each session remembers the app, its exact version, the user, the installed copy and the permissions it holds, per [bundles section 4](bundles.md#4-installing-a-copy). Each new session gets a new number, and the host ignores requests and replies that carry an older number. In a browser, the app label becomes trustworthy once Core confirms which app is calling, one of the [gates](#gates).
+Each session remembers the app, its exact version and the user, and on a phone the installed copy, per [bundles section 4](bundles.md#4-installing-a-copy). Each new session gets a new number, and the host ignores requests and replies that carry an older number. In a browser, the app label becomes trustworthy once Core confirms which app is calling ([#5264](https://github.com/freenet/freenet-core/issues/5264)).
 
 Before any action that needs permission, the host checks that the permission is still granted and that the request targets the right contract or delegate. The delegate then applies its own rules.
 
@@ -37,19 +37,19 @@ A bundle can hold two kinds of screens, and a publisher can also ship a phone ap
 - SDUI: screens described as data in `ui/sdui/ui.json`, which a reader draws.
 - Native code: the publisher's own iPhone or Android app.
 
-| Host function | Browser | Phone |
+| Host function | Browser | Native |
 | --- | --- | --- |
 | Host | The page Core wraps around every web app. It holds the node's access key and relays the app's messages to the node | SDUI: the Freenet mobile app<br>Native code: the publisher's own app |
 | What runs | Web code: the publisher's pages<br>SDUI: the web reader that ships in the bundle<br>Core loads both from the bundle inside a sandbox, a browser frame cut off from other sites and the rest of the browser | SDUI: the reader built into the Freenet mobile app draws the screens with the phone's own buttons and lists, per [SDUI section 7](sdui.md#7-reader-implementations)<br>Native code: the publisher's own screens |
-| What buttons do | SDUI: the reader runs the steps the bundle declares, such as "read the room, ask the delegate to sign, send". Heavy work runs in the background<br>Web code: its own code talks to Freenet directly | SDUI: the reader in the Freenet mobile app runs the declared steps<br>Native code: its own code talks to Freenet directly |
+| What buttons do | SDUI: the reader runs the steps the bundle declares, such as "read the room, ask the delegate to sign, send". Heavy work runs in the background<br>Web code: its own code talks to Freenet directly | SDUI: the reader in the Freenet mobile app runs the declared steps. Each app can reach only the contracts, delegates and permissions its bundle declares, so one app cannot use another app's room or delegate<br>Native code: its own code talks to Freenet directly |
 | Library for talking to Freenet | SDUI: a browser library built from Freenet's Rust code, bundled with the web reader<br>Web code: Freenet's TypeScript library, or its Rust library compiled into the app | One Freenet library written in Rust, used from Swift on iPhone and Kotlin on Android. It also runs Core inside the app |
 | Messages to delegates | SDUI and web code send the same messages to the app's delegates, per [actions section 3](actions-and-delegates.md#3-delegate-requests-and-results) | SDUI and native code send the same messages |
 | Sessions | One per open page. Web code and SDUI screens on that page share it | One each time the app starts |
-| Confirming which app is calling | Core confirms it, once that [gate](#gates) ships | Core runs inside the app and checks each call directly, per the [mobile SDK plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
-| Saved work | Browser storage that survives closing the tab, once that [gate](#gates) ships. Until then, saved work lasts only while the tab is open, and the host tells the user so | An on-device database: SQLite on iPhone, Room on Android |
-| Protecting keys | Core encrypts keys with a master key kept in the computer's key store or a protected file | Core encrypts keys with a master key kept in the iPhone Keychain or Android Keystore, once that [gate](#gates) ships |
+| Confirming which app is calling | Core confirms it. Today Core's page hands an app ID to any app that asks, so Core needs to check the app itself ([#5264](https://github.com/freenet/freenet-core/issues/5264)) | Core runs inside the app, so the mobile SDK adds a direct in-process path that tags each call with the app, user and session, per the [mobile SDK plan](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
+| Saved work | Browser storage that survives closing the tab, which Core needs to add ([#5165](https://github.com/freenet/freenet-core/issues/5165), [#5254](https://github.com/freenet/freenet-core/issues/5254)). Until then, saved work lasts only while the tab is open, and the host tells the user so | An on-device database: SQLite on iPhone, Room on Android |
+| Protecting keys | Core encrypts keys with a master key kept in the computer's key store or a protected file | Core encrypts keys with a master key kept in the iPhone Keychain or Android Keystore. Core needs a Keychain and Keystore backend for that, per [identity section 2](../identity/README.md#2-protected-keys-and-records) |
 | Permission prompts | Core's page draws them, for web code and SDUI alike. Anything that looks like a prompt inside the sandbox is part of the app | SDUI: the Freenet mobile app draws them<br>Native code: the publisher's app draws its own |
-| Network | The sandbox lets the app talk only to its own node. Loading anything from other websites fails, except opening a new window. Payment therefore opens in a new window, and images and media ship in the bundle or come from the node | SDUI: the Freenet mobile app decides, and apps reach the network only through its approved features<br>Native code: the publisher's app decides |
+| Network | The sandbox lets the app talk only to its own node. Loading anything from other websites fails, except opening a new window. Payment therefore opens in a new window, per the [payment plan](../payment/README.md#2-checkout-flow), and images and media ship in the bundle or come from the node | SDUI: the Freenet mobile app decides, and apps reach the network only through its approved features. Payment runs in the Freenet mobile app's own screens, outside any web view<br>Native code: the publisher's app decides, and handles payment itself |
 
 The [mobile SDK plan](../freenet-mobile/README.md#0-feasibility-and-existing-evidence) lists which library each kind of app uses, and [how the phone library is packaged](../freenet-mobile/README.md#3-runtime-and-packaging).
 
@@ -67,8 +67,6 @@ For an app that uses AppKit permissions, Core's page:
 - Confirms who each message comes from, matches each reply to its request and cancels work that takes too long.
 - Checks delegate answers before the reader shows them or sends them on.
 
-On a phone, each app session gets only the actions its bundle declares.
-
 ### Features missing in Freenet for AppKit to work
 
 | Feature | Where | Core today | AppKit needs | Tracked in |
@@ -78,16 +76,18 @@ On a phone, each app session gets only the actions its bundle declares.
 | Declared permissions | Browser | Not built yet. The review of an earlier attempt, [#4090](https://github.com/freenet/freenet-core/pull/4090), requires asking again when an app's list changes, and letting users take permissions back | Permissions that are remembered and can be taken back | [#4014](https://github.com/freenet/freenet-core/issues/4014), plan in [discussion #5380](https://github.com/freenet/freenet-core/discussions/5380) |
 | Storage that lasts | Browser | Apps lose their data when the tab closes | Storage that survives closing the tab | [#5165](https://github.com/freenet/freenet-core/issues/5165) and [#5254](https://github.com/freenet/freenet-core/issues/5254) |
 | Confirming which app is calling | Browser | Core's page hands an app ID to any app that asks for one | Core confirms each app itself | [#5264](https://github.com/freenet/freenet-core/issues/5264) |
-| Confirming which app is calling | Phone | The same open work | A direct path inside the app that tags every call with the app, user and session | [#5264](https://github.com/freenet/freenet-core/issues/5264) and [mobile SDK section 2](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
-| Delegates on the phone | Phone | Core's phone library reads, writes, updates and follows contracts, with no delegate support yet | Run the app's delegates on the phone | [Mobile SDK section 2](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
-| Phone key stores | Phone | Core keeps its master key in Linux, macOS or Windows key stores, or in a file | Keep it in the iPhone Keychain and Android Keystore | [Identity section 2](../identity/README.md#2-protected-keys-and-records) |
+| Confirming which app is calling | Native | The same open work | A direct path inside the app that tags every call with the app, user and session | [#5264](https://github.com/freenet/freenet-core/issues/5264) and [mobile SDK section 2](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
+| Delegates on the phone | Native | Core's phone library reads, writes, updates and follows contracts, with no delegate support yet | Run the app's delegates on the phone | [Mobile SDK section 2](../freenet-mobile/README.md#2-embedded-node-and-native-api) |
+| Phone key stores | Native | Core keeps its master key in Linux, macOS or Windows key stores, or in a file | Keep it in the iPhone Keychain and Android Keystore | [Identity section 2](../identity/README.md#2-protected-keys-and-records) |
 | Stop following a contract | Both | The app keeps receiving updates until it disconnects | Stop updates when no screen needs them | Freenet's client library and Core, listed as upcoming |
 
 ## 3. Installing and updating
 
+This section is about phones. A browser installs nothing: Core's page serves whichever version its node holds, and a reload picks up a newer one.
+
 River publishes a new version that adds Carol's "Invite member" screen, per [bundles section 3](bundles.md#3-publishing-and-evidence).
 
-1. Bob's host sees a newer version at River's Freenet address.
+1. Bob's host follows River's container, so it sees the new version.
 2. Before running any of its code, the host checks the publisher's signature and reads the app definition. It runs the safety checks in [bundles section 4](bundles.md#4-installing-a-copy), then checks that its reader supports everything the new screens and actions use.
 3. The chat delegate is the same as before, so the host installs the update straight away. It prepares the new files and its own database changes on the side, checks them, then switches to the new copy in one step.
 4. Bob still has an unsent reply to Alice. The host starts a new session and ignores late replies meant for the old one. The unsent reply keeps its ID and goes out under the new session.
@@ -106,12 +106,11 @@ The host remembers the newest version it has seen and the version it has install
 | What the host finds | What it does |
 | --- | --- |
 | A compatible new version | Prepares it, switches to it in one step and starts a new session |
-| An older version than the one it has | Keeps what it has and checks again later |
+| An older version than the one it has | Keeps what it has |
 | The same version number with different files | Keeps the copy it accepted and a record of the mismatch. Moves on when a later signed version settles it |
 | Screens, actions or delegate messages newer than the host supports | Keeps the working copy and explains which host update the user needs. The Freenet mobile app offers the web app or the publisher's phone app instead, per its [opening flow](../freenet-mobile-app/README.md#2-opening-an-application) |
 | Missing files, or an install that stopped halfway | Keeps the last working copy and saved data, then tries again |
 | A changed delegate or a new setup step | Shows the install screen with the change, per [bundles section 2](bundles.md#2-contracts-delegates-and-initialization), and switches after the user accepts |
-| A new phone feature | Asks the first time the app uses it, per [section 5](#5-permissions-and-device-access) |
 
 When an update changes how data is stored:
 
@@ -142,7 +141,7 @@ The reply counts as sent once a later read of the room shows it among the recent
 - Closing one app leaves other apps running.
 - When the app goes to the background, the host saves drafts to the app's delegate, saves unsent work, stops local work and ignores late replies to the old session. Reopening starts a new session. Saved work survives even if the phone kills the app.
 - After showing saved data, the host refreshes the app and its active contracts, within the limits in [actions section 4](actions-and-delegates.md#4-limits-and-security). It can restore missing app data through the app's own recovery actions. Data nobody has fetched for a long time ([cold state](https://github.com/freenet/freenet-core/issues/4642)) comes back only if some peer still keeps a copy.
-- Importing and exporting local data runs through the host. The app's delegate converts the records, and the host checks that the destination may receive them. The host lists records it cannot import, and imports shared data only when it carries valid signatures.
+- Importing and exporting local data runs through the host, the way `riverctl identity export` and `riverctl identity import` move a River identity today ([cli/README.md](https://github.com/freenet/river/blob/main/cli/README.md)). The app's delegate converts the records, and the host checks that the destination may receive them. The host lists records it cannot import, and imports shared data only when it carries valid signatures.
 
 Drafts and private records live in the chat delegate's storage, and unsent work and cached screens live with the host, per [data section 2](data-and-operations.md#2-values-and-local-storage). The host also keeps installed bundles and where the user was in the app, while the installed copy still has that screen. The [identity plan](../identity/README.md) covers keys and recovery.
 
@@ -156,6 +155,7 @@ Alice turns on message alerts in "Skate club". The reader asks the host to turn 
 - The host draws the prompt. It names the app and what it wants, and remembers the answer for that app, user and installed copy. That remembered answer is a grant.
 - The app keeps the grant until the user takes it back in the host's settings. Taking it back stops the feature right away, and unsent work checks again before it runs.
 - If an update adds a permission to the list, the host asks again.
+- A delegate that should run after install and after each node start declares it in its own Wasm manifest ([#5730](https://github.com/freenet/freenet-core/pull/5730)). In a browser, Core asks once per app. On a phone, the host allows it without asking, because the node runs only while the app is open.
 
 When Bob starts using River:
 
@@ -210,8 +210,7 @@ When a user exports a report, it includes IDs and error types, and hides private
 - The Freenet mobile app and publisher phone apps use the same phone library. Tests on real phones show delegates running on the device, apps kept apart, callers confirmed and limits enforced.
 - Alice's draft and pending reply survive locking, backgrounding and the phone closing the app, on hosts with storage that lasts.
 - Install tests pass for files that match the exact version, an update interrupted halfway, falling back to a working copy, the same version with different files, replayed content, late updates after time offline, and deleting old copies while work is still pending.
-- Taking back a permission stops the feature right away, and unsent work checks permissions again.
-- Tests cover a locked phone, lost keys, a replaced phone and delegate upgrades through the [export and import](../migration/README.md#3-delegate-secret-export-and-import).
+- Taking back a permission stops the feature right away, and unsent work checks permissions again.- Tests cover a locked phone, lost keys, a replaced phone and delegate upgrades through the [export and import](../migration/README.md#3-delegate-secret-export-and-import).
 - The browser and phone libraries pass the same message tests. SDUI screens and publisher code produce the same results.
 - Measurements cover startup time and the time to show saved data. Tests enforce limits on actions, storage, followed contracts and delegate running time.
 - Test cases include harmful bundles, fake messages, actions that take too long, Core stopping midway, late replies, data format changes, fake permission prompts and two apps kept apart.

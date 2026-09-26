@@ -35,7 +35,7 @@ Complete two separate feasibility checks before wider adoption:
 
 Measure browser startup, compressed download size and memory against the TypeScript SDK. Measure native library size, startup, memory, large-record copying, subscription throughput and lifecycle recovery on target devices. Record the workload, platform, library revision and adapter configuration with every result. Measure embedded Core separately from SDK binding costs. For SDUI, also measure action steps, delegate calls, transferred bytes and response time.
 
-Record the tested Core, stdlib, binding and `freenet-migrate` versions with every result. Core's lockfile pins stdlib 0.10.0, and the [migration library README](https://github.com/freenet/freenet-migrate#status) describes a published runtime targeting 0.8.x plus unreleased APIs. Confirm compatible adapters or aligned dependencies before selecting its runtime policy.
+Record the tested Core, stdlib, binding and `freenet-migrate` versions with every result. Core main depends on stdlib 0.12.0, and the [migration library README](https://github.com/freenet/freenet-migrate#status) describes a published runtime targeting 0.8.x plus unreleased APIs. Confirm compatible adapters or aligned dependencies before selecting its runtime policy.
 
 Publish required adapters, unsupported operations and API compatibility changes with the results. Set device and workload acceptance budgets from those measurements before adopting the Rust-backed browser build for the web reader or expanding product adoption. A successful library build establishes compilation. Integration and device results establish usable behavior. If a gate fails, record the required follow-up and keep broader adoption pending.
 
@@ -75,15 +75,16 @@ The remaining native operations are feasibility deliverables:
 | Deliverable | Why it is needed | Where it lands |
 | --- | --- | --- |
 | Delegate messaging, register and unregister | Domain delegates run on the device | `crates/mobile` API |
+| Prompt handler | Core runs a delegate after install and each node start only when its embedder answers yes to Core's prompt | `crates/mobile` answers yes, per [hosts section 5](../appkit/hosts.md#5-permissions-and-device-access) |
 | Full-state update | Recovery republishes whole records | `crates/mobile` API |
 | Structured operation events with request and session identity | Hosts correlate callbacks to sessions | `crates/mobile` API |
-| Client-side Unsubscribe | stdlib 0.10 has Put, Update, Get and Subscribe. Core lists the Unsubscribe variant as upcoming, and demand is released when the client connection closes | stdlib and Core, tracked upstream |
+| Client-side Unsubscribe | stdlib 0.12 has Put, Update, Get and Subscribe. Core lists the Unsubscribe variant as upcoming, and demand is released when the client connection closes | stdlib and Core, tracked upstream |
 | Request correlation | The protocol matches responses by variant and contract key and carries no request id, so the mobile client serializes requests | Either serialize per contract key in the SDK, or add a request id to stdlib and track it upstream. Record the choice with the feasibility results |
 | Kotlin build script | Only the iOS build script exists | `crates/mobile/scripts` |
 
 Until Unsubscribe ships, a subscription to Core ends with the client connection. The host's reference count decides which screens still need the data.
 
-Create a trusted in-process host-to-Core path for production app sessions. It binds the verified container identity, content reference, user and session to each privileged call. Route application requests through that path. Every privileged call requires caller authentication, including calls over a loopback socket. [Core session admission](https://github.com/freenet/freenet-core/issues/5264) defines that boundary and remains open. Implement and test it before enabling protected operations.
+Create a trusted in-process host-to-Core path for production app sessions. It binds the verified container identity, content reference, user and session to each privileged call. Route application requests through that path. Every privileged call requires caller authentication, including calls over a loopback socket. [Core session admission](https://github.com/freenet/freenet-core/issues/5264) defines that boundary and remains open. The [host plan](../appkit/hosts.md#features-missing-in-freenet-for-appkit-to-work) lists it with the other Core features AppKit needs.
 
 SDK request IDs correlate transport work once the correlation deliverable above lands. Application operation IDs identify actions such as Bob's message and survive retries, restarts and device recovery. Return both when relevant so each network request remains linked to the same message.
 

@@ -68,9 +68,10 @@ flowchart LR
     Review -->|Accept| Validate[Validate size]
     Review -->|Reject| Closed[Close proposal]
     Validate --> Accept[Accept proposal]
-    Accept --> Certify[Certify exact archive]
-    Certify --> Publish[Verify publication]
-    Publish --> Eligible[Eligible for paid usage]
+    Accept --> Publish[Publish and read back]
+    Publish --> Certify[Certify the stored archive]
+    Certify --> Observe[Observe from an independent node]
+    Observe --> Eligible[Eligible for paid usage]
 ```
 
 | Stage | Rule |
@@ -80,10 +81,10 @@ flowchart LR
 | Review | An eligible reviewer signs against the evidence revision. Rejection closes the proposal, and further work starts a linked successor |
 | Validate size | An eligible validator signs an estimate. Agreement accepts the proposed size. On disagreement, a second validator selects one of the two estimates |
 | Accept | Requires complete evidence, review, size, allocation, and resolved challenges. Acceptance binds to the evidence revision and policy version |
-| Certify | Requires resolved challenges and accepted source-to-artifact evidence. Commit a snapshot and signed contribution record for the prepared archive in one transaction ([bundle integration](#4-bundle-integration)) |
+| Certify | Requires resolved challenges and accepted source-to-artifact evidence. Commit a snapshot and signed contribution record for the archive read back from the node in one transaction ([bundle integration](#4-bundle-integration)) |
 | Observe publication | Verify the published container and match its archive digest to the contribution record before enabling paid use |
 
-An attributed change reaches Accept before it merges. Acceptance requires addressed review feedback, a signed size estimate and a signed resolution for every challenge. The repository integration permits merging once these checks pass. The product publication workflow obtains certification for the prepared archive before signing and publishing it. Paid eligibility also requires verified publication. The acceptance gate applies to changes claiming attribution.
+An attributed change reaches Accept before it merges. Acceptance requires addressed review feedback, a signed size estimate and a signed resolution for every challenge. The repository integration permits merging once these checks pass. The product publication workflow publishes through the unchanged fdev path, reads the archive back and obtains certification for the bytes the node stored. Paid eligibility also requires verified publication. The acceptance gate applies to changes claiming attribution.
 
 ### Challenges
 
@@ -122,19 +123,20 @@ sequenceDiagram
     participant Attribution as Attribution service
     participant Publisher as Freenet publisher
     participant Network as Freenet
-    Builder->>Builder: Build and validate exact archive
+    Builder->>Builder: Build and validate the directory
+    Builder->>Publisher: Build directory
+    Publisher->>Network: Sign and publish normal container state
+    Builder->>Network: Read back, verify signature, hash archive
     Builder->>Attribution: Certify archive digest and accepted evidence
     Attribution->>Attribution: Commit snapshot and contribution record
     Attribution-->>Builder: Signed contribution record
-    Builder->>Publisher: Prepared archive bytes
-    Publisher->>Network: Sign and publish normal container state
     Attribution->>Network: Read back from an independent node and verify publication
     Attribution->>Attribution: Record matching publication reference and observing node
 ```
 
-The contribution record lives separately from the archive it certifies. The service signs all binding fields using a specified, versioned encoding. Repeating an identical certification request returns the existing record. Changed archive bytes require a matching new certification and review of changed evidence. The preparation hook in the bundle plan must preserve bytes through signing and submission.
+The contribution record lives separately from the archive it certifies. The service signs all binding fields using a specified, versioned encoding. Repeating an identical certification request returns the existing record. Changed archive bytes require a matching new certification and review of changed evidence. The bundle plan certifies the archive read back from the node, so the certified digest is the stored digest.
 
-A failed publish leaves a retryable certification record. After an uncertain publication, read and verify the container. Record its exact publication reference against the contribution record, together with the node that served the read. Core serves GET from locally cached state, so a readback from the publisher's own node proves acceptance there and a read from an independent node proves retrievability at that moment. Paid eligibility requires the independent-node observation. The same certified archive can appear at several container versions, each with its own verified observation. Paid use requires the observation and the product's commercial eligibility decision.
+After an uncertain publication, read and verify the container before publishing again. Record its exact publication reference against the contribution record, together with the node that served the read. Core serves GET from locally cached state, so a readback from the publisher's own node proves acceptance there and a read from an independent node proves retrievability at that moment. Paid eligibility requires the independent-node observation. The same certified archive can appear at several container versions, each with its own verified observation. Paid use requires the observation and the product's commercial eligibility decision.
 
 Native builds receive their own artifact certification and publisher/distribution evidence under the product's declared verification policy. They can share contribution weights with a reviewed SDUI bundle. The service validates that mapping. A client-supplied build digest remains a claim until it passes the policy's evidence checks.
 

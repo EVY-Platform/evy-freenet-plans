@@ -95,7 +95,7 @@ flowchart LR
 
 #### From a developer's change to a contributor payment
 
-A contributor payment needs a paid operation, so this diagram follows the Marketplace sale, the one flow in these plans that carries money. The [running example](#running-example) below covers everything else.
+A contributor payment needs a paid operation, so this diagram follows the Marketplace sale, the one flow in these plans that carries money. The running example in each plan covers everything else.
 
 ```mermaid
 sequenceDiagram
@@ -106,11 +106,10 @@ sequenceDiagram
     participant Payments
     participant Remuneration
     Carol->>Attribution: Submit pickup work and review evidence
-    Publisher->>Publisher: Build and hash the prepared archive
-    Publisher->>Attribution: Request certification for those exact bytes
-    Attribution-->>Publisher: Separate signed contribution record and snapshot
     Publisher->>Publisher: Sign and publish the ordinary container state
-    Publisher->>Attribution: Supply publication reference
+    Publisher->>Publisher: Read back and hash the stored archive
+    Publisher->>Attribution: Request certification for those bytes and the publication reference
+    Attribution-->>Publisher: Separate signed contribution record and snapshot
     Attribution->>Attribution: Verify signed publication and archive digest
     App->>App: Verify bundle and activate declared actions
     App->>Payments: Request checkout for the agreed 70 dollar order
@@ -122,6 +121,8 @@ sequenceDiagram
 ```
 
 ## Roadmap
+
+The [proposed milestone and plan index](docs/plan-index.md) groups delivery into five milestones, with optional SDUI in milestone 4. It includes numbered plans, release gates and a source map for the detailed rewrite. The documents below are the source plans for that review.
 
 | Plan | What for |
 | --- | --- |

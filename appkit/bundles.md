@@ -1,8 +1,8 @@
 # Application bundles
 
-A publisher ships an application as a Freenet website, a signed archive stored in a container contract. The container's key comes from its code and the publisher's key, and each release is a higher signed version under that key, so the key names the application across releases. River ships this way from `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`, per [FREENET.md](https://github.com/freenet/river/blob/main/FREENET.md).
+A publisher ships an application as a Freenet website, a signed archive stored in a container contract. The container's key comes from its code and the publisher's key, and each release is a higher signed version under that key, so the key names the application across releases.
 
-A browser runs whatever code the archive's entry page loads. A mobile host runs only its own code, so AppKit adds an application definition to the archive that tells the host what the bundle contains and what to set up before the first screen opens. When Bob opens Alice's invite link, his phone reads River's container key from it, verifies the publisher's signature and installs River from the definition.
+A browser runs whatever code the archive's entry page loads. A mobile host runs only its own code, so AppKit adds an application definition to the archive that tells the host what the bundle contains and what to set up before the first screen opens.
 
 ## 1. The archive and its definition
 
@@ -26,7 +26,7 @@ ui/sdui/schemas/      # new: action, view and delegate protocols
 | Name | The application name. The install screen and the app list show it |
 | Description | Short sentence on what the application does, for app lists, discovery indexes and agents that search for applications |
 | Contract/delegate references | Each contract and delegate the bundle ships, with its setup flag and predecessor rows, see [section 2](#2-contracts-delegates-and-initialization) |
-| Permissions* | Device capabilities the application may use, each marked required or optional (per [#4014](https://github.com/freenet/freenet-core/issues/4014) & [#5254](https://github.com/freenet/freenet-core/issues/5254)). Hosts decide when to ask (mobile may ask only when needed) |
+| Permissions* | Device capabilities the application may use, each marked required or optional (per [#4014](https://github.com/freenet/freenet-core/issues/4014) & [#5254](https://github.com/freenet/freenet-core/issues/5254)). Hosts decide when to ask (mobile may ask only when needed). [Delegates permissions](hosts.md#5-permissions-and-device-access) are handled separately as it is an existing pattern |
 | Native links | Endorsed platform app builds and their store links, used to verify attribution and other checks |
 | Publisher transfer | An optional transfer statement or acknowledgement, per [migration section 4](../migration/README.md#4-publisher-continuity) |
 
@@ -55,30 +55,69 @@ A web app sets itself up, its own code calls `Put` to create contracts and `Regi
 - `fdev build` writes an alias and a code hash for each contract to `dependencies.json`. The publisher turns each pair into an entry, fills in the other fields and adds one entry per delegate under `delegates/`.
 - The install screen is the user's consent to the setup. The host shows it again when a delegate changes, because a delegate signs in the user's name.
 
-River's two entries, with illustrative field names and delegate alias:
+What this looks like with River as an example:
 
-```jsonc
-[
-  {
-    "alias": "river.room",                   // the name actions and views bind to
-    "kind": "contract",
-    "file": "contracts/<code_hash>.wasm",
-    "parameters": "room owner's key",        // host builds ChatRoomParametersV1 { owner }
-    "protocols": ["ChatRoomStateV1"],
-    "setup": "none",                         // the chat delegate creates one per room
-    "predecessors": [/* rows from common/legacy_room_contracts.toml */]
-  },
-  {
-    "alias": "river.chat",
-    "kind": "delegate",
-    "file": "delegates/chat_delegate.wasm",
-    "parameters": "empty",                   // the key is BLAKE3 of the code hash
-    "protocols": ["chat delegate: Store, Get, Delete, List"],
-    "setup": "register",                     // host installs it at install time
-    "predecessors": [/* rows from legacy_delegates.toml */]
-  }
-]
+<table>
+<tr><th>Example</th><th>What it means</th></tr>
+<tr>
+<td>
+
+```json
+{
+  "alias": "river.room",
+  "kind": "contract",
+  "file": "contracts/<code_hash>.wasm",
+  "parameters": "room owner's key",
+  "protocols": ["ChatRoomStateV1"],
+  "setup": "none",
+  "predecessors": [...]
+}
 ```
+
+</td>
+<td>
+
+`alias`: what actions and views [bind to](data-and-operations.md#1-reads-views-and-freshness)<br>
+`kind`: contract or delegate<br>
+`file`: Wasm path from `fdev build`<br>
+`parameters`: `ChatRoomParametersV1 { owner }`<br>
+`protocols`: schema the contract validates<br>
+`setup`: the chat delegate creates each room<br>
+`predecessors`: rows from [legacy_room_contracts.toml](https://github.com/freenet/river/blob/main/common/legacy_room_contracts.toml)
+
+</td>
+</tr>
+<tr>
+<td>
+
+```json
+{
+  "alias": "river.chat",
+  "kind": "delegate",
+  "file": "delegates/chat_delegate.wasm",
+  "parameters": "empty",
+  "protocols": ["chat delegate: Store, Get, Delete, List"],
+  "setup": "register",
+  "predecessors": [...]
+}
+```
+
+</td>
+<td>
+
+`alias`: picked by the publisher<br>
+`kind`: contract or delegate<br>
+`file`: Wasm path the publisher adds<br>
+`parameters`: key is BLAKE3 of the code hash<br>
+`protocols`: in the [chat delegate README](https://github.com/freenet/river/blob/main/delegates/chat-delegate/README.md)<br>
+`setup`: host registers it at install time<br>
+`predecessors`: rows from [legacy_delegates.toml](https://github.com/freenet/river/blob/main/legacy_delegates.toml)
+
+</td>
+</tr>
+</table>
+
+`setup` takes `create` with an initial-state rule for a contract the host creates at install time, `register` for a delegate, or `none` when a delegate creates each instance.
 
 The flow from publishing to updates:
 
@@ -90,18 +129,9 @@ The flow from publishing to updates:
 
 The web reader runs the same setup from the same flags through the browser SDK.
 
-| Entry field | Source | Notes |
-| --- | --- | --- |
-| Alias | `dependencies.json` | Actions and views bind to it, per [data section 1](data-and-operations.md#1-reads-views-and-freshness) |
-| Kind and file | `dependencies.json` for contracts, the publisher for delegates | Contract or delegate, and the Wasm path |
-| Parameter rule | Publisher | How the host builds the parameter bytes. The chat delegate key is BLAKE3 of the code hash alone, per [legacy_delegates.toml](https://github.com/freenet/river/blob/main/legacy_delegates.toml) |
-| Protocol versions | Publisher | The delegate protocols the entry answers, as in the chat delegate [README](https://github.com/freenet/river/blob/main/delegates/chat-delegate/README.md), or the record schemas the contract validates |
-| Setup | Publisher | `create` with an initial-state rule for a contract, `register` for a delegate, or none when a delegate creates each instance |
-| Predecessors | Publisher, the same rows `freenet-migrate-build` reads from `legacy.toml` | Generation and code hash of each earlier version, plus delegate key and parameter hex for a delegate. River's room rows in [common/legacy_room_contracts.toml](https://github.com/freenet/river/blob/main/common/legacy_room_contracts.toml) have `version`, `description`, `date` and `code_hash`. Its delegate rows in [legacy_delegates.toml](https://github.com/freenet/river/blob/main/legacy_delegates.toml) add `delegate_key` and `irregular_key` |
-
 #### Relevant reading and links
 - Any change to the chat delegate Wasm re-keys it, per [river-publish.md](https://github.com/freenet/river/blob/main/.claude/rules/river-publish.md).
-- Core's manifest permissions for browser capabilities, [#4014](https://github.com/freenet/freenet-core/issues/4014), set the same two requirements: a new prompt when the declared manifest changes and a way to revoke a grant. The [host gates](hosts.md#gates) track it.
+- Core's manifest permissions for browser capabilities, [#4014](https://github.com/freenet/freenet-core/issues/4014), set the same two requirements: a new prompt when the declared manifest changes and a way to revoke a grant. The [host plan](hosts.md#features-missing-in-freenet-for-appkit-to-work) lists it among the Core features AppKit needs.
 - The migration plan fixes parameter encodings, resolves successor pointers and carries state across re-keys. Core tracks the upstream side in [#2776](https://github.com/freenet/freenet-core/issues/2776). [Migration section 1](../migration/README.md#1-component-identity-and-re-keying) owns the registry rules and the build check that requires an entry when component code changes.
 - River runs `freenet_migrate_build::codegen()` on its two legacy files at build time, and CI fails a pull request that changes Wasm without a new entry, per [delegate-migration.md](https://github.com/freenet/river/blob/main/.claude/rules/delegate-migration.md). The host passes the definition's rows to the same library.
 - Core's [RFC #5255](https://github.com/freenet/freenet-core/issues/5255) proposes shipping delegate Wasm as the state of a signed container and asks whether `RegisterDelegate` grows an install-from-container variant. If it lands, the file field references that container, the host runs the registration path Core ships, and the other entry fields stay the same.
@@ -110,26 +140,29 @@ The web reader runs the same setup from the same flags through the browser SDK.
 
 ```mermaid
 flowchart LR
-    subgraph existing [Existing fdev path]
+    subgraph existing [Existing fdev website publish]
         A[Build directory] --> B[Tar and XZ]
         B --> C[Sign version plus archive]
         C --> D[PUT to node]
     end
     subgraph proposed [Proposed AppKit steps]
-        V[Validate definition, actions, schemas, SDUI] --> A
-        B --> H[Attribution hook on exact bytes]
-        H --> C
-        D --> R[Read back, verify signature, compare digest]
-        R --> I[Fetch from an independent node]
-        I --> K[Retain envelope and archive]
+        V[Validate definition, actions, schemas, SDUI<br/><i>needed for SDUI & mobile</i>] --> A
+        D --> R[Read back, verify signature, hash archive<br/><i>needed for attribution</i>]
+        R --> H[Attribution record for those bytes<br/><i>needed for attribution</i>]
+        H --> I[Fetch from an independent node<br/><i>needed for attribution</i>]
+        I --> K[Retain envelope and archive<br/><i>needed for attribution</i>]
     end
 ```
 
-`fdev website publish` reads the current container version and publishes a higher one, and Core serves GET from local cache. This plan proposes three additions around that path: certify the archive before signing, read the container back after the PUT, and record two references that name what was published. One release, the River version that carries Carol's "Invite member" screen, goes through the steps in order.
+`fdev website publish` compresses the directory, stamps a timestamp version, signs and PUTs in one command, and Core serves GET from local cache. Every bundle goes through it unchanged. This plan proposes one check before it and four steps after it. A web-only bundle needs none of them. An SDUI or mobile bundle needs the validation step, which also runs the caps from [section 4](#4-installing-a-copy). The four steps after the PUT serve attribution and recovery. A publisher that claims no attribution skips them.
 
-The River publisher claims attribution for Carol's screen, so the tool validates the bundle, builds the archive once and gets the signed [contribution record](../attribution/README.md#4-bundle-integration) for those exact bytes. Any later change to the archive, even a rebuild of the same source, needs a new record.
+One release, the River version that carries Carol's "Invite member" screen, goes through the steps in order.
 
-`fdev website publish` signs version 1758500000 and PUTs it. The PUT times out. A blind retry would sign a rebuilt archive under the same version, so the tool reads the container back first, verifies the signature and compares the digest with what it signed. The node returns the certified digest, so the tool skips the retry. That readback came from the publisher's own cache, so it proves acceptance there and nothing more. The tool marks the publication distributed once an independent node returns the same digest, attribution records that observation, and the publisher retains the envelope and archive under [section 5](#5-retention-and-recovery).
+1. The tool validates the definition, actions, schemas and SDUI files. `fdev website publish` signs version 1758500000 and PUTs it.
+2. The PUT times out. Each fdev run stamps a new version, so a blind retry would ship the same build twice. The tool reads the container back first, verifies the signature and hashes the archive. The node holds version 1758500000, so the tool skips the retry.
+3. The River publisher claims attribution for Carol's screen, so the tool gets the signed [contribution record](../attribution/README.md#4-bundle-integration) for the bytes it read back. A later publish, even a rebuild of the same source, compresses to different bytes and needs a new record.
+4. That readback came from the publisher's own node cache, so it proves acceptance there and nothing more. The tool marks the publication distributed once an independent node returns the same digest, and attribution records that observation.
+5. The publisher retains the envelope and archive under [section 5](#5-retention-and-recovery).
 
 `publication_ref` names the exact archive that Bob's phone installs.
 
@@ -137,7 +170,7 @@ The River publisher claims attribution for Carol's screen, so the tool validates
 | --- | --- |
 | Container `ContractKey` | River's container key, `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv` |
 | Container version | 1758500000, verified against the signature |
-| Hash algorithm and digest | The certified archive digest |
+| Hash algorithm and digest | The digest of the archive read back from the node, which attribution certifies |
 
 If the phone later sees the same version with a different digest, it keeps the accepted copy and the conflict evidence, as [Hosts](hosts.md#3-installing-and-updating) describes.
 
@@ -192,7 +225,7 @@ Predecessor entries belong to the [migration plan recap](../migration/README.md#
 - All hosts derive identical container, contract and delegate identities from shared fixtures, and probe the predecessors each entry lists.
 - Validation rejects mismatched actions, unsafe paths and an unsupported format version before execution.
 - Validation rejects an action step that requests an access the permissions field does not declare, and an update that adds an entry prompts again before the new access is granted.
-- The attribution hook preserves the certified bytes through signing, retry, readback and the independent-node fetch.
+- The attribution record names the archive the node stored, and the independent-node fetch returns the same digest after a retry.
 - A native client and an SDUI client complete the same `river.sendMessage` action with the same delegate and contract bindings.
 - Publisher transfer, incompatible updates and recovery pass the host and identity fixtures.
 - Restoring a historical archive succeeds after the live container advances.

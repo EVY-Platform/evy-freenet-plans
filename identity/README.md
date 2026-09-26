@@ -27,7 +27,7 @@ Wrap Core's key encryption key with an iOS Keychain or Android Keystore backend.
 
 Core owns delegate secret namespaces. On a device node the namespace is the node: every app on the node shares the local scope, partitioned only by delegate key, and two apps that bundle the same delegate code and parameters share one secret store. In hosted mode the per-user secret context derives from a token the shell mints into browser local storage. Requests route by delegate key and parameters, with the origin contract as an optional attestation. The enrolled-key user identity in the table above is a host-layer concept that the host enforces.
 
-The production profile requires Core-authenticated app sessions. [Session admission #5264](https://github.com/freenet/freenet-core/issues/5264) remains open, and the shell mints app-identity tokens on request for a supplied contract identity today. Implement and test the selected browser or native admission path before enabling protected operations. Core then binds each delegate request to that admitted session.
+Core-authenticated app sessions are open Core work, [session admission #5264](https://github.com/freenet/freenet-core/issues/5264). The [host plan](../appkit/hosts.md#features-missing-in-freenet-for-appkit-to-work) lists it with the other Core features AppKit needs.
 
 Record the key algorithm and recovery method for each key. Hardware-backed signing depends on the device's supported algorithms. For a device key that cannot be exported, define how the user authorizes a successor after losing the device. An encrypted database backup preserves data but requires the corresponding key to open it.
 

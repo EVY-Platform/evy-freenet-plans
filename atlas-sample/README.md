@@ -8,7 +8,7 @@ Atlas has a Rust browser interface. The local `atlas-client` work exposes a brow
 
 Atlas re-keys its index contract whenever its common or contracts directories change. Its stable identity is a pointer record resolved through the migration library under the root verifying key. Pin the author key, the pointer record and the current index code hash in fixtures, and preserve the original parameter bytes and canonical signed Atlas records. A fresh contract build can address a different index, even when its source appears equivalent. Keep the browser workflows available while validating the proposed SDK bindings.
 
-Atlas pins stdlib 0.8.3, and the inspected Core uses 0.10.0. Bump Atlas to Core's stdlib in phase 0 before any measurement.
+Atlas pins stdlib 0.8.3, and Core main uses 0.12.0. Bump Atlas to Core's stdlib in phase 0 before any measurement.
 
 ## 2. Feasibility and application responsibilities
 

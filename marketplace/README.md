@@ -84,7 +84,7 @@ Store and listing contracts have fixed bounds in the v1 wire profile:
 
 ## 4. Offers, orders and conflicts
 
-Action definitions expose `makeOffer`, `acceptOffer`, `cancelOrder` and `closeOrder`. Each coordinates host reads, delegate preparation, durable journaling and approved submission. Section 5 defines the fulfillment and dispute actions. Saving a listing remains local until the buyer explicitly submits an offer or request.
+Action definitions expose `makeOffer`, `acceptOffer`, `cancelOrder` and `closeOrder`. Each coordinates host reads, delegate preparation, durable journaling and approved submission. Section 5 defines the fulfillment and dispute actions. Saving a listing remains local until the buyer explicitly submits an offer or request. A seller can let the Marketplace delegate accept offers that match a listing's fixed terms while the seller is away, as Harvest's [instant checkout](https://github.com/freenet/harvest/pull/159) does.
 
 An accepted order binds the buyer, seller, originating request, listing revision, quantity, amount, currency, fulfillment mode, charges, verified seller payment beneficiary, contributor-fee terms, agreed terms revision and payment authority. Compute the order terms digest over the complete canonical terms. Signatures and Checkout requests cover that digest. Changed terms require a new signed revision and renewed agreement.
 
