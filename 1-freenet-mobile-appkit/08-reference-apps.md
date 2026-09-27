@@ -48,11 +48,11 @@ Use a separate test contract for destructive migration cases and small Atlas rec
 
 ## Atlas recorded evidence and pinned identity
 
-[Atlas](https://github.com/freenet/atlas) has a Rust browser UI. Recorded local `atlas-client` work exposes a browser Wasm client, and the iOS demo reuses it through `FreenetWebRuntime`. Native application integration and delegate-backed signing need their own proof. These notes describe inspected development work. Plan 1.1 will record pinned revisions and real-device results.
+[Atlas](https://github.com/freenet/atlas) has a Rust browser UI. Recorded local `atlas-client` work exposes a browser Wasm client. Native application integration and delegate-backed signing need their own proof. These notes describe inspected development work. Plan 1.1 builds fresh iOS and Android WebView demos on the browser client and records pinned revisions and real-device results for both platforms.
 
 The recorded Atlas dependency is stdlib 0.8.3, while the inspected Core main uses 0.12.0. Align compatible dependencies or prove an adapter before measurement. Preserve published validator bytes while testing new builds separately.
 
-Atlas re-keys its index contract when common or contract code changes. Resolve its stable pointer under the root verifying key through the [migration library](https://github.com/freenet/freenet-migrate). Pin the author key, signed pointer record, index code hash, exact validator and original parameter bytes. Preserve canonical signed Atlas records. A new build's compatibility proof must account for its actual instance identity.
+Atlas re-keys its index contract when common or contract code changes. Resolve its stable pointer under the root verifying key through the [migration library](https://github.com/freenet/freenet-migrate). Fall back to the pinned index code hash when a fresh peer's pointer GET times out. Pin the author key, signed pointer record, index code hash, exact validator and original parameter bytes. Preserve canonical signed Atlas records. A new build's compatibility proof must account for its actual instance identity.
 
 ## Atlas fixture scope and acceptance
 

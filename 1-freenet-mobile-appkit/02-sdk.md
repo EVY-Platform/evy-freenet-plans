@@ -20,7 +20,7 @@ Compatible versions and profiles from [1.1](01-feasibility.md), the host authori
 | Delegate startup and prompts | Apply the trusted host's installation and permission policy, including approved foreground startup. |
 | Events and cancellation | Include SDK request and session identity, typed errors and submission uncertainty. Deliver callbacks on the platform's expected executor and reject expired-session callbacks. |
 
-The recorded mobile wrapper exposes get, put, delta update, subscribe, peer counts and update/status callbacks. Delegate operations, full-state updates, structured events and Android build scripts remain SDK deliverables.
+Build the mobile crate from a clean Core main with UniFFI Swift and Kotlin bindings and deliver this whole API, including delegate operations, full-state updates, structured events and iOS and Android build scripts. Apply the [prototype learnings in 1.1](01-feasibility.md#prototype-learnings).
 
 The recorded stdlib protocol correlates by response variant and contract key. Select and test safe request serialization or an upstream request-ID extension. SDK request IDs identify transport work. Application operation IDs in [1.6](06-data-and-operations.md#operation-identity-and-journal) survive retries and restarts.
 
@@ -30,8 +30,8 @@ Every privileged call, including loopback calls, uses a trusted host-to-Core pat
 
 ## Runtime, packaging and lifecycle
 
-- Compile native Rust libraries and reproducible Swift/Kotlin bindings. Package Apple device/simulator builds and selected Android ABIs with build scripts and checksums.
-- Execute standard contract/delegate Wasm on the on-device node. The recorded iOS profile uses the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). Keep compiled caches local, bounded and keyed by backend/engine version.
+- Compile native Rust libraries and reproducible Swift/Kotlin bindings. Package Apple device/simulator builds and Android device/emulator builds for the selected ABIs with build scripts and checksums.
+- Execute standard contract/delegate Wasm on the on-device node. The iOS profile uses the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). Select and record the Android profile's Wasm backend per ABI through 1.1 and test both profiles with the same fixtures. Keep compiled caches local, bounded and keyed by backend/engine version.
 - Test execution deadlines, memory growth, host-call cancellation, runtime shutdown and returned bytes/errors against desktop fixtures. Recorded Core defaults of 256 MiB per Wasm instance and 50 MiB per contract state are configuration evidence. Establish mobile limits through 1.1 and set an explicit mobile module-cache size because iOS lacks cgroup limits.
 - Carry explicit role and host-supplied storage paths through restart, reinstall and container relocation. Keep fixture stores separate from network stores.
 - Use one coordinator for startup, reconnect and shutdown. Save host journals before teardown, invalidate callbacks and release ports, runtime resources and store locks. Exercise termination during every transition.

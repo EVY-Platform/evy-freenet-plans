@@ -20,4 +20,4 @@ Own the River-and-Atlas release suite and product evidence on iOS and Android. E
 - Pass node-wide and per-app cellular tests, including [1.10's two-app continuous-publish cap cases](../1-freenet-mobile-appkit/10-thin-peer.md#acceptance), serving-peer loss, foreground lifecycle and accounting checks. Per-app caps preserve the other app's eligible demand. A node-wide cap stops both streams within the shared reserve. Unsupported thin negotiation stays visible and preserves the configured role.
 - Test inaccessible archives, offline caches, revoked permissions, invalid links, native/external handoffs and accessibility through both apps' actual UIs.
 
-The release suite uses River's and Atlas's actual web UIs. Record both application builds, container identities, devices, workloads and redacted results alongside the fixed catalogue configuration.
+The release suite uses River's and Atlas's actual web UIs. Record both application builds for iOS and Android, container identities, devices, workloads and redacted results alongside the fixed catalogue configuration.

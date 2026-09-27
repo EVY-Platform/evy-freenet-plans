@@ -62,4 +62,4 @@ Compare values, domain results, navigation events, operation records and typed e
 - Updates during a submitted operation or checkout retain original operation and commercial bindings through reconciliation.
 - Custom web/native acceptance passes alongside reader-only and embedded SDUI tests.
 - Mobile tests run under the required [thin-peer cellular profile](../1-freenet-mobile-appkit/10-thin-peer.md), including reader and archive-update traffic.
-- Release reports separate source inspection, compilation, simulator runs and real-device results and list the supported version matrix.
+- Release reports separate source inspection, compilation, iOS simulator and Android emulator runs and real-device results on both platforms, and list the supported version matrix.

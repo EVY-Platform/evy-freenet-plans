@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Own the developer-facing package, supported-version matrix, setup instructions, diagnostic export and release checklist. Provide a River WebView starter plus Swift/Kotlin SDK examples for the supported native route. Include build commands, pinned dependencies, artifact verification, fixture setup, lifecycle integration and distribution instructions.
+Own the developer-facing package, supported-version matrix, setup instructions, diagnostic export and release checklist. Provide a River WebView starter plus Swift/Kotlin SDK examples for the supported native route. Include iOS and Android build commands, pinned dependencies, artifact verification, fixture setup, lifecycle integration and distribution instructions for both platforms.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ The 1.8 prerequisite covers River's release flows and the bounded Atlas compatib
 | Thin-peer release | Upstream role support is implemented, role-preserving failure tests pass and all measured cellular budgets in [1.10](10-thin-peer.md) pass. |
 | Safety and durability | Host authority, protected keys, durable operations, app-specific encrypted export/import and supported migrations pass their owning plans. |
 | Device limits and accessibility | Startup, memory, battery, storage exhaustion, keyboard, focus, large text and screen-reader tests pass on the declared devices. |
-| Distribution | Reproducible packages and platform-review evidence cover the complete runtime and downloaded-content behavior. |
+| Distribution | Reproducible iOS and Android packages and platform-review evidence cover the complete runtime and downloaded-content behavior on both platforms. |
 | Diagnostics | Reports identify versions, node role, lifecycle state, observation provenance, pending-operation status and budget failures. Apply [host redaction](03-host.md#diagnostics) to keys, tokens, message content and private references. |
 
 Restart durability and migration are release requirements. [Broader customer recovery in 5.2](../5-optional-extensions/02-recovery.md) and [device sync in 5.3](../5-optional-extensions/03-sync-and-collaboration.md) are optional extensions of that foundation.
