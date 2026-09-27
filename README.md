@@ -34,32 +34,28 @@ flowchart LR
     Thin --> Full[Serving full peers route and host network data]
 ```
 
-| Plan | Specification |
-| --- | --- |
-| 1.1 | [Mobile feasibility and supported profiles](1-freenet-mobile-appkit/01-feasibility.md) |
-| 1.2 | [Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md) |
-| 1.3 | [Single-application host](1-freenet-mobile-appkit/03-host.md) |
-| 1.4 | [Application bundles](1-freenet-mobile-appkit/04-bundles.md) |
-| 1.5 | [Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md) |
-| 1.6 | [Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md) |
-| 1.7 | [Upgrades and migration](1-freenet-mobile-appkit/07-migration.md) |
-| 1.8 | [Reference apps and compatibility fixtures](1-freenet-mobile-appkit/08-reference-apps.md) |
-| 1.9 | [Developer package and release acceptance](1-freenet-mobile-appkit/09-release.md) |
-| 1.10 | [Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/10-thin-peer.md) |
+- [1.1 Mobile feasibility and supported profiles](1-freenet-mobile-appkit/01-feasibility.md)
+- [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md)
+- [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md)
+- [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md)
+- [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md)
+- [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md)
+- [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md)
+- [1.8 Reference apps and compatibility fixtures](1-freenet-mobile-appkit/08-reference-apps.md)
+- [1.9 Developer package and release acceptance](1-freenet-mobile-appkit/09-release.md)
+- [1.10 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/10-thin-peer.md)
 
 ### 2. EVY mobile app
 
 Build a curated multi-application host on the released AppKit. Ship hardcoded full application IDs for River and Atlas. Each resolves to a verified signed website with its own UI in a separate, isolated in-app WebView session. Both apps share one embedded thin node.
 
-| Plan | Specification |
-| --- | --- |
-| 2.1 | [EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md) |
-| 2.2 | [Multi-application sessions and authority](2-evy-mobile-app/02-sessions.md) |
-| 2.3 | [Installation and updates](2-evy-mobile-app/03-installation-and-updates.md) |
-| 2.4 | [Identity, permissions and device access](2-evy-mobile-app/04-permissions.md) |
-| 2.5 | [Shared node, data and lifecycle](2-evy-mobile-app/05-lifecycle.md) |
-| 2.6 | [Navigation and application management](2-evy-mobile-app/06-navigation.md) |
-| 2.7 | [Multi-application acceptance](2-evy-mobile-app/07-acceptance.md) |
+- [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md)
+- [2.2 Multi-application sessions and authority](2-evy-mobile-app/02-sessions.md)
+- [2.3 Installation and updates](2-evy-mobile-app/03-installation-and-updates.md)
+- [2.4 Identity, permissions and device access](2-evy-mobile-app/04-permissions.md)
+- [2.5 Shared node, data and lifecycle](2-evy-mobile-app/05-lifecycle.md)
+- [2.6 Navigation and application management](2-evy-mobile-app/06-navigation.md)
+- [2.7 Multi-application acceptance](2-evy-mobile-app/07-acceptance.md)
 
 ### 3. Attribution, remuneration and payment
 
@@ -82,24 +78,24 @@ Add screen definitions, readers and visual authoring to the released platform. A
 
 | Plan | Scope |
 | --- | --- |
-| [4.1 Format and compatibility](4-sdui/01-format.md) | Screens, components, navigation and accessibility |
-| [4.2 Bundles and publication](4-sdui/02-bundles.md) | SDUI artifacts, schema packaging and bundled web reader |
-| [4.3 Hosts and readers](4-sdui/03-readers.md) | Browser, SwiftUI and Compose readers and SDK adapters |
-| [4.4 Identity and permissions](4-sdui/04-identity.md) | Reader bindings to host sessions, grants and protected operations |
-| [4.5 Actions and delegates](4-sdui/05-actions.md) | Declared-action executor and typed domain convention |
-| [4.6 Data and operations](4-sdui/06-data.md) | Views, forms, local state and operation-status presentation |
-| [4.7 Commerce and attribution](4-sdui/07-commerce.md) | Optional checkout, domain evidence and artifact integration |
-| [4.8 Visual authoring](4-sdui/08-developer.md) | Canvas, schema editors, preview, import and durable checkpoints |
-| [4.9 Migration and conformance](4-sdui/09-migration-and-conformance.md) | Form upgrades, reader compatibility and cross-target tests |
+| [4.1 SDUI format and compatibility](4-sdui/01-format.md) | Screens, components, navigation and accessibility |
+| [4.2 SDUI bundles and publication](4-sdui/02-bundles.md) | SDUI artifacts, schema packaging and bundled web reader |
+| [4.3 SDUI hosts and readers](4-sdui/03-readers.md) | Browser, SwiftUI and Compose readers and SDK adapters |
+| [4.4 SDUI identity and permissions](4-sdui/04-identity.md) | Reader bindings to host sessions, grants and protected operations |
+| [4.5 SDUI actions and delegate protocols](4-sdui/05-actions.md) | Declared-action executor and typed domain convention |
+| [4.6 SDUI data and operation presentation](4-sdui/06-data.md) | Views, forms, local state and operation-status presentation |
+| [4.7 SDUI commerce and attribution](4-sdui/07-commerce.md) | Optional checkout, domain evidence and artifact integration |
+| [4.8 EVY Developer visual authoring](4-sdui/08-developer.md) | Canvas, schema editors, preview, import and durable checkpoints |
+| [4.9 SDUI migration and conformance](4-sdui/09-migration-and-conformance.md) | Form upgrades, reader compatibility and cross-target tests |
 
 ### 5. Optional extensions
 
 | Plan | Scope | Prerequisites |
 | --- | --- | --- |
 | [5.1 Peer reputation](5-optional-extensions/01-reputation.md) | Private evidence, purpose-bound proofs and disclosure policy | Protected identity, authenticated host access and application-defined evidence |
-| [5.2 Backup and recovery](5-optional-extensions/02-recovery.md) | Automated backups, selected destinations and cross-app recovery | App-specific recovery, durable operations and supported migrations |
-| [5.3 Sync and collaboration](5-optional-extensions/03-sync-and-collaboration.md) | Consumer device sync and opt-in authoring sessions, with separate gates | Identity, durable operations and verified Core sync support for consumer sync. Released 4.8 visual authoring and checkpoints for collaboration |
-| [5.4 Discovery and catalogue extensions](5-optional-extensions/04-discovery.md) | Replaceable search providers and signed catalogue updates | Milestone 2 installation, sessions, permissions, lifecycle and navigation, plus 1.8 Atlas fixtures |
+| [5.2 Extended customer backup and recovery](5-optional-extensions/02-recovery.md) | Automated backups, selected destinations and cross-app recovery | App-specific recovery, durable operations and supported migrations |
+| [5.3 Device sync and authoring collaboration](5-optional-extensions/03-sync-and-collaboration.md) | Consumer device sync and opt-in authoring sessions, with separate gates | Identity, durable operations and verified Core sync support for consumer sync. Released 4.8 EVY Developer visual authoring and checkpoints for collaboration |
+| [5.4 Discovery and catalogue extensions](5-optional-extensions/04-discovery.md) | Replaceable search providers and signed catalogue updates | Milestone 2 (EVY mobile app) installation, sessions, permissions, lifecycle and navigation, plus the Atlas fixtures in 1.8 Reference apps and compatibility fixtures |
 
 ## Sources
 

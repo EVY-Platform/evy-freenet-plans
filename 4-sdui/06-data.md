@@ -1,8 +1,23 @@
-# SDUI data and operation presentation
+# 4.6 SDUI data and operation presentation
 
-Plan ID: 4.6. Bind controls to typed views, forms and local state, and display durable operation outcomes from the host.
+Bind controls to typed views, forms and local state, and display durable operation outcomes from the host.
 
-Prerequisites: [application data and durable operations, 1.6](../1-freenet-mobile-appkit/06-data-and-operations.md), [shared-node scheduling, 2.5](../2-evy-mobile-app/05-lifecycle.md), [screen format, 4.1](01-format.md), [session bindings, 4.4](04-identity.md), and [actions, 4.5](05-actions.md). The foundation owns storage, journals, operation identity, idempotence and retry. This plan owns the declarative binding and presentation layer.
+Prerequisites:
+
+- [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md)
+- [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md)
+- [4.1 SDUI format and compatibility](01-format.md)
+- [4.4 SDUI identity and permissions](04-identity.md)
+- [4.5 SDUI actions and delegate protocols](05-actions.md)
+
+The foundation owns storage, journals, operation identity, idempotence and retry. This plan owns the declarative binding and presentation layer.
+
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| `freenet-sdui` | Modified | Logical resources, views, value model, expressions, forms, saved state and pending-operation presentation |
+| `freenet-appkit` | Used | Bounded reads, subscription demand accounting, storage adapter and operation handles from 1.6 Application protocols, data and operations |
 
 ## Logical resources and views
 
@@ -19,7 +34,7 @@ Large search declares bounded index shards and result windows. Validate a delega
 | `error` | The bounded read failed. Show its typed error and permitted retry control |
 | `permission_required` | A host grant is needed. Retain the current form and request trusted host UI |
 
-Freshness uses the host-recorded response time, or an application timestamp whose meaning and verification the view declares. Label observation time separately from a publisher's data timestamp. The foundation's [client API evidence](../1-freenet-mobile-appkit/06-data-and-operations.md) owns response correlation and local-cache behavior.
+Freshness uses the host-recorded response time, or an application timestamp whose meaning and verification the view declares. Label observation time separately from a publisher's data timestamp. The [client API evidence in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) owns response correlation and local-cache behavior.
 
 Key cached projections by their resource identity and definition/delegate versions. Notify changed views and show stale metadata when restoring a cache. Cache retention and private-data protection use the foundation's storage policy.
 
@@ -27,7 +42,7 @@ Key cached projections by their resource identity and definition/delegate versio
 
 Define a common value model for null, missing, booleans, integers, decimals, strings, bytes, timestamps, durations, lists and objects. Shared fixtures fix numeric ranges, decimal encoding, overflow, comparisons, conversions and missing-value behavior. Host-supplied time, randomness, locale and time zone have deterministic substitutes in tests.
 
-Every binding explicitly selects a literal, reference or expression. References address a declared view, immutable route parameters, a form value or temporary display state. Expressions provide bounded presence checks, fallbacks, comparisons and formatting. Evaluation is side-effect-free. [Domain adapters](05-actions.md) calculate business values.
+Every binding explicitly selects a literal, reference or expression. References address a declared view, immutable route parameters, a form value or temporary display state. Expressions provide bounded presence checks, fallbacks, comparisons and formatting. Evaluation is side-effect-free. [Domain adapters under 4.5 SDUI actions and delegate protocols](05-actions.md) calculate business values.
 
 Proposed binding example:
 
@@ -62,7 +77,7 @@ Check action names, argument types and binding paths at publication and page act
 
 A form declares validation feedback, submission action, save policy and discard policy. Submission captures one consistent snapshot of its values. An explicit action writes shared state. Keep recoverable input after validation failure, denied access or domain conflict.
 
-Batch draft saves through the storage adapter and flush on pause, navigation and backgrounding according to the foundation lifecycle. Show whether a save is local, durable or waiting for storage. Restore only compatible form data under [4.9](09-migration-and-conformance.md). Revocation and lock handling use [4.4](04-identity.md).
+Batch draft saves through the storage adapter and flush on pause, navigation and backgrounding according to the foundation lifecycle. Show whether a save is local, durable or waiting for storage. Restore only compatible form data under [4.9 SDUI migration and conformance](09-migration-and-conformance.md). Revocation and lock handling use [4.4 SDUI identity and permissions](04-identity.md).
 
 ## Pending-operation presentation
 

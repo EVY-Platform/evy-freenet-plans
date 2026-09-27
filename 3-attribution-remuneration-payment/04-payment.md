@@ -1,14 +1,31 @@
 # 3.4 Payments and checkout adapters
 
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/payment`: Stripe Connect Checkout, webhook inbox, refunds, signed status record with its verifier crate, Freenet bridge peer and outbox |
+| `freenet-appkit` | Modified | Host checkout adapter: authenticated request binding, native trusted confirmation, browser handoff and return reconciliation |
+| `evy-marketplace` | Used | Order contract links the status verifier and the pilot exercises the whole flow |
+
 ## Owned scope
 
-Payment is the canonical authority for Checkout, purchase and application-fee refunds, reconciled cash adjustments and signed payment status. [3.3 certification](03-certification.md) owns certified-content eligibility. [Remuneration](05-remuneration.md) owns allocation calculations and contributor payout execution.
+Payment is the canonical authority for Checkout, purchase and application-fee refunds, reconciled cash adjustments and signed payment status. [3.3 Artifact certification and publication evidence](03-certification.md) owns certified-content eligibility. [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) owns allocation calculations and contributor payout execution.
 
 ## Prerequisites
 
-Use certification and publication evidence from [3.3](03-certification.md), the settlement interface from [3.5](05-remuneration.md#funding-and-settlement-policy), the trusted host from [1.3](../1-freenet-mobile-appkit/03-host.md), protected keys from [1.5](../1-freenet-mobile-appkit/05-identity.md), operation IDs and journals from [1.6](../1-freenet-mobile-appkit/06-data-and-operations.md), and authenticated multi-app sessions from [2.2](../2-evy-mobile-app/02-sessions.md). Production use requires [3.7 operations readiness](07-operations.md#acceptance), including processor and regional approval checks.
+Use:
 
-Custom web and native application code requests Checkout through an authorized service adapter. The first paid pilot uses Marketplace's custom web UI inside EVY's curated WebView host and a native checkout bridge. Optional SDUI invocation belongs to [plan 4.7](../4-sdui/07-commerce.md).
+- Certification and publication evidence from [3.3 Artifact certification and publication evidence](03-certification.md).
+- The settlement interface from [3.5 Usage evidence, remuneration and payouts](05-remuneration.md#funding-and-settlement-policy).
+- The trusted host from [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md).
+- Protected keys from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md).
+- Operation IDs and journals from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
+- Authenticated multi-app sessions from [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md).
+
+Production use requires [3.7 Operating readiness](07-operations.md#acceptance), including processor and regional approval checks.
+
+Custom web and native application code requests Checkout through an authorized service adapter. The first paid pilot uses Marketplace's custom web UI inside EVY's curated WebView host and a native checkout bridge. Optional SDUI invocation belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
 
 ## Trusted checkout handoff
 
@@ -21,14 +38,14 @@ Custom web and native application code requests Checkout through an authorized s
 
 The adapter persists the request ID, operation ID, payment/attempt IDs, order, terms digest and return correlation before leaving the app. It handles the embedded node being suspended or the app being terminated. On return, restore the authenticated session and resume the node under the host's lifecycle policy. Fetch signed service status even when Freenet synchronization is pending. A redirect or a success-looking URL supplies navigation evidence only.
 
-The payment service's Freenet peer publishes signed order updates while the phone is backgrounded. The client can also submit the same signed status after reconnecting. Both paths merge as one payment revision. The [trusted host](../1-freenet-mobile-appkit/03-host.md), [multi-app session and namespace rules](../2-evy-mobile-app/02-sessions.md) and [mobile lifecycle](../2-evy-mobile-app/05-lifecycle.md) remain the security boundary. Payment credentials stay in the service's secrets store.
+The payment service's Freenet peer publishes signed order updates while the phone is backgrounded. The client can also submit the same signed status after reconnecting. Both paths merge as one payment revision. [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md), [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md) and [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) remain the security boundary. Payment credentials stay in the service's secrets store.
 
 ## Fixed checkout evidence
 
 Record these bindings against the operation and agreed terms:
 
-- The exact `application_content_ref` defined by [bundles](../1-freenet-mobile-appkit/04-bundles.md), naming a publication or certified native build.
-- The signed contribution record, immutable attribution snapshot and retained source/publication or distribution evidence from [certification](03-certification.md#certification-records).
+- The exact `application_content_ref` defined by [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md), naming a publication or certified native build.
+- The signed contribution record, immutable attribution snapshot and retained source/publication or distribution evidence from [3.3 Artifact certification and publication evidence](03-certification.md#certification-records).
 - The product's signed capability-allocation policy and the signed settlement policy owned by remuneration.
 - The usage epoch assigned under remuneration's admission profile.
 
@@ -84,7 +101,7 @@ Receive the Checkout, PaymentIntent, charge, refund, dispute and application-fee
 
 The v1 unclaimed-fee beneficiary is the original seller whose proceeds bore the fee. Purchase refunds go to the buyer. Payment validates the seller's original account binding before returning an application fee. Use the explicit fee-return amount calculated by remuneration so earlier unclaimed returns and later purchase refunds reconcile against the same receipt. Total application-fee cash returns stay within the amount collected.
 
-[Remuneration](05-remuneration.md#return-calculations-and-allocation-effects) owns the return arithmetic, overlap accounting and the [combined unclaimed-return/partial-refund/post-payout fixture](05-remuneration.md#combined-return-and-refund-fixture). Financial operations replays this flow through the owning services.
+[3.5 Usage evidence, remuneration and payouts](05-remuneration.md#return-calculations-and-allocation-effects) owns the return arithmetic, overlap accounting and the [combined unclaimed-return/partial-refund/post-payout fixture in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#combined-return-and-refund-fixture). 3.7 Operating readiness replays this flow through the owning services.
 
 ## Signed payment status
 
@@ -103,7 +120,7 @@ revision, previous_record_digest
 bridge_key_id, key_succession_chain, signature
 ```
 
-Retain raw processor payloads, customer details and processor object IDs in private service records. Public Freenet records use opaque payment IDs. The public record still reveals its order, amount and content links under the [pilot privacy policy](08-marketplace.md#pilot-privacy-and-disputes).
+Retain raw processor payloads, customer details and processor object IDs in private service records. Public Freenet records use opaque payment IDs. The public record still reveals its order, amount and content links under the [pilot privacy policy in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#pilot-privacy-and-disputes).
 
 Embed the signed record in the order update. The order contract verifies its schema, signature, amount, currency and terms digest deterministically from that evidence. It uses the fixed bridge root key in its parameters. Every verification input needed by the contract travels in the update or its existing state.
 
@@ -113,9 +130,9 @@ Embed the signed record in the order update. The order contract verifies its sch
 | Signed status record | Append-only key succession from the root to the signer, each successor authorized by its predecessor |
 | Order state | Bounded records by payment ID and revision |
 
-Parameters hash into contract identity, so rotating keys appear in the signed succession chain. Earlier records remain verifiable under their original signer. [Operations](07-operations.md#signing-keys-and-access) owns rotation and compromise runbooks.
+Parameters hash into contract identity, so rotating keys appear in the signed succession chain. Earlier records remain verifiable under their original signer. [3.7 Operating readiness](07-operations.md#signing-keys-and-access) owns rotation and compromise runbooks.
 
-Merge identical revisions once. Retain different signed payloads at one revision as a conflict, keeping the two lowest digests. The [order profile](08-marketplace.md#orders-canonical-terms-and-conflicts) retains at most 32 revision slots per payment. Use the highest unconflicted verified revision for display. Automated order actions require predecessor recovery across gaps and an authorized signed resolution naming conflicting digests and the replacement chain. Pause those actions for the affected payment while preserving the evidence.
+Merge identical revisions once. Retain different signed payloads at one revision as a conflict, keeping the two lowest digests. The [order profile in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#orders-canonical-terms-and-conflicts) retains at most 32 revision slots per payment. Use the highest unconflicted verified revision for display. Automated order actions require predecessor recovery across gaps and an authorized signed resolution naming conflicting digests and the replacement chain. Pause those actions for the affected payment while preserving the evidence.
 
 An optional audit contract can mirror the records. The order validates against its embedded evidence. Marketplace applies its own fulfillment transitions after matching payment amount, currency and terms. Inventory and completion evidence remain separate domain facts.
 
@@ -125,11 +142,11 @@ The payment service runs a Freenet peer and a durable outbound queue. Retry an o
 
 During a Freenet outage, processor collection and webhook accounting continue. The queue retains pending order updates. The app distinguishes service-confirmed payment from order synchronization. A client can fetch and verify the signed record, then submit the same order update when its node resumes.
 
-[Plan 3.7](07-operations.md#durable-queues-and-reconciliation) requires recoverable service state, signing evidence, queue cursors and tested processor reconciliation. A future transfer of payment authority into Freenet also needs authenticated processor-event and custody primitives, alongside the [remuneration migration gates](05-remuneration.md#recovery-and-authority).
+[3.7 Operating readiness](07-operations.md#durable-queues-and-reconciliation) requires recoverable service state, signing evidence, queue cursors and tested processor reconciliation. A future transfer of payment authority into Freenet also needs authenticated processor-event and custody primitives, alongside the [migration gates in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#recovery-and-authority).
 
 ## Acceptance and evidence
 
-Plan 3.4 passes when:
+This plan passes when:
 
 - Custom web code completes Checkout through the authenticated native adapter on iOS and Android. A custom native fixture uses the same service interface.
 - Forged callers, revoked grants, stale sessions, wrong orders and substituted return links fail. Trusted native UI confirms the exact terms.
@@ -138,6 +155,6 @@ Plan 3.4 passes when:
 - Duplicate and reordered webhooks, refund retries and racing workers produce one reconciled financial result.
 - Changed application content, publisher authority or allocation policy during checkout preserves the original attempt's bindings.
 - Wrong-order payment proofs fail. Bridge-key rotation verifies through the root, and revision conflicts pause automated transitions.
-- Refunds and disputes update both the order record and contributor funding, including after payout. The [combined return fixture](05-remuneration.md#combined-return-and-refund-fixture) separates seller fee returns from buyer refunds and produces one cash adjustment per processor effect.
+- Refunds and disputes update both the order record and contributor funding, including after payout. The [combined return fixture in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#combined-return-and-refund-fixture) separates seller fee returns from buyer refunds and produces one cash adjustment per processor effect.
 
-Retain processor test evidence, tested host/Core revisions and real-device results. Stripe documentation describes API behavior, while the service, adapter and signed-status protocol here are planned work. The [Harvest source map](08-marketplace.md#harvest-design-references) records the separate source for embedded payment-proof design.
+Retain processor test evidence, tested host/Core revisions and real-device results. Stripe documentation describes API behavior, while the service, adapter and signed-status protocol here are planned work. The [Harvest source map in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#harvest-design-references) records the separate source for embedded payment-proof design.

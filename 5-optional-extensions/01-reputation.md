@@ -1,10 +1,21 @@
-# Peer reputation
+# 5.1 Peer reputation
 
-Plan ID: 5.1. This optional research and application-integration track lets an application request evidence about a peer while the peer keeps its credentials and activity receipts private. A claim proves the source's stated activity, such as participation on 20 distinct days.
+This optional research and application-integration track lets an application request evidence about a peer while the peer keeps its credentials and activity receipts private. A claim proves the source's stated activity, such as participation on 20 distinct days.
 
-Prerequisites: [protected identity](../1-freenet-mobile-appkit/05-identity.md), [authenticated host access](../1-freenet-mobile-appkit/03-host.md) and an application that defines qualifying events and receipt issuance. Mobile implementations inherit the [thin-peer resource and cellular limits](../1-freenet-mobile-appkit/10-thin-peer.md). Ordinary application use and commercial release have their own gates.
+Prerequisites: [protected identity in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md), [authenticated host access in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md) and an application that defines qualifying events and receipt issuance. Mobile implementations inherit the [resource and cellular limits in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md). Ordinary application use and commercial release have their own gates.
 
-This plan owns claims, private witnesses, verification and disclosure policy. Application code requests a scoped proof through its authorized host/SDK interface. [Marketplace](../3-attribution-remuneration-payment/08-marketplace.md) owns seller checks, orders, refunds and disputes.
+This plan owns claims, private witnesses, verification and disclosure policy. Application code requests a scoped proof through its authorized host/SDK interface. [3.8 Paid application pilot and commercial acceptance](../3-attribution-remuneration-payment/08-marketplace.md) owns seller checks, orders, refunds and disputes.
+
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| `freenet-reputation` | Created | Claim and source protocol, trust-graph contract, receipts delegate, proof system, contract verifier and host adapter |
+| `evy-marketplace` | Modified | Positive-event receipts and purpose-bound claim checks under its policy |
+| `freenet-appkit` | Modified | Proof grants, protected witnesses, session cancellation and persistent request history |
+| [river](https://github.com/freenet/river) | Used | Qualified activity events in the worked example |
+| [mail](https://github.com/freenet/mail) | Used | Recipient policy in the worked example and policy issue #70 |
+| [freenet-core](https://github.com/freenet/freenet-core), [paper-1](https://github.com/freenet/paper-1), [web](https://github.com/freenet/web), [harvest](https://github.com/freenet/harvest) and [atlas](https://github.com/freenet/atlas) | Used | Research sources listed at the end of this plan |
 
 ## Claims and evidence
 
@@ -56,7 +67,7 @@ The same purpose binding applies when a source requires a membership proof befor
 
 The privacy target covers pass identifiers, credentials, receipts, exact totals and links between source events and the pass. Public source records, network addresses, timing and information already held by recipients remain part of the threat model.
 
-[Host admission 1.3](../1-freenet-mobile-appkit/03-host.md) owns caller authentication and response isolation. [Multi-app sessions 2.2](../2-evy-mobile-app/02-sessions.md) and [permissions 2.4](../2-evy-mobile-app/04-permissions.md) own sharing and grants. [Migration](../1-freenet-mobile-appkit/07-migration.md) owns publisher continuity. Proof grants name accepted claims, source contracts and recipients. Grant transfer requires verified continuity and user approval. Treat a declined proof as an unanswered request.
+[1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md) owns caller authentication and response isolation. [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md) and [2.4 Identity, permissions and device access](../2-evy-mobile-app/04-permissions.md) own sharing and grants. [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md) owns publisher continuity. Proof grants name accepted claims, source contracts and recipients. Grant transfer requires verified continuity and user approval. Treat a declined proof as an unanswered request.
 
 ## Implementation and acceptance
 
@@ -96,9 +107,9 @@ These references supply research questions and implementation evidence. Their is
 | [Web of trust and anonymity #133](https://github.com/freenet/freenet-core/discussions/133) | Hidden membership, rotation, retirement and narrow-pool privacy |
 | [Anonymous reputation #882](https://github.com/freenet/freenet-core/discussions/882) | Private receipts and manufactured activity |
 | [Karma #11](https://github.com/freenet/freenet-core/issues/11) | Relay and hosting evidence, delivery checks and disputes |
-| [Symmetric NAT relays #2925](https://github.com/freenet/freenet-core/issues/2925) and [contract hardening](https://github.com/freenet/freenet-core/blob/08798042093a24d2e0c9d2dc744e570500747aa5/docs/design/contract-hardening.md) | Verifiable relay receipts and collusion. Thin mobile peers' network role remains owned by 1.10 |
+| [Symmetric NAT relays #2925](https://github.com/freenet/freenet-core/issues/2925) and [contract hardening](https://github.com/freenet/freenet-core/blob/08798042093a24d2e0c9d2dc744e570500747aa5/docs/design/contract-hardening.md) | Verifiable relay receipts and collusion. Thin mobile peers' network role remains owned by 1.10 Thin-peer role and cellular data budgets |
 | [Ghost Key research](https://github.com/freenet/web/issues/25) and [Mail policy #70](https://github.com/freenet/mail/issues/70) | Certificate-hiding proofs, attestation encryption and recipient/message binding |
-| [Harvest incentive mechanism](https://github.com/freenet/harvest/blob/main/docs/design/incentive-mechanism.md) and [design notes](https://github.com/freenet/harvest/blob/main/docs/design/README.md) | Signed order evidence and receiver policy, assessed in the [Marketplace's Harvest source appendix](../3-attribution-remuneration-payment/08-marketplace.md) |
+| [Harvest incentive mechanism](https://github.com/freenet/harvest/blob/main/docs/design/incentive-mechanism.md) and [design notes](https://github.com/freenet/harvest/blob/main/docs/design/README.md) | Signed order evidence and receiver policy, assessed in the [Harvest source appendix in 3.8 Paid application pilot and commercial acceptance](../3-attribution-remuneration-payment/08-marketplace.md) |
 | [Anonymous keypairs and blind donation verification #602](https://github.com/freenet/freenet-core/issues/602) | Donation-backed identity with a hidden donation link |
 | [Atlas reputation proposal](https://github.com/freenet/atlas/blob/main/PROPOSAL.md#ghostkeys-integration) | Discovery trust weights, signed feedback and analyzer reputation |
 | [Whitepaper trust boundaries](https://github.com/freenet/paper-1/blob/main/sections/06-trust.tex) and [open problems](https://github.com/freenet/paper-1/blob/main/sections/07-status.tex) | Sybil-exposed routing, revocation and consistency of accumulating and decreasing claims |

@@ -1,16 +1,31 @@
-# Plan 1.7: Upgrades and migration
+# 1.7 Upgrades and migration
+
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| `freenet-appkit` | Modified | Component key derivation, predecessor registry checks, contract carry-forward, delegate export and import coordination and transfer statements |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | `freenet-migrate-build`, probe drivers, carry-forward policies, delegate secret migration and pointer resolution |
+| [river](https://github.com/freenet/river) | Used | Legacy contract and delegate registries, pointer records, delegate migration rules and FREENET.md as fixtures |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Upgrade issue #2776, pointer records #5194, FNSX interfaces #4035 and #4592, RFC #5255 and PR #5199 as evidence |
+| [paper-1](https://github.com/freenet/paper-1) | Used | Status section on the upgrade protocol |
 
 ## Purpose
 
-Plan 1.7 carries application state, private records and publisher authority across supported upgrades. It owns component keys, predecessor registries, contract carry-forward, delegate secret migration and publisher transfer.
+This plan carries application state, private records and publisher authority across supported upgrades. It owns component keys, predecessor registries, contract carry-forward, delegate secret migration and publisher transfer.
 
 ## Prerequisites
 
-Compatible SDK and `freenet-migrate` versions from [1.1](01-feasibility.md) and [1.2](02-sdk.md), [bundle references 1.4](04-bundles.md), [identity protection 1.5](05-identity.md), and [durable operations 1.6](06-data-and-operations.md). Mobile upgrade tests run under the required [thin-peer and cellular gate in 1.10](10-thin-peer.md).
+- Compatible SDK and `freenet-migrate` versions from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) and [1.2 Embedded node and mobile SDK](02-sdk.md)
+- [1.4 Application bundles](04-bundles.md)
+- [1.5 Identity, keys and local protection](05-identity.md)
+- [1.6 Application protocols, data and operations](06-data-and-operations.md)
 
-The [single-app installation interface in 1.3](03-host.md#single-app-installation-interface) supplies release activation and host database staging for milestone 1. [Installation 2.3](../2-evy-mobile-app/03-installation-and-updates.md) composes that shared interface per app. Application code supplies concrete codecs and migration adapters. Optional screen and reader compatibility belongs to [SDUI 4.9](../4-sdui/09-migration-and-conformance.md).
+Mobile upgrade tests run under the required [thin-peer and cellular gate in 1.10 Thin-peer role and cellular data budgets](10-thin-peer.md).
 
-Source links below preserve the plan's implementation evidence. Release validation must confirm behavior and compatibility against pinned revisions, including the migration library's published and unreleased interfaces.
+The [single-app installation interface in 1.3 Single-application host](03-host.md#single-app-installation-interface) supplies release activation and host database staging for milestone 1 (Freenet mobile AppKit). [2.3 Installation and updates](../2-evy-mobile-app/03-installation-and-updates.md) composes that shared interface per app. Application code supplies concrete codecs and migration adapters. Optional screen and reader compatibility belongs to [4.9 SDUI migration and conformance](../4-sdui/09-migration-and-conformance.md).
+
+Source links below preserve this plan's implementation evidence. Release validation must confirm behavior and compatibility against pinned revisions, including the migration library's published and unreleased interfaces.
 
 ## Component identity and re-keying
 
@@ -77,7 +92,7 @@ Plaintext secrets transit the application during this round trip. State that exp
 
 | Interface or proposal | Boundary to verify |
 | --- | --- |
-| Same-key backup through Core's FNSX | [Identity 1.5](05-identity.md) owns package limits, cryptography and recovery coverage. Restore to the same full delegate key |
+| Same-key backup through Core's FNSX | [1.5 Identity, keys and local protection](05-identity.md) owns package limits, cryptography and recovery coverage. Restore to the same full delegate key |
 | Delegate-specific CLI export/import | [#4035](https://github.com/freenet/freenet-core/issues/4035) records interface work to check in the selected Core build |
 | Live import into the user's peer | [#4592](https://github.com/freenet/freenet-core/issues/4592) records the required import path |
 | Core-mediated provenance, deposit and merge | [RFC #5255](https://github.com/freenet/freenet-core/issues/5255) proposes signed delegate containers and install-from-container behavior. Adoption requires separate authorization and import tests |
@@ -87,7 +102,7 @@ Protected operations in the first public application require this upgrade gate. 
 
 ## Publisher continuity
 
-Routine web updates retain container validator code and publisher parameters. Changing either creates a successor container. [Bundles](04-bundles.md#publishing-and-evidence) owns the signed archive format and publication references.
+Routine web updates retain container validator code and publisher parameters. Changing either creates a successor container. [1.4 Application bundles](04-bundles.md#publishing-and-evidence) owns the signed archive format and publication references.
 
 The initial profile uses the stock website container and its single publisher verifying key. It accepts strictly higher versions and replaces the whole state. Publisher recovery therefore uses tested backups of that signing key. A validator with recovery-key parameters would be a separately reviewed successor identity.
 
@@ -111,7 +126,7 @@ After same-version divergence, a higher signed predecessor version names the com
 
 River's source records use `river.room-contract` and `river.chat-delegate` under publisher anchor `river:v1:vk:9Ebskq4y7NvJpTQTrF1FAxU8g6bR4Rhe4TRikXba55EJ`. The publisher re-signs them on each component re-key, and CI checks freshness in [pointer-records.toml](https://github.com/freenet/river/blob/main/pointer-records.toml) and [FREENET.md](https://github.com/freenet/river/blob/main/FREENET.md). Rotating the author key moves the container and both pointer addresses. Test all three references together.
 
-[Attribution](../README.md#3-attribution-remuneration-and-payment) separately approves product-to-container mappings. Existing contribution and funded-operation evidence keeps its original content references through a transfer.
+[Milestone 3 (Attribution, remuneration and payment)](../README.md#3-attribution-remuneration-and-payment) separately approves product-to-container mappings. Existing contribution and funded-operation evidence keeps its original content references through a transfer.
 
 ## Reference definitions
 
@@ -131,4 +146,4 @@ River's source records use `river.room-contract` and `river.chat-delegate` under
 - Same-key FNSX restore and cross-key application migration pass separate tests. The pinned build preserves successor namespace isolation.
 - Forged transfers, mismatched acknowledgements, competing successors, copied parameters and expanded permissions fail authorization tests.
 - A restored publisher backup signs a valid update to the original container. A transfer fixture verifies the container and pointer changes together.
-- Pending operations retain original IDs, exact bytes and content bindings through activation and migration. Real-device upgrade runs pass 1.10's thin-peer and cellular budgets.
+- Pending operations retain original IDs, exact bytes and content bindings through activation and migration. Real-device upgrade runs pass the thin-peer and cellular budgets in 1.10 Thin-peer role and cellular data budgets.

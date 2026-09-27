@@ -1,12 +1,19 @@
 # 3.3 Artifact certification and publication evidence
 
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution`: contribution records, snapshots, publication observations, native artifact records, eligibility lookup and retention |
+| `freenet-appkit` | Used | Exact envelope retention, local readback and independent-node fetch from the 1.4 Application bundles packaging CLI |
+
 ## Owned scope
 
-The attribution service owns source-to-artifact mappings, contribution records, immutable snapshots, publication observations and commercial eligibility evidence. It certifies exact web archives, contract/delegate builds and native executables. Its [decision authority](02-attribution.md#authority-and-later-extensions) is shared with registration and work acceptance.
+The attribution service owns source-to-artifact mappings, contribution records, immutable snapshots, publication observations and commercial eligibility evidence. It certifies exact web archives, contract/delegate builds and native executables. Its [decision authority in 3.2 Attribution workflow and allocation weights](02-attribution.md#authority-and-later-extensions) is shared with registration and work acceptance.
 
 ## Prerequisites
 
-Use accepted work from [3.2](02-attribution.md) and release tooling from [1.4 bundles](../1-freenet-mobile-appkit/04-bundles.md). Plan 1.4 owns `publication_ref` and the tagged `application_content_ref` format, plus building, signing, submission, exact-envelope retention and publication readback.
+Use accepted work from [3.2 Attribution workflow and allocation weights](02-attribution.md) and release tooling from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md). 1.4 Application bundles owns `publication_ref` and the tagged `application_content_ref` format, plus building, signing, submission, exact-envelope retention and publication readback.
 
 ## Certification records
 
@@ -19,7 +26,7 @@ Use accepted work from [3.2](02-attribution.md) and release tooling from [1.4 bu
 | Publication observation | Verified publication reference, matching contribution record, observing node and retained publisher evidence |
 | Native artifact record | Product, platform/build identity, exact build digest, accepted source evidence, capabilities, snapshot and distribution evidence |
 
-[3.2](02-attribution.md#work-records) owns acceptance records that bind the exact source revision, contribution shares and policy. Reviewed artifacts, including web and native builds, can share a snapshot when the service verifies their source and capability mapping.
+[3.2 Attribution workflow and allocation weights](02-attribution.md#work-records) owns acceptance records that bind the exact source revision, contribution shares and policy. Reviewed artifacts, including web and native builds, can share a snapshot when the service verifies their source and capability mapping.
 
 ## Certification and paid eligibility
 
@@ -47,12 +54,12 @@ For a verified publication or native artifact and capability, return:
 - The immutable snapshot, resolved recipients and contribution-policy version.
 - The product's current eligibility for new commercial operations.
 
-Historical lookups return the original evidence and weights. [Payment](04-payment.md#fixed-checkout-evidence) fixes the checkout bindings. [Remuneration](05-remuneration.md#verification-and-credit-accounting) verifies those bindings when allocating funds. Commercial suspension governs new operations while existing payments follow their recorded settlement policy.
+Historical lookups return the original evidence and weights. [3.4 Payments and checkout adapters](04-payment.md#fixed-checkout-evidence) fixes the checkout bindings. [3.5 Usage evidence, remuneration and payouts](05-remuneration.md#verification-and-credit-accounting) verifies those bindings when allocating funds. Commercial suspension governs new operations while existing payments follow their recorded settlement policy.
 
-Retain exact source and artifact bytes, mappings, snapshots, signatures and publication evidence for the configured support and transaction-evidence periods. [Financial operations](07-operations.md#backups-and-exact-evidence) owns backups and restore drills. A drill must verify a historical payment after the live container advances and the publisher's primary archive becomes unavailable.
+Retain exact source and artifact bytes, mappings, snapshots, signatures and publication evidence for the configured support and transaction-evidence periods. [3.7 Operating readiness](07-operations.md#backups-and-exact-evidence) owns backups and restore drills. A drill must verify a historical payment after the live container advances and the publisher's primary archive becomes unavailable.
 
 ## Acceptance
 
-Plan 3.3 requires changed-byte rejection, idempotent certification and certification from verified local readback while paid eligibility awaits independent observation. A matching later observation can enable paid use under policy. A mismatched observation keeps it pending. Tests also reject absent capabilities and unverified native digests, preserve original weights after updates, publisher transfer and commercial suspension, and consume the bundle tooling's uncertain-publication recovery evidence.
+This plan requires changed-byte rejection, idempotent certification and certification from verified local readback while paid eligibility awaits independent observation. A matching later observation can enable paid use under policy. A mismatched observation keeps it pending. Tests also reject absent capabilities and unverified native digests, preserve original weights after updates, publisher transfer and commercial suspension, and consume the bundle tooling's uncertain-publication recovery evidence.
 
-These are planned service requirements. The [bundle sources](../1-freenet-mobile-appkit/04-bundles.md) establish the publication mechanism. Acceptance must retain tested revisions and results for the certification and service checks.
+These are planned service requirements. [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md) establishes the publication mechanism. Acceptance must retain tested revisions and results for the certification and service checks.

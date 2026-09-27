@@ -1,12 +1,31 @@
-# SDUI actions and delegate protocols
+# 4.5 SDUI actions and delegate protocols
 
-Plan ID: 4.5. Execute bounded declared actions and define an optional typed domain convention over Freenet delegate messages.
+Execute bounded declared actions and define an optional typed domain convention over Freenet delegate messages.
 
-Prerequisites: [SDK delegate access, 1.2](../1-freenet-mobile-appkit/02-sdk.md), [concrete application protocols and durable operations, 1.6](../1-freenet-mobile-appkit/06-data-and-operations.md), [host admission, 1.3](../1-freenet-mobile-appkit/03-host.md), [multi-app sharing, 2.2](../2-evy-mobile-app/02-sessions.md), [permissions, 2.4](../2-evy-mobile-app/04-permissions.md), [bundles, 4.2](02-bundles.md), and [reader session bindings, 4.4](04-identity.md). This plan owns the executor, its step versions and the typed request/result convention. Application protocols and SDK delegate messaging remain foundation interfaces that custom applications use directly.
+Prerequisites:
+
+- [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md)
+- [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md)
+- [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md)
+- [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md)
+- [2.4 Identity, permissions and device access](../2-evy-mobile-app/04-permissions.md)
+- [4.2 SDUI bundles and publication](02-bundles.md)
+- [4.4 SDUI identity and permissions](04-identity.md)
+
+This plan owns the executor, its step versions and the typed request/result convention. Application protocols and SDK delegate messaging remain foundation interfaces that custom applications use directly.
+
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| `freenet-sdui` | Modified | Declared-action executor, step versions, typed delegate convention codecs and the River adapter fixture |
+| `freenet-appkit` | Modified | Executor host interface: authority rechecks, journal integration and budget enforcement |
+| [atlas](https://github.com/freenet/atlas) | Used | Domain operation run through a declared action and custom controls |
+| [river](https://github.com/freenet/river) | Used | Concrete signing protocol behind the adapter fixture |
 
 ## Convention boundary
 
-The [foundation application-protocol plan](../1-freenet-mobile-appkit/06-data-and-operations.md) owns Core message formats, caller attestation, autonomous events and River's concrete signing fixtures. Plan 4.5 adds schemas and typed adapters for generic readers. A correlated action completion requires its matching request and active session. Unsolicited output uses a separate validated event path through the foundation's authorized delivery interface.
+[1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) owns Core message formats, caller attestation, autonomous events and River's concrete signing fixtures. This plan adds schemas and typed adapters for generic readers. A correlated action completion requires its matching request and active session. Unsolicited output uses a separate validated event path through the foundation's authorized delivery interface.
 
 ## Declared actions
 
@@ -15,7 +34,7 @@ Definitions in `ui/sdui/actions/` name resources, input/output schemas and requi
 | Step | Result or effect |
 | --- | --- |
 | Invoke a declared action | Typed child result within the parent action's budget |
-| Read or observe a resource | Host snapshot or owned view demand through [4.6](06-data.md) |
+| Read or observe a resource | Host snapshot or owned view demand through [4.6 SDUI data and operation presentation](06-data.md) |
 | Call a delegate | Typed projection, prepared operation or structured error |
 | Submit prepared data | Foundation operation handle and subsequent outcome events |
 | Read, write or observe local data | Authorized record result from the selected storage adapter |
@@ -25,7 +44,7 @@ Definitions in `ui/sdui/actions/` name resources, input/output schemas and requi
 
 A new composition of supported steps arrives in a bundle. A new primitive requires a released executor implementation. Native executors update with the host. Bundled browser executors update through verified reader packaging and declare the host capabilities they need.
 
-Definitions, schemas and selected delegate artifacts come from one verified release. Before executing a protected step, the host rechecks session authority, grants and the concrete target. The executor uses the [foundation journal](../1-freenet-mobile-appkit/06-data-and-operations.md) for operation identity, exact submitted bytes, reconciliation and retry. Nested actions declare how their side effects map to those durable operations.
+Definitions, schemas and selected delegate artifacts come from one verified release. Before executing a protected step, the host rechecks session authority, grants and the concrete target. The executor uses the [journal in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) for operation identity, exact submitted bytes, reconciliation and retry. Nested actions declare how their side effects map to those durable operations.
 
 For example, `river.sendMessage` reads the room, sends typed signing arguments to the chat delegate, validates the prepared result and requests submission. A later view shows the host's observed outcome. `river.createRoom` can use a delegate's authorized Core request to create the room under the domain's contract and parameter rules.
 
@@ -44,7 +63,7 @@ Ship domain decoding and protocol translation in the application's verified dele
 
 Transport request IDs correlate one exchange. Durable operation IDs follow the user operation across retries and restarts under the foundation rules. Pure view calls use request correlation without allocating a mutation journal entry.
 
-Specify canonical encodings, numeric ranges, byte ownership and error variants. Distinguish permission denial, unavailable adapter, invalid input, protocol mismatch, conflict and uncertain outcome. Bound payload and delegate-context sizes by both the selected Core version and the reader profile. Use the delegate-context limit recorded by the [foundation protocol owner](../1-freenet-mobile-appkit/06-data-and-operations.md) and pin the effective value in release fixtures.
+Specify canonical encodings, numeric ranges, byte ownership and error variants. Distinguish permission denial, unavailable adapter, invalid input, protocol mismatch, conflict and uncertain outcome. Bound payload and delegate-context sizes by both the selected Core version and the reader profile. Use the delegate-context limit recorded in [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) and pin the effective value in release fixtures.
 
 Reject conflicting reuse of a request ID, unknown handles, mismatched protocols and expired-session completions. Validate the complete result before exposing it to bindings or starting a side effect. Measure copies across the SDK boundary for large records.
 
@@ -59,9 +78,9 @@ Run bounded work away from the UI thread. Apply host limits for storage, subscri
 ## Acceptance
 
 - An Atlas domain operation works through a declared action and custom web/native controls using the same protocol fixtures and domain results.
-- Real Core/delegate integration agrees with deterministic [preview fixtures](08-developer.md#preview).
+- Real Core/delegate integration agrees with deterministic [preview fixtures in 4.8 EVY Developer visual authoring](08-developer.md#preview).
 - A new application bundle supplies its domain delegate and action definitions and runs on released generic readers. An unsupported primitive fails compatibility checks before execution.
 - Canonical request/result encodings, structured errors, byte ownership and correlation agree across browser, Swift and Kotlin bindings.
-- The River adapter maps the SDUI convention to the foundation's concrete protocol fixtures with identical canonical signing bytes and domain outcomes. Version negotiation and typed-error fixtures run as 4.5 acceptance.
+- The River adapter maps the SDUI convention to the foundation's concrete protocol fixtures with identical canonical signing bytes and domain outcomes. Version negotiation and typed-error fixtures run as this plan's acceptance.
 - Malformed results, forged authority, undeclared targets, conflicting request IDs and excessive nested work fail before unauthorized effects.
 - Duplicate, canceled, unsolicited and late responses reach only their valid handler. Retry and restart cases retain the foundation's operation identity and exact prepared bytes.

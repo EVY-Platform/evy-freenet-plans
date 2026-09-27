@@ -1,8 +1,29 @@
-# SDUI migration and conformance
+# 4.9 SDUI migration and conformance
 
-Plan ID: 4.9. Upgrade screen and form definitions safely and prove equivalent domain behavior across web, iOS and Android readers.
+Upgrade screen and form definitions safely and prove equivalent domain behavior across web, iOS and Android readers.
 
-Prerequisites: [shared upgrade rules, 1.7](../1-freenet-mobile-appkit/07-migration.md), [host installation, 2.3](../2-evy-mobile-app/03-installation-and-updates.md), [format, 4.1](01-format.md), [bundles, 4.2](02-bundles.md), [readers, 4.3](03-readers.md), [actions, 4.5](05-actions.md), and [data bindings, 4.6](06-data.md). Paid-flow fixtures add [4.7](07-commerce.md). Authoring import/export fixtures add [4.8](08-developer.md).
+Prerequisites:
+
+- [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md)
+- [2.3 Installation and updates](../2-evy-mobile-app/03-installation-and-updates.md)
+- [4.1 SDUI format and compatibility](01-format.md)
+- [4.2 SDUI bundles and publication](02-bundles.md)
+- [4.3 SDUI hosts and readers](03-readers.md)
+- [4.5 SDUI actions and delegate protocols](05-actions.md)
+- [4.6 SDUI data and operation presentation](06-data.md)
+
+Paid-flow fixtures add [4.7 SDUI commerce and attribution](07-commerce.md). Authoring import/export fixtures add [4.8 EVY Developer visual authoring](08-developer.md).
+
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| `freenet-sdui` | Modified | Compatibility matrix, form and route conversions and the cross-target suite |
+| `freenet-appkit` | Modified | Saved-form identity, conversion staging and retained source copies during upgrades |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Domain migration evidence alongside River's registries |
+| [atlas](https://github.com/freenet/atlas) | Used | Cross-target fixture |
+| [river](https://github.com/freenet/river) | Used | Signing fixture and predecessor registries |
+| `evy-marketplace` | Used | Paid pilot fixture |
 
 ## Ownership and scope
 
@@ -24,7 +45,7 @@ Publish a compatibility matrix covering application-definition, SDUI interface, 
 | Contract, delegate or publisher identity change | Invoke the foundation's migration and consent flow |
 | Current shared data exceeds supported schemas | Present a compatibility error and retain recoverable local work |
 
-[River's predecessor registries](../1-freenet-mobile-appkit/07-migration.md) and [freenet-migrate](https://github.com/freenet/freenet-migrate) supply domain migration evidence. SDUI consumes the foundation's verified descriptors and adapter results. Reader-form compatibility requires its own fixtures.
+[River's predecessor registries in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md) and [freenet-migrate](https://github.com/freenet/freenet-migrate) supply domain migration evidence. SDUI consumes the foundation's verified descriptors and adapter results. Reader-form compatibility requires its own fixtures.
 
 ## Form and route upgrades
 
@@ -34,7 +55,7 @@ Keep canonical domain values separate from formatted display strings. Test null,
 
 Validate restored routes and parameters against the activated release. Map a renamed route through an explicit versioned rule, or offer a supported destination with the saved draft retained. Preserve focus and navigation semantics when a compatible page resumes.
 
-A changed draft can start a new operation through the foundation. Submitted operations retain their original identity, payload and protocol/content references. Reader upgrades reconnect to their journal entries and display reconciliation outcomes. [Paid operations](07-commerce.md) also retain their original commercial bindings.
+A changed draft can start a new operation through the foundation. Submitted operations retain their original identity, payload and protocol/content references. Reader upgrades reconnect to their journal entries and display reconciliation outcomes. [Paid operations under 4.7 SDUI commerce and attribution](07-commerce.md) also retain their original commercial bindings.
 
 ## Cross-target suite
 
@@ -42,9 +63,9 @@ Use shared protocol and behavior fixtures with fixed locale, time zone, clock, r
 
 | Fixture | Required observation |
 | --- | --- |
-| [Atlas](../1-freenet-mobile-appkit/08-reference-apps.md) | Equivalent query or update through SDUI and custom web/native controls, preserving the published index identity |
+| [Atlas in 1.8 Reference apps and compatibility fixtures](../1-freenet-mobile-appkit/08-reference-apps.md) | Equivalent query or update through SDUI and custom web/native controls, preserving the published index identity |
 | River signing | Equivalent canonical signing inputs, prepared bytes and observed message result |
-| [Paid pilot](../3-attribution-remuneration-payment/08-marketplace.md) | Equivalent checkout terms, domain completion evidence and original payment bindings |
+| [Paid pilot in 3.8 Paid application pilot and commercial acceptance](../3-attribution-remuneration-payment/08-marketplace.md) | Equivalent checkout terms, domain completion evidence and original payment bindings |
 | Reader-only and embedded pages | Matching actions and errors while custom entry points, assets and navigation keep working |
 | Forms and language | Compatible draft recovery, route validation, locale fallback and right-to-left layout |
 | Accessibility | Browser keyboard/screen reader, VoiceOver and TalkBack control semantics and focus |
@@ -61,5 +82,5 @@ Compare values, domain results, navigation events, operation records and typed e
 - An incompatible update keeps a usable installation and required pending-work artifacts. Rollback follows the foundation's version and authority rules.
 - Updates during a submitted operation or checkout retain original operation and commercial bindings through reconciliation.
 - Custom web/native acceptance passes alongside reader-only and embedded SDUI tests.
-- Mobile tests run under the required [thin-peer cellular profile](../1-freenet-mobile-appkit/10-thin-peer.md), including reader and archive-update traffic.
+- Mobile tests run under the required [cellular profile in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md), including reader and archive-update traffic.
 - Release reports separate source inspection, compilation, iOS simulator and Android emulator runs and real-device results on both platforms, and list the supported version matrix.

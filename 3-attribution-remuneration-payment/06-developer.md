@@ -1,14 +1,30 @@
 # 3.6 Contribution and release workspace
 
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `web/` Developer workspace, repository integration and merge checks, CLI and CI clients with scoped credentials |
+| `freenet-appkit` | Used | Bundle tooling that CLI and CI drive for artifacts and publication |
+| `evy-marketplace` | Used | First commercial run through the pickup pilot |
+
 ## Owned scope
 
 EVY Developer connects repository work to contribution review, certified releases and earnings. Developers write custom web or native application code in their chosen tools and use concrete application protocols.
 
-The first commercial run uses the [Marketplace pickup pilot](08-marketplace.md#pilot-sequence). Optional extensions cover [visual authoring in 4.8](../4-sdui/08-developer.md), [authoring collaboration in 5.3](../5-optional-extensions/03-sync-and-collaboration.md) and [SDUI commerce in 4.7](../4-sdui/07-commerce.md).
+The first commercial run uses the [pilot sequence in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#pilot-sequence). Optional extensions cover [4.8 EVY Developer visual authoring](../4-sdui/08-developer.md), [5.3 Device sync and authoring collaboration](../5-optional-extensions/03-sync-and-collaboration.md) and [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
 
 ## Prerequisites
 
-Use release tooling from [1.4](../1-freenet-mobile-appkit/04-bundles.md), identity and protected signing from [1.5](../1-freenet-mobile-appkit/05-identity.md), and the service interfaces owned by [registration](01-registration.md), [attribution](02-attribution.md), [certification](03-certification.md), [payment](04-payment.md) and [remuneration](05-remuneration.md). Production acceptance also requires [3.7 financial operations readiness](07-operations.md#acceptance). The mobile pilot uses [2.2 authenticated multi-app sessions](../2-evy-mobile-app/02-sessions.md) and the required [1.10 thin-peer profile](../1-freenet-mobile-appkit/10-thin-peer.md).
+Use release tooling from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md), identity and protected signing from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md), and the service interfaces owned by:
+
+- [3.1 Product and contributor registration](01-registration.md)
+- [3.2 Attribution workflow and allocation weights](02-attribution.md)
+- [3.3 Artifact certification and publication evidence](03-certification.md)
+- [3.4 Payments and checkout adapters](04-payment.md)
+- [3.5 Usage evidence, remuneration and payouts](05-remuneration.md)
+
+Production acceptance also requires [3.7 Operating readiness](07-operations.md#acceptance). The mobile pilot uses [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md) and the required [1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md).
 
 Use TypeScript, React and Vite for the Developer web application, with Bun for development and tests. Connect the workspace, repository integration and CLI/CI clients through versioned service interfaces.
 
@@ -23,14 +39,14 @@ Use TypeScript, React and Vite for the Developer web application, with Bun for d
 
 ## Repository and CLI/CI workflow
 
-1. Register the product, repository and publisher through [registration](01-registration.md).
+1. Register the product, repository and publisher through [3.1 Product and contributor registration](01-registration.md).
 2. Submit signed proposals from the workspace or repository integration. Bind every review and size decision to the exact evidence revision.
 3. Show the service's merge checks in the repository. A changed revision reruns the required checks.
-4. Build application code in the project's own toolchain. CLI/CI submits source provenance and exact artifacts through [bundle tooling](../1-freenet-mobile-appkit/04-bundles.md).
+4. Build application code in the project's own toolchain. CLI/CI submits source provenance and exact artifacts through the [bundle tooling in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md).
 5. Request certification and publication verification through attribution's release sequence. Display pending, verified, conflicted and failed results with the evidence needed to resolve them.
 6. Use the services' confirmed records to show commercial eligibility and earnings.
 
-The workspace keeps request IDs and submitted bytes through interrupted requests under [1.6 operation IDs and journals](../1-freenet-mobile-appkit/06-data-and-operations.md). Reconcile an uncertain service or publication result before retrying. CLI/CI credentials have separate scopes for repository access, certification requests and publisher signing. Keep publisher keys and service secrets in their protected stores.
+The workspace keeps request IDs and submitted bytes through interrupted requests under [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md). Reconcile an uncertain service or publication result before retrying. CLI/CI credentials have separate scopes for repository access, certification requests and publisher signing. Keep publisher keys and service secrets in their protected stores.
 
 ## Release and earnings screens
 
@@ -45,17 +61,17 @@ Repository drafts and pending workspace requests survive service outages. A queu
 | Authority | Owns |
 | --- | --- |
 | Publisher signer | Container publication authorization |
-| Attribution service | [Registration and roles](01-registration.md), [accepted evidence and weights](02-attribution.md), [snapshots and artifact certification](03-certification.md) |
-| [Payment](04-payment.md) | Checkout, contributor-fee rules, processor reconciliation and signed payment status |
-| [Remuneration](05-remuneration.md) | Usage records, allocations, reservations, balances and payouts |
+| Attribution service | [3.1 Product and contributor registration](01-registration.md), [3.2 Attribution workflow and allocation weights](02-attribution.md), [3.3 Artifact certification and publication evidence](03-certification.md) |
+| [3.4 Payments and checkout adapters](04-payment.md) | Checkout, contributor-fee rules, processor reconciliation and signed payment status |
+| [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) | Usage records, allocations, reservations, balances and payouts |
 | EVY Developer | Workflow screens, repository/CLI/CI integration and requests to those authorities |
-| [Financial operations](07-operations.md) | Service backups, queue recovery, audit retention, key rotation and operating readiness |
+| [3.7 Operating readiness](07-operations.md) | Service backups, queue recovery, audit retention, key rotation and operating readiness |
 
 Version requests and responses. Authenticate each actor and product scope, retain idempotency IDs, and show service validation errors next to the relevant evidence. The workspace displays canonical service results. UI caches and repository check summaries remain derived views.
 
 ## Acceptance
 
-Plan 3.6 is complete when a developer can:
+This plan is complete when a developer can:
 
 - Register a repository-backed product and submit a signed contribution through the workspace and CLI/CI.
 - Complete review, size validation and challenge resolution against exact source evidence.

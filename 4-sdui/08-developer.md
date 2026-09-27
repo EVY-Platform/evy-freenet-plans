@@ -1,36 +1,57 @@
-# EVY Developer visual authoring
+# 4.8 EVY Developer visual authoring
 
-Plan ID: 4.8. Add visual SDUI editing, preview, import and deterministic checkpoint export to the code-based Developer workflows. This plan owns the editor and durable checkpoint protocol.
+Add visual SDUI editing, preview, import and deterministic checkpoint export to the code-based Developer workflows. This plan owns the editor and durable checkpoint protocol.
 
-Prerequisites: [Developer MVP, 3.6](../3-attribution-remuneration-payment/06-developer.md), [protected signing and records, 1.5](../1-freenet-mobile-appkit/05-identity.md), [durable operations, 1.6](../1-freenet-mobile-appkit/06-data-and-operations.md), [screen schemas, 4.1](01-format.md), [bundles, 4.2](02-bundles.md), [released readers, 4.3](03-readers.md), [actions, 4.5](05-actions.md), and [bindings, 4.6](06-data.md). Commercial publication also uses [4.7](07-commerce.md). Opt-in real-time sessions have their own [5.3 acceptance gate](../5-optional-extensions/03-sync-and-collaboration.md#optional-real-time-collaboration-53). Repository-authored SDUI uses CLI/CI publication independently of this plan.
+Prerequisites:
+
+- [3.6 Contribution and release workspace](../3-attribution-remuneration-payment/06-developer.md)
+- [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md)
+- [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md)
+- [4.1 SDUI format and compatibility](01-format.md)
+- [4.2 SDUI bundles and publication](02-bundles.md)
+- [4.3 SDUI hosts and readers](03-readers.md)
+- [4.5 SDUI actions and delegate protocols](05-actions.md)
+- [4.6 SDUI data and operation presentation](06-data.md)
+
+Commercial publication also uses [4.7 SDUI commerce and attribution](07-commerce.md). Opt-in real-time sessions have their own [acceptance gate in 5.3 Device sync and authoring collaboration](../5-optional-extensions/03-sync-and-collaboration.md#optional-real-time-collaboration). Repository-authored SDUI uses CLI/CI publication independently of this plan.
+
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| `freenet-app-builder` | Created | Editor, project model, EVY importer, schema-driven editors, preview, validation, deterministic export, authoring-project contract and checkpoint protocol |
+| [evy](https://github.com/EVY-Platform/evy) | Used | Canvas, row factories, action editor, design system and schema generation reused; `web/` Developer service clients integrated |
+| `freenet-sdui` | Used | Released schema packages and web reader for preview |
+| `freenet-appkit` | Used | Memory host adapter, operation journal and publication tooling |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | fdev conformance #5344 and merge properties #5320 for contract tests; traffic issues #5153 and #5050 |
 
 ## Scope and implementation
 
 Build the visual extension in a dedicated `freenet-app-builder` workspace using TypeScript, React and Vite, with Bun for development and tests. Integrate the existing Developer service clients and release workflows. Reuse [EVY's](https://github.com/EVY-Platform/evy) canvas, row factories, action editor, design system and schema generation where they match the released Freenet interfaces.
 
-Separate the project model and EVY importer from canvas, catalogue, configuration, binding/action editors, preview and export. Import schemas through released AppKit/SDUI packages. Source schemas and row names are centralized in the [component catalogue](01-format.md#components-and-source-catalogue).
+Separate the project model and EVY importer from canvas, catalogue, configuration, binding/action editors, preview and export. Import schemas through released AppKit/SDUI packages. Source schemas and row names are centralized in the [component catalogue of 4.1 SDUI format and compatibility](01-format.md#components-and-source-catalogue).
 
-The canvas edits SDUI. Publishers continue writing custom application code in their chosen tools. New domain behavior uses delegate/schema development. New executor primitives follow the [4.5 release rules](05-actions.md).
+The canvas edits SDUI. Publishers continue writing custom application code in their chosen tools. New domain behavior uses delegate/schema development. New executor primitives follow the [release rules in 4.5 SDUI actions and delegate protocols](05-actions.md).
 
 ## Project and editing model
 
 A project records application identity and targets, custom web build references, flows, pages, components, routes, themes, languages, actions, typed views, logical resources and domain-artifact descriptors. It also holds sample scenarios, capability references and source-to-artifact evidence. Link to proposals and review status through Developer's existing service interfaces.
 
-Large binary assets use content references, verified digests and upload progress through an explicitly supported storage adapter. Bundle runtime assets under [4.2](02-bundles.md).
+Large binary assets use content references, verified digests and upload progress through an explicitly supported storage adapter. Bundle runtime assets under [4.2 SDUI bundles and publication](02-bundles.md).
 
-Apply edits immediately and append them to a local draft journal with stable IDs. Undo appends a safe inverse. The checkpoint protocol below defines the supported operations, signatures, conflicts and save batches. Expose conflicting values and an explicit resolution action. Local editing, offline work and checkpoint publication form the 4.8 authoring gate.
+Apply edits immediately and append them to a local draft journal with stable IDs. Undo appends a safe inverse. The checkpoint protocol below defines the supported operations, signatures, conflicts and save batches. Expose conflicting values and an explicit resolution action. Local editing, offline work and checkpoint publication form this plan's authoring gate.
 
 ## Schema catalogue and editors
 
 Generate configuration controls from released JSON Schema. Provide curated editors for typed bindings, selectors, action steps, delegate arguments/results, routes, responsive layout and accessible labels.
 
-A binding picker shows a data source and its typed fields. An action editor shows the available primitive versions and domain operations. Query controls show permitted indexes and result limits. Keep domain decoding and business calculations in the declared adapters. Presentation expressions use the limits from [4.6](06-data.md).
+A binding picker shows a data source and its typed fields. An action editor shows the available primitive versions and domain operations. Query controls show permitted indexes and result limits. Keep domain decoding and business calculations in the declared adapters. Presentation expressions use the limits from [4.6 SDUI data and operation presentation](06-data.md).
 
 Explain fields in plain language. An advanced view exposes the underlying schema and protocol reference. Component insertion supplies required states and flags missing accessible labels.
 
 ## Preview
 
-Embed the released web reader and declared-action executor through a deterministic memory host adapter. Use typed delegate-result fixtures and fake identity, network, signing, device and payment adapters by default. An explicitly selected development environment runs real Core and delegates through the adapter selected by [4.3](03-readers.md). Label that environment and its possible effects before connecting.
+Embed the released web reader and declared-action executor through a deterministic memory host adapter. Use typed delegate-result fixtures and fake identity, network, signing, device and payment adapters by default. An explicitly selected development environment runs real Core and delegates through the adapter selected by [4.3 SDUI hosts and readers](03-readers.md). Label that environment and its possible effects before connecting.
 
 Provide recorded user-flow playback and these scenarios:
 
@@ -65,11 +86,11 @@ Convert only bounded supported expressions. Produce explicit repair tasks for un
 
 Export a validated checkpoint under the protocol below. Pin schema packages, reader builds, domain artifacts and exporter version. Deterministic export produces the same application files and mapping for those exact inputs. The base publication tool owns archive signing and publication versioning.
 
-Preserve a custom web entry point and relative assets. Generate a reader-only entry point for a project that selects that target. Package the web reader and validate every declared native reader requirement under [4.2](02-bundles.md). Custom native distribution remains a separately identified build.
+Preserve a custom web entry point and relative assets. Generate a reader-only entry point for a project that selects that target. Package the web reader and validate every declared native reader requirement under [4.2 SDUI bundles and publication](02-bundles.md). Custom native distribution remains a separately identified build.
 
-Submit exact signed checkpoint evidence through [Developer](../3-attribution-remuneration-payment/06-developer.md). For commercial products, [4.7](07-commerce.md) connects the reviewed mapping to the attribution service. Contribution review, certification authority and earnings remain with their milestone 3 owners.
+Submit exact signed checkpoint evidence through [3.6 Contribution and release workspace](../3-attribution-remuneration-payment/06-developer.md). For commercial products, [4.7 SDUI commerce and attribution](07-commerce.md) connects the reviewed mapping to the attribution service. Contribution review, certification authority and earnings remain with their milestone 3 (Attribution, remuneration and payment) owners.
 
-## Durable checkpoint protocol (4.8)
+## Durable checkpoint protocol
 
 Store signed mutable project state and export a verified checkpoint for review and publication.
 
@@ -109,7 +130,7 @@ An offline client reports the epoch last merged into its journal. It retains ear
 
 ### Checkpoints and compaction
 
-A checkpoint contains canonical entity state, the included operation frontier, conflicts, tombstones, membership epoch and predecessor references. Publication requires structural validation and resolved conflicts throughout the exported content and its dependencies. Retain the signed checkpoint and source-to-artifact mapping for [review and certification](07-commerce.md).
+A checkpoint contains canonical entity state, the included operation frontier, conflicts, tombstones, membership epoch and predecessor references. Publication requires structural validation and resolved conflicts throughout the exported content and its dependencies. Retain the signed checkpoint and source-to-artifact mapping for [review and certification under 4.7 SDUI commerce and attribution](07-commerce.md).
 
 Coalesce local edits deterministically into bounded checkpoint batches before they become shared signed operations. Shared operations retain their identity. Compaction verifies which operations the source checkpoint includes, then creates an owner-signed successor checkpoint and epoch. Preserve predecessor references and required audit evidence under the project's retention policy.
 
@@ -123,7 +144,7 @@ The admission and conflict-retention rules must be merge-closed. Any two valid s
 
 Advance a validated checkpoint or split a project before exhausting the published capacity. Bound save batches and enforce update-rate limits in the client and service. Contract validation uses deterministic state rules. The client and service own wall-clock rate enforcement.
 
-Measure payload bytes, protocol overhead and update counts against the published authoring profile. Mobile authoring also inherits the [thin-peer cellular budgets](../1-freenet-mobile-appkit/10-thin-peer.md). The [traffic issue #5153](https://github.com/freenet/freenet-core/issues/5153) and [update-volume issue #5050](https://github.com/freenet/freenet-core/issues/5050) are source context for this batching requirement. Record the measured profile with the checkpoint release.
+Measure payload bytes, protocol overhead and update counts against the published authoring profile. Mobile authoring also inherits the [cellular budgets in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md). The [traffic issue #5153](https://github.com/freenet/freenet-core/issues/5153) and [update-volume issue #5050](https://github.com/freenet/freenet-core/issues/5050) are source context for this batching requirement. Record the measured profile with the checkpoint release.
 
 ### Checkpoint acceptance
 
@@ -143,5 +164,5 @@ Measure payload bytes, protocol overhead and update counts against the published
 - The checkpoint suite above passes with real contract execution and offline/reconnect cases independently of live collaboration.
 - Repeated export of the same checkpoint and pinned inputs produces identical files and source mappings.
 - Representative EVY imports retain supported behavior and report every unsupported item with a repair path.
-- Browser preview agrees with real delegate fixtures. Native behavior passes the [4.9 suite](09-migration-and-conformance.md).
+- Browser preview agrees with real delegate fixtures. Native behavior passes the [cross-target suite in 4.9 SDUI migration and conformance](09-migration-and-conformance.md).
 - The builder itself passes keyboard and screen-reader tests, and preview recordings and reports redact protected data.

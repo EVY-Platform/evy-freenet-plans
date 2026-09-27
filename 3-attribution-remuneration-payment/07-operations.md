@@ -1,12 +1,27 @@
 # 3.7 Operating readiness
 
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Backups, inbox and outbox reconciliation, restore drill tooling, key rotation and runbooks across `services/attribution`, `services/payment` and `services/remuneration` |
+| `evy-marketplace` | Used | Historical pilot transaction replayed in restore drills |
+
 ## Owned scope
 
-Financial service backups, restore drills, durable queues, reconciliation, audit retention and signing-key operations are mandatory for milestone 3. Optional customer backup extensions belong to [recovery plan 5.2](../5-optional-extensions/02-recovery.md).
+Financial service backups, restore drills, durable queues, reconciliation, audit retention and signing-key operations are mandatory for milestone 3 (Attribution, remuneration and payment). Optional customer backup extensions belong to [5.2 Extended customer backup and recovery](../5-optional-extensions/02-recovery.md).
 
 ## Prerequisites
 
-Use the service records and invariants defined by [registration](01-registration.md), [attribution](02-attribution.md), [certification](03-certification.md), [payment](04-payment.md) and [remuneration](05-remuneration.md). [1.6](../1-freenet-mobile-appkit/06-data-and-operations.md) owns application operation IDs and producer journals. Operators must establish recovery before the [3.8 paid pilot](08-marketplace.md) handles live money. Service development can proceed against test environments while these gates are completed.
+Use the service records and invariants defined by:
+
+- [3.1 Product and contributor registration](01-registration.md)
+- [3.2 Attribution workflow and allocation weights](02-attribution.md)
+- [3.3 Artifact certification and publication evidence](03-certification.md)
+- [3.4 Payments and checkout adapters](04-payment.md)
+- [3.5 Usage evidence, remuneration and payouts](05-remuneration.md)
+
+[1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) owns application operation IDs and producer journals. Operators must establish recovery before the [3.8 Paid application pilot and commercial acceptance](08-marketplace.md) handles live money. Service development can proceed against test environments while these gates are completed.
 
 ## Launch decisions
 
@@ -39,7 +54,7 @@ Each service commits its authoritative state and outbound work in one local tran
 
 After a timeout, reconcile the existing operation before creating a replacement. Bound retry rates and queue growth, quarantine invalid messages with reasons and retain the exact evidence for review. Alert on oldest pending work, repeated rejection, revision conflicts, unreconciled processor balances and low reserve coverage.
 
-Run scheduled reconciliation across processor objects, fee receipts, signed payment revisions, usage decisions and payout reservations. Follow [payment's refund flow](04-payment.md#refunds-and-fee-returns) for purchase/application-fee cash execution and [remuneration](05-remuneration.md) for calculations, allocation effects and contributor payouts. Operational recovery uses those same service authorities. Freenet delivery can resume separately from processor accounting. Status screens distinguish a service-confirmed result from pending network publication.
+Run scheduled reconciliation across processor objects, fee receipts, signed payment revisions, usage decisions and payout reservations. Follow the [refund flow in 3.4 Payments and checkout adapters](04-payment.md#refunds-and-fee-returns) for purchase/application-fee cash execution and [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) for calculations, allocation effects and contributor payouts. Operational recovery uses those same service authorities. Freenet delivery can resume separately from processor accounting. Status screens distinguish a service-confirmed result from pending network publication.
 
 ## Backups and exact evidence
 
@@ -76,7 +91,7 @@ A missing receipt, uncertain payout or conflicting signed revision remains held 
 
 Separate publisher, attribution, payment bridge and remuneration statement keys. Scope production access by service and role. Record key IDs, algorithms, custody, rotation authority and recovery coverage.
 
-Payment order parameters keep the fixed bridge root key. Normal rotation appends predecessor-signed succession records, and new status records carry the chain required by [payment](04-payment.md#signed-payment-status). Retain verification keys and historical signatures for the evidence period. Test rotations against order and usage record size bounds before deployment.
+Payment order parameters keep the fixed bridge root key. Normal rotation appends predecessor-signed succession records, and new status records carry the chain required by [3.4 Payments and checkout adapters](04-payment.md#signed-payment-status). Retain verification keys and historical signatures for the evidence period. Test rotations against order and usage record size bounds before deployment.
 
 A compromise or loss of the active signer needs a separate incident decision. Pause affected signing and new operations, preserve evidence, identify which attestations require review and use only the recovery authority the protocol can verify. A normal successor signature alone supplies no independent proof that a compromised predecessor was trustworthy. Publish the supported compromise response before launch, including any new-contract or customer action it requires.
 
@@ -100,15 +115,15 @@ Keep append-only audit events for policy changes, role changes, certifications, 
 
 ## Acceptance
 
-Plan 3.7 passes when:
+This plan passes when:
 
 - Operators approve the region, processor, distribution and financial policy checklist for the actual pilot.
 - Every financial store, queue and required evidence archive has a tested backup and named owner.
 - Restore drills meet the approved recovery targets and reproduce historical certification and allocation from exact bytes.
 - Replay after restoration, outage or worker races preserves one checkout attempt, allocation and payout result.
 - Key rotation preserves historical verification within wire limits, and the compromise runbook has an exercised response.
-- The [combined return and refund fixture](05-remuneration.md#combined-return-and-refund-fixture) survives queue replay and restore, preserving seller returns, buyer refunds and contributor recovery separately.
+- The [combined return and refund fixture in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#combined-return-and-refund-fixture) survives queue replay and restore, preserving seller returns, buyer refunds and contributor recovery separately.
 - A claim never retained in its usage contract reaches remuneration through the authenticated recovery path. Restore preserves its timely receipt and deduplicates later contract delivery.
 - Audit exports preserve lineage while excluding protected customer data and secrets.
 
-Acceptance records include drill and processor evidence. Financial recovery readiness is part of the commercial release, while broader consumer recovery and device synchronization follow their own milestone 5 plans.
+Acceptance records include drill and processor evidence. Financial recovery readiness is part of the commercial release, while broader consumer recovery and device synchronization follow their own milestone 5 (Optional extensions) plans.

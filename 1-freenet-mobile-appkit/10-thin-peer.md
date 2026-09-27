@@ -1,12 +1,21 @@
-# Plan 1.10: Thin-peer role and cellular data budgets
+# 1.10 Thin-peer role and cellular data budgets
+
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin role in the connect protocol, connection manager, ring and serving-peer selection, subscription delivery, lifecycle configuration and diagnostics |
+| `freenet-appkit` | Modified | Cellular budget accounting, cap enforcement, role and traffic diagnostics and the workload test definitions |
+| [paper-1](https://github.com/freenet/paper-1) | Used | Peers and ring section as the single-role baseline |
+| [river](https://github.com/freenet/river) | Used | Join, read and send flows from 1.8 Reference apps and compatibility fixtures as the active-use workload |
 
 ## Purpose
 
-Mobile release requires thin-peer networking within cellular budgets. Milestone 1 proves this profile on real iOS and Android devices. Milestone 2 inherits the same node-wide limits. Full-peer phone profiles are development-only.
+Mobile release requires thin-peer networking within cellular budgets. Milestone 1 (Freenet mobile AppKit) proves this profile on real iOS and Android devices. Milestone 2 (EVY mobile app) inherits the same node-wide limits. Full-peer phone profiles are development-only.
 
 ## Prerequisites
 
-The workloads and device matrix from [1.1](01-feasibility.md), SDK integration from [1.2](02-sdk.md), and upstream agreement on the Core role protocol. Work proceeds together, with upstream support and passing budgets required by release acceptance in [1.9](09-release.md).
+The workloads and device matrix from [1.1 Mobile feasibility and supported profiles](01-feasibility.md), SDK integration from [1.2 Embedded node and mobile SDK](02-sdk.md), and upstream agreement on the Core role protocol. Work proceeds together, with upstream support and passing budgets required by release acceptance in [1.9 Developer package and release acceptance](09-release.md).
 
 Status: proposed Core work and a release blocker. The evidence recorded on 2026-09-22 identifies [smartphone discussion #811](https://github.com/freenet/freenet-core/discussions/811) as the nearest upstream thread, with a dedicated thin-role issue pending filing. The [whitepaper's peers and ring section](https://github.com/freenet/paper-1/blob/main/sections/03-primitives.tex) describes a single peer role. These are recorded findings. Recheck them against the selected Core revision and record the proposal issue and accepted protocol before release.
 
@@ -25,11 +34,11 @@ A thin peer opens terminal connections to serving full peers for its own reads, 
 
 An unsupported protocol or role fails visibly and retries within the configured budget while preserving the thin role. Exhausted attempts leave a visible disconnected state and retain local work. Only explicit development-fixture profiles may request a full-peer role.
 
-Specify how thin nodes reach gateways and select replacement serving peers, including capacity limits and backoff. Test cleanup when peers disappear abruptly and deduplicate subscription demand after reconnect. Pin the client Unsubscribe capability with [1.2](02-sdk.md) and prove that released demand stops consuming the cellular budget while other active sessions retain service.
+Specify how thin nodes reach gateways and select replacement serving peers, including capacity limits and backoff. Test cleanup when peers disappear abruptly and deduplicate subscription demand after reconnect. Pin the client Unsubscribe capability with [1.2 Embedded node and mobile SDK](02-sdk.md) and prove that released demand stops consuming the cellular budget while other active sessions retain service.
 
 ## Cellular budget contract
 
-Numerical thresholds, supported carriers, device coverage and test durations remain to be established. Plan 1.1 supplies repeatable workloads and measurements. This plan owns explicit upload/download ceilings and enforcement. Approve them before 1.9 release acceptance.
+Numerical thresholds, supported carriers, device coverage and test durations remain to be established. 1.1 Mobile feasibility and supported profiles supplies repeatable workloads and measurements. This plan owns explicit upload/download ceilings and enforcement. Approve them before release acceptance in 1.9 Developer package and release acceptance.
 
 | Workload | Fix in the test definition | Required limits and measurements |
 | --- | --- | --- |
@@ -42,7 +51,7 @@ Numerical thresholds, supported carriers, device coverage and test durations rem
 
 Count bytes at the network layer as well as application payloads. Include bootstrap traffic, framing, encryption, retransmission, failed requests, repair and shared overhead. Record each counter's measurement layer and reconcile SDK counters with platform counters or controlled packet traces on each supported OS. Account for other device traffic in the test setup and state the uncertainty in estimating carrier-billed usage.
 
-Attribute app traffic where possible and charge shared overhead once to the total node budget. Product scheduling in [2.5](../2-evy-mobile-app/05-lifecycle.md) divides this budget among apps.
+Attribute app traffic where possible and charge shared overhead once to the total node budget. Product scheduling in [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) divides this budget among apps.
 
 Reserve bounded upload/download allowances inside the caps for counter delay, in-flight packets and teardown. Set byte and time limits from device measurements. Trigger cap enforcement when the remaining upload or download budget reaches its reserve, leaving that allowance to complete shutdown within the hard cap.
 
@@ -59,7 +68,7 @@ Recorded carrier evidence includes [mobile network restrictions #5051](https://g
 
 ## Acceptance
 
-- Real iOS and Android devices complete River's [1.8 flows](08-reference-apps.md#river-acceptance-cases) through terminal connections while Core verifies state and runs signing delegates locally.
+- Real iOS and Android devices complete River's [flows in 1.8 Reference apps and compatibility fixtures](08-reference-apps.md#river-acceptance-cases) through terminal connections while Core verifies state and runs signing delegates locally.
 - Traces show application traffic and bounded protocol overhead on the phone. Serving full peers handle onward routing and network hosting.
 - Unsupported roles, incompatible versions and exhausted serving capacity produce visible failures. Retry, restart, resume and network-change tests preserve the thin role.
 - Malformed state, wrong contract identities and forged updates fail on-device validation. Serving peers receive only the application's authorized network payloads, while signing keys stay in the on-device protected boundary.
@@ -68,4 +77,4 @@ Recorded carrier evidence includes [mobile network restrictions #5051](https://g
 - Keep remote publishers sending continuously as the upload and download stop thresholds are reached in separate runs. Test working, unavailable and unconfirmed subscription release. Network-layer traces must show terminal delivery ending within the teardown deadline and reserved bytes, with total use inside the hard caps. Continued publisher activity must leave the capped phone connection stopped.
 - Restart, foreground resume and Wi-Fi/cellular changes preserve the exhausted state and suppress automatic traffic until a new allowance permits it. Retain pending operation IDs and exact bytes throughout.
 
-Milestone 2 adds [EVY's two-app acceptance](../2-evy-mobile-app/07-acceptance.md). Run the continuous-publish cap cases with both apps subscribed. Per-app caps preserve the other app's eligible demand, while a node-wide cap stops both streams within the shared reserve. Closing one session preserves the other's active subscriptions while its budgets permit.
+Milestone 2 (EVY mobile app) adds [2.7 Multi-application acceptance](../2-evy-mobile-app/07-acceptance.md). Run the continuous-publish cap cases with both apps subscribed. Per-app caps preserve the other app's eligible demand, while a node-wide cap stops both streams within the shared reserve. Closing one session preserves the other's active subscriptions while its budgets permit.
