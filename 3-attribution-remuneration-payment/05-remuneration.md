@@ -5,7 +5,8 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `services/remuneration`: usage contract, bridge and cursors, admission checks, ledger, settlement policy, payouts and the authenticated recovery endpoint |
-| `freenet-appkit` | Modified | Host service adapter for signed usage claims and producer-journal recovery |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` operation journal gains producer-journal recovery |
+| `freenet-appkit` | Modified | Host service adapter for signed usage claims |
 | `evy-marketplace` | Used | Participant-signed fulfillment records as the pilot's completion evidence |
 
 ## Owned scope

@@ -5,7 +5,8 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution`: product and contributor registration, PIN issuance, roles and mapping history; the repository integration verifies PINs in pull requests |
-| `freenet-appkit` | Used | Publication references from 1.4 Application bundles and protected signing keys from 1.5 Identity, keys and local protection |
+| `freenet-appkit` | Used | Publication references from 1.4 Application bundles |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Protected signing keys from 1.5 Identity, keys and local protection |
 
 ## Owned scope
 

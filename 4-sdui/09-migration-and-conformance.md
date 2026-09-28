@@ -19,7 +19,8 @@ Paid-flow fixtures add [4.7 SDUI commerce and attribution](07-commerce.md). Auth
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-sdui` | Modified | Compatibility matrix, form and route conversions and the cross-target suite |
-| `freenet-appkit` | Modified | Saved-form identity, conversion staging and retained source copies during upgrades |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains saved-form identity and protects retained source copies during conversion |
+| `freenet-appkit` | Modified | Conversion staging in the installation interface during upgrades |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Domain migration evidence alongside River's registries |
 | [atlas](https://github.com/freenet/atlas) | Used | Cross-target fixture |
 | [river](https://github.com/freenet/river) | Used | Signing fixture and predecessor registries |

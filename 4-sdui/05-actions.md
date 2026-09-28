@@ -19,7 +19,7 @@ This plan owns the executor, its step versions and the typed request/result conv
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-sdui` | Modified | Declared-action executor, step versions, typed delegate convention codecs and the River adapter fixture |
-| `freenet-appkit` | Modified | Executor host interface: authority rechecks, journal integration and budget enforcement |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the executor host interface: authority rechecks, journal integration and budget enforcement |
 | [atlas](https://github.com/freenet/atlas) | Used | Domain operation run through a declared action and custom controls |
 | [river](https://github.com/freenet/river) | Used | Concrete signing protocol behind the adapter fixture |
 

@@ -4,8 +4,8 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin role in the connect protocol, connection manager, ring and serving-peer selection, subscription delivery, lifecycle configuration and diagnostics |
-| `freenet-appkit` | Modified | Cellular budget accounting, cap enforcement, role and traffic diagnostics and the workload test definitions |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin role in the connect protocol, connection manager, ring and serving-peer selection, subscription delivery and lifecycle configuration; cellular budget accounting, cap enforcement and role and traffic diagnostics |
+| `freenet-appkit` | Modified | Workload test definitions for the iOS and Android device runs |
 | [paper-1](https://github.com/freenet/paper-1) | Used | Peers and ring section as the single-role baseline |
 | [river](https://github.com/freenet/river) | Used | Join, read and send flows from 1.8 Reference apps and compatibility fixtures as the active-use workload |
 

@@ -5,8 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Per-app isolated WebView sessions, storage scoping and namespace-policy admission in the iOS and Android apps |
-| `freenet-appkit` | Modified | Multi-session host authority: per-app bindings, callback routing and the shared-delegate namespace policy |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Pinned build's admission paths and delegate secret partitioning by full delegate key |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains multi-session host authority: per-app bindings, callback routing and the shared-delegate namespace policy, built on the pinned build's admission paths and delegate secret partitioning by full delegate key |
 | [river](https://github.com/freenet/river) | Used | First curated app in the two-app isolation tests |
 | [atlas](https://github.com/freenet/atlas) | Used | Second curated app in the two-app isolation tests |
 

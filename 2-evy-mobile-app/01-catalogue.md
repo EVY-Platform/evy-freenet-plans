@@ -5,7 +5,8 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `ios/` app rebuilt on the AppKit host and a new `android/` app: home, curated catalogue, settings and release configuration |
-| `freenet-appkit` | Used | Host, sessions, installation interface and SDK from milestone 1 (Freenet mobile AppKit) |
+| `freenet-appkit` | Used | WebView host, installation interface and Swift and Kotlin SDK from milestone 1 (Freenet mobile AppKit) |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Session authority in `crates/mobile` from milestone 1 (Freenet mobile AppKit) |
 | [river](https://github.com/freenet/river) | Used | Verified website container ID as a hardcoded catalogue entry |
 | [atlas](https://github.com/freenet/atlas) | Used | Verified website container ID as a hardcoded catalogue entry |
 

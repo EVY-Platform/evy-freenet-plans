@@ -17,7 +17,7 @@ The foundation owns storage, journals, operation identity, idempotence and retry
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-sdui` | Modified | Logical resources, views, value model, expressions, forms, saved state and pending-operation presentation |
-| `freenet-appkit` | Used | Bounded reads, subscription demand accounting, storage adapter and operation handles from 1.6 Application protocols, data and operations |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Bounded reads, subscription demand accounting, storage adapter and operation handles in `crates/mobile` from 1.6 Application protocols, data and operations |
 
 ## Logical resources and views
 

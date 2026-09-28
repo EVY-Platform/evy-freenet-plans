@@ -12,10 +12,10 @@ This plan owns claims, private witnesses, verification and disclosure policy. Ap
 | --- | --- | --- |
 | `freenet-reputation` | Created | Claim and source protocol, trust-graph contract, receipts delegate, proof system, contract verifier and host adapter |
 | `evy-marketplace` | Modified | Positive-event receipts and purpose-bound claim checks under its policy |
-| `freenet-appkit` | Modified | Proof grants, protected witnesses, session cancellation and persistent request history |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains proof grants, protected witnesses, session cancellation and persistent request history; research sources listed at the end of this plan |
 | [river](https://github.com/freenet/river) | Used | Qualified activity events in the worked example |
 | [mail](https://github.com/freenet/mail) | Used | Recipient policy in the worked example and policy issue #70 |
-| [freenet-core](https://github.com/freenet/freenet-core), [paper-1](https://github.com/freenet/paper-1), [web](https://github.com/freenet/web), [harvest](https://github.com/freenet/harvest) and [atlas](https://github.com/freenet/atlas) | Used | Research sources listed at the end of this plan |
+| [paper-1](https://github.com/freenet/paper-1), [web](https://github.com/freenet/web), [harvest](https://github.com/freenet/harvest) and [atlas](https://github.com/freenet/atlas) | Used | Research sources listed at the end of this plan |
 
 ## Claims and evidence
 

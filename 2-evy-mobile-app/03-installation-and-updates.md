@@ -5,7 +5,8 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Per-app staged installation, activation, retention and rollback on the shared node in the iOS and Android apps |
-| `freenet-appkit` | Used | Single-app installation interface from 1.3 Single-application host, bundle checks from 1.4 Application bundles and migration from 1.7 Upgrades and migration |
+| `freenet-appkit` | Used | Single-app installation interface from 1.3 Single-application host and bundle checks from 1.4 Application bundles |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Migration from 1.7 Upgrades and migration |
 | [river](https://github.com/freenet/river) | Used | Update fixture that must preserve Atlas's session |
 | [atlas](https://github.com/freenet/atlas) | Used | Update fixture that must preserve River's session |
 

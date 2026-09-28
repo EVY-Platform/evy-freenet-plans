@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Operation journal, protocol adapters, cached projections, subscription demand accounting, storage namespaces and owned-state repair |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the operation journal, protocol adapter interface, cached projections, subscription demand accounting, storage namespaces and owned-state repair, built on delegate secret operations in `native_api.rs`, state and deadline limits, #5730 startup behavior and #3465 timeout evidence |
+| `freenet-appkit` | Modified | River signing adapter fixture |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API and delegate interface definitions for requests, results and `MessageOrigin` |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Delegate secret operations in `native_api.rs`, state and deadline limits, #5730 startup behavior and #3465 timeout evidence |
 | [river](https://github.com/freenet/river) | Used | Chat delegate `SignMessage` and `SignResponse`, `AuthorizedMessageV1` and room state merge rules as fixtures |
 
 ## Purpose

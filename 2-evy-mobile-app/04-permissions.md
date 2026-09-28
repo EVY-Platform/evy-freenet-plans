@@ -5,7 +5,8 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Trusted permission prompts, grant review and revocation, identity and record sharing screens in the iOS and Android apps |
-| `freenet-appkit` | Used | Grant records, enforcement boundary and device adapters from 1.3 Single-application host and 1.5 Identity, keys and local protection |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Grant records and enforcement boundary in `crates/mobile` from 1.3 Single-application host and key protection from 1.5 Identity, keys and local protection |
+| `freenet-appkit` | Used | Device adapters from 1.3 Single-application host |
 | [river](https://github.com/freenet/river) | Used | Notification and clipboard permission fixtures |
 | [atlas](https://github.com/freenet/atlas) | Used | Second app in revocation and sharing tests |
 

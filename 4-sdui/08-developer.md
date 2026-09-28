@@ -22,8 +22,8 @@ Commercial publication also uses [4.7 SDUI commerce and attribution](07-commerce
 | `freenet-app-builder` | Created | Editor, project model, EVY importer, schema-driven editors, preview, validation, deterministic export, authoring-project contract and checkpoint protocol |
 | [evy](https://github.com/EVY-Platform/evy) | Used | Canvas, row factories, action editor, design system and schema generation reused; `web/` Developer service clients integrated |
 | `freenet-sdui` | Used | Released schema packages and web reader for preview |
-| `freenet-appkit` | Used | Memory host adapter, operation journal and publication tooling |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | fdev conformance #5344 and merge properties #5320 for contract tests; traffic issues #5153 and #5050 |
+| `freenet-appkit` | Used | Memory host adapter and publication tooling |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Operation journal in `crates/mobile` from 1.6 Application protocols, data and operations; fdev conformance #5344 and merge properties #5320 for contract tests; traffic issues #5153 and #5050 |
 
 ## Scope and implementation
 

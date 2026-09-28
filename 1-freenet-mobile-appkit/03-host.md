@@ -4,8 +4,8 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Host bridge, caller admission, session authority, grants, single-app installation interface, iOS and Android WebView hosts and diagnostics redaction |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Session admission #5264, permissions #4014, storage #5165 and #5254, `RequestUserInput` and delegate startup #5730 as pinned admission evidence |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains caller admission, session authority and grants; session admission #5264, permissions #4014, storage #5165 and #5254, `RequestUserInput` and delegate startup #5730 are the pinned admission evidence |
+| `freenet-appkit` | Modified | Host bridge, single-app installation interface, iOS and Android WebView hosts and diagnostics redaction |
 | [river](https://github.com/freenet/river) | Used | UI package, bundle configuration and notification integration as fixtures for the WebView route |
 
 ## Purpose

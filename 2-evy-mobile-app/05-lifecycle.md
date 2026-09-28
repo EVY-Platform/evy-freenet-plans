@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Cross-app scheduler, per-app allocations for work, storage, subscriptions and traffic, and foreground lifecycle in the iOS and Android apps |
-| `freenet-appkit` | Modified | Per-app budget allocation and cap enforcement hooks on the shared node, built on the accounting in 1.10 Thin-peer role and cellular data budgets |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Per-app budget allocation and cap enforcement hooks on the shared node, built on the accounting in 1.10 Thin-peer role and cellular data budgets |
 | [river](https://github.com/freenet/river) | Used | Concurrent workload in the shared-node tests |
 | [atlas](https://github.com/freenet/atlas) | Used | Concurrent workload in the shared-node tests |
 
@@ -28,7 +28,7 @@ Own scheduling and resource allocation across applications. Combine subscription
 | Selected, host foregrounded | UI requests and active subscriptions within its allocation and the node's total limits. |
 | Unselected, host foregrounded | Retained sessions and explicitly budgeted pending work/subscriptions. Suspend excess demand and show its freshness when reopened. |
 | Closed app session | Release its demand and reject its late callbacks. Retain drafts and pending work under the host's data policy. |
-| Host backgrounded | Save durable work and follow [foreground-only node lifecycle in 1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#scope-and-acceptance) on iOS and Android. |
+| Host backgrounded | Save durable work and follow [foreground-only node lifecycle in 1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#foreground-lifecycle) on iOS and Android. |
 | Foreground resume | Show labeled cached state, refresh within budget, recheck grants and reconcile uncertain operations before retry. |
 
 On app suspension, save acknowledged drafts and journal changes, release that app's cancellable demand and invalidate its session. Reopening establishes fresh authority, shows retained state with its observation time, and reconciles pending operations.

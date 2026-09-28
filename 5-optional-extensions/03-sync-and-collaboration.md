@@ -6,10 +6,9 @@ Optional consumer sync synchronizes selected private application records across 
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Sync group enrollment, encrypted record exchange, key epochs, membership transitions and budget-bound shards |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains sync group enrollment, encrypted record exchange, key epochs, membership transitions and budget-bound shards; sync delegate RFC #5587, #4560, #5542, #5467, PR #5493 and PR #5728 verified on the selected build |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Sync selection, device enrollment and budget screens in the iOS and Android apps |
 | `freenet-app-builder` | Modified | Collaboration-session shard contracts, presence hints and live-session checkpoint commits |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Sync delegate RFC #5587, #4560, #5542, #5467, PR #5493 and PR #5728, verified on the selected build |
 | [river](https://github.com/freenet/river) | Used | `OutboundDmStore` hidden-thread merge fixture |
 | [paper-1](https://github.com/freenet/paper-1) | Used | Trust boundaries and status sections on private state replication |
 

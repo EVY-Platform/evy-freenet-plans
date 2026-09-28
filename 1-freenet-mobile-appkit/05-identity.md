@@ -4,8 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Protected key and record handling, typed lock states, explicit forget, encrypted export and import package and the restore flow |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Secrets-at-rest backends, delegate secret store and FNSX bundle; the mobile Keychain and Keystore backends land through 1.2 Embedded node and mobile SDK |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains protected key and record handling, typed lock states, explicit forget, the encrypted export and import package and the restore flow, built on the secrets-at-rest backends, delegate secret store and FNSX bundle; the mobile Keychain and Keystore backends land through 1.2 Embedded node and mobile SDK |
 | [river](https://github.com/freenet/river) | Used | `riverctl identity export` and `import`, privacy model and chat delegate store as the application fixture |
 
 ## Purpose

@@ -4,8 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Component key derivation, predecessor registry checks, contract carry-forward, delegate export and import coordination and transfer statements |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | `freenet-migrate-build`, probe drivers, carry-forward policies, delegate secret migration and pointer resolution |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Modified | Component key derivation, predecessor registry checks, contract carry-forward, delegate export and import coordination and transfer statements, built on `freenet-migrate-build`, probe drivers, carry-forward policies, delegate secret migration and pointer resolution |
 | [river](https://github.com/freenet/river) | Used | Legacy contract and delegate registries, pointer records, delegate migration rules and FREENET.md as fixtures |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Upgrade issue #2776, pointer records #5194, FNSX interfaces #4035 and #4592, RFC #5255 and PR #5199 as evidence |
 | [paper-1](https://github.com/freenet/paper-1) | Used | Status section on the upgrade protocol |
@@ -37,7 +36,7 @@ A contract or delegate key derives from BLAKE3 over its code hash and exact para
 | Chat delegate | Code hash and empty parameters, yielding BLAKE3 of the code hash |
 | Website container | Container code hash and the publisher's verifying-key parameters |
 
-Sources: [River FREENET.md](https://github.com/freenet/river/blob/main/FREENET.md), [publication rules](https://github.com/freenet/river/blob/main/.claude/rules/river-publish.md), and the [whitepaper status](https://github.com/freenet/paper-1/blob/main/sections/07-status.tex). [Core upgrade issue #2776](https://github.com/freenet/freenet-core/issues/2776) is related protocol evidence. AppKit uses explicit application migration adapters.
+Sources: [River FREENET.md](https://github.com/freenet/river/blob/main/FREENET.md), [publication rules](https://github.com/freenet/river/blob/main/.claude/rules/river-publish.md), and the [whitepaper status](https://github.com/freenet/paper-1/blob/main/sections/07-status.tex). [Core upgrade issue #2776](https://github.com/freenet/freenet-core/issues/2776) is related protocol evidence. freenet-migrate provides the explicit application migration adapters.
 
 ### Predecessor registry
 
@@ -112,7 +111,7 @@ The initial profile uses the stock website container and its single publisher ve
 | Strict version ordering | Verify the highest signed predecessor state the host has observed |
 | Two signed digests at one version | Retain both as compromise evidence and suspend automatic transfer pending a signed resolution |
 
-The AppKit transfer convention uses matching statements authenticated by both containers' normal signatures:
+The transfer convention in freenet-migrate uses matching statements authenticated by both containers' normal signatures:
 
 1. Publish and verify the successor container.
 2. Publish a higher predecessor version with full predecessor and successor identities, a unique transfer ID and its purpose.

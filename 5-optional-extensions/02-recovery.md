@@ -17,9 +17,9 @@ Mobile use inherits the [gate in 1.10 Thin-peer role and cellular data budgets](
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Automated backup scheduling, storage destinations, coverage checkpoints and broader restore |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains automated backup scheduling, coverage checkpoints and broader restore, built on the encrypted FNSX bundle and same-key delegate import |
+| `freenet-appkit` | Modified | Storage destination adapters on iOS and Android |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Backup, destination and coverage screens in the iOS and Android apps |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Encrypted FNSX bundle and same-key delegate import |
 | [river](https://github.com/freenet/river) | Used | Export and import fixture from 1.5 Identity, keys and local protection |
 
 ## Scope

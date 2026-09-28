@@ -6,9 +6,10 @@
 | --- | --- | --- |
 | `evy-marketplace` | Created | Admission, continuation, store, listing and order contracts, domain delegates, cryptographic profile, custom web UI and fixtures |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Catalogue entry and pilot wiring in the iOS and Android apps; the attribution, payment and remuneration services serve the pilot |
-| `freenet-appkit` | Used | Bundles, host authority, checkout adapter, journals and migration from milestone 1 (Freenet mobile AppKit) and milestone 3 (Attribution, remuneration and payment) |
+| `freenet-appkit` | Used | Bundles and the checkout adapter from milestone 1 (Freenet mobile AppKit) and milestone 3 (Attribution, remuneration and payment) |
 | [harvest](https://github.com/freenet/harvest) | Used | Design references listed at the end of this plan |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Hosting and eviction #4642 and local pin #5041 as retention references |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Host authority and journals in `crates/mobile` from milestone 1 (Freenet mobile AppKit); hosting and eviction #4642 and local pin #5041 as retention references |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Migration from 1.7 Upgrades and migration |
 
 ## Owned scope
 

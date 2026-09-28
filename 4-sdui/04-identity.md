@@ -18,7 +18,8 @@ This plan owns reader bindings and UI behavior. The foundation owns caller authe
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-sdui` | Modified | Reader session handle use, permission bindings, protected-field handling and diagnostics redaction |
-| `freenet-appkit` | Modified | Opaque session handles, reader prompt requests and scoped device handles |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains opaque session handles for readers |
+| `freenet-appkit` | Modified | Reader prompt requests and scoped device handles |
 | [river](https://github.com/freenet/river) | Used | Notification component as evidence for permission-dependent UI |
 
 ## Session binding

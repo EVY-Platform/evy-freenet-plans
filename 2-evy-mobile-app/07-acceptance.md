@@ -5,10 +5,10 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | River-and-Atlas release suite, recorded builds and fixed catalogue configuration for iOS and Android |
-| `freenet-appkit` | Used | Host, SDK and subscription cleanup under test |
+| `freenet-appkit` | Used | WebView hosts and the Swift and Kotlin SDK under test |
 | [river](https://github.com/freenet/river) | Used | Actual web UI in the concurrent two-app suite |
 | [atlas](https://github.com/freenet/atlas) | Used | Actual web UI and the product flows from 1.8 Reference apps and compatibility fixtures in the concurrent two-app suite |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Pinned thin-role build for the cellular cap cases |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Session authority and subscription cleanup in `crates/mobile` under test; pinned thin-role build for the cellular cap cases |
 
 ## Purpose
 
