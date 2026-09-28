@@ -19,10 +19,8 @@ Paid-flow acceptance uses [3.8 Paid application pilot and commercial acceptance]
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-sdui` | Modified | Checkout service step, domain-evidence action and payment status presentation |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution` gains the checkpoint-evidence path and checkpoint author registration |
 | `evy-marketplace` | Modified | SDUI screens and action definitions for the pilot order flow |
 | `freenet-appkit` | Used | Checkout adapter and usage-evidence interface from 3.4 Payments and checkout adapters and 3.5 Usage evidence, remuneration and payouts |
-| `freenet-app-builder` | Used | Signed checkpoints as the visual-authoring evidence input |
 
 ## Ownership
 
@@ -58,16 +56,9 @@ Use the service-defined event identity and durable delivery rules. Bindings expo
 
 ## SDUI artifact integration
 
-Accept either evidence path, or both when a release combines repository and visually authored content:
+Repository-authored SDUI uses the repository evidence path. Its reviewed source and build evidence is the exact reviewed repository revisions, accepted contribution references, and pinned build inputs and tool versions under the existing repository-evidence rules. [4.8 EVY Developer visual authoring](08-developer.md) adds the checkpoint evidence path.
 
-| Authoring path | Reviewed source and build evidence |
-| --- | --- |
-| Repository-authored SDUI | Exact reviewed repository revisions, accepted contribution references, and pinned build inputs and tool versions under the existing repository-evidence rules |
-| Visual authoring | Exact signed [checkpoint defined in 4.8 EVY Developer visual authoring](08-developer.md#durable-checkpoint-protocol), project identity, membership epoch and roster digest, author-operation evidence, accepted contribution references, and pinned exporter version and inputs |
-
-Repository-authored SDUI uses CLI packaging and certification independently of [4.8 EVY Developer visual authoring](08-developer.md). The checkpoint path uses 4.8 EVY Developer visual authoring when selected.
-
-Both paths map their reviewed inputs to:
+The repository evidence path maps its reviewed inputs to:
 
 - Exact screen, action, view and delegate-schema digests.
 - Reader build and schema package versions.
@@ -76,18 +67,11 @@ Both paths map their reviewed inputs to:
 
 Keep reviewed source evidence, prepared archive, contribution record and publication observation as separate records. The [certification owner in 3.3 Artifact certification and publication evidence](../3-attribution-remuneration-payment/03-certification.md) certifies exact retained archive bytes and verifies publication evidence. A dedicated native build follows its native-artifact policy. The service decides how reviewed SDUI and native artifacts share contribution weights.
 
-Changed source or checkpoint content creates a new evidence revision and requires renewed review. Changed artifact bytes require matching certification of their reviewed source-to-artifact mapping. Browser publication readback and independent-node observation retain their base meanings. Payment eligibility follows the commercial service decision.
+Changed source content creates a new evidence revision and requires renewed review. Changed artifact bytes require matching certification of their reviewed source-to-artifact mapping. Browser publication readback and independent-node observation retain their base meanings. Payment eligibility follows the commercial service decision.
 
-## Optional checkpoint evidence checks
+## Contributor recovery profile
 
-This plan adds the checkpoint-evidence path to the attribution service for projects that select visual authoring. The service owns these checks and their signed decisions. The editor submits evidence and displays the result.
-
-- Register a checkpoint author by verifying a signed request, the author's project membership and control of the signing key. Bind the verified author key to the contributor's `ActorId` lineage and retain the registration evidence.
-- Verify the project identity, membership epoch, owner-signed roster and roster digest against the exact signed checkpoint. Verify included author-operation signatures, causal references and the operation frontier against that checkpoint and the membership authority for each operation.
-- Bind contributor claims and co-contributor signatures to that exact evidence revision. Record the verified checkpoint and roster digests with the acceptance and source-to-artifact mapping. Apply the existing product-scoped review, role-separation and challenge rules through [3.2 Attribution workflow and allocation weights](../3-attribution-remuneration-payment/02-attribution.md).
-- Require renewed review when checkpoint content changes. Preserve the signed evidence behind earlier accepted revisions.
-
-At author registration, the attribution service approves and records a versioned contributor recovery profile with its recovery authority and required proofs. Use the [identity interfaces in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) for protected key recovery. The attribution service verifies a successor against the registered profile and retains signed contributor lineage. A repository-linked profile uses the repository identity recorded at registration. A checkpoint-author profile names the authorized recovery authority and project/identity evidence it accepts. Project membership establishes project access. Contributor-history transfer requires the registered recovery proof. Freeze payout-identity changes while recovery is unresolved. An identity lacking verified lineage starts with contributor eligibility.
+At contributor registration, the attribution service approves and records a versioned contributor recovery profile with its recovery authority and required proofs. Use the [identity interfaces in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) for protected key recovery. The attribution service verifies a successor against the registered profile and retains signed contributor lineage. A repository-linked profile uses the repository identity recorded at registration. Contributor-history transfer requires the registered recovery proof. Freeze payout-identity changes while recovery is unresolved. An identity lacking verified lineage starts with contributor eligibility.
 
 ## Acceptance
 
@@ -97,8 +81,7 @@ At author registration, the attribution service approves and records a versioned
 - A verified `Accepted` payment awaiting order synchronization displays both states. Observing the matching signed revision updates the synchronization result while preserving the payment evidence.
 - Updating the reader, definitions or delegate during checkout preserves the original payment/content/contribution/policy bindings.
 - Repeated renders, replayed notifications and duplicate evidence submissions produce the same funded allocation result as the base service fixtures.
-- Hand-authored SDUI in a repository completes CLI packaging, publication and certification from reviewed revisions and pinned build inputs while visual-authoring tools and checkpoint services are absent.
-- Checkpoint certification verifies registered author lineage, project identity, epoch, roster signatures/digest and included operation signatures against the exact checkpoint. Substituted checkpoints, unauthorized authors and invalid successor lineage fail.
-- Changed checkpoint content requires a new evidence revision and renewed review. Recovery fixtures accept the registered profile's authorized proof and freeze payout-identity changes for unresolved or unauthorized claims.
-- Certification detects changed screens, actions, schemas, reader builds and domain artifacts against the reviewed mapping for both evidence paths.
+- Hand-authored SDUI in a repository completes CLI packaging, publication and certification from reviewed revisions and pinned build inputs.
+- Recovery fixtures accept the registered profile's authorized proof and freeze payout-identity changes for unresolved or unauthorized claims.
+- Certification detects changed screens, actions, schemas, reader builds and domain artifacts against the reviewed mapping for the repository evidence path.
 - Offline and service-outage screens distinguish saved work, signed payment state, order synchronization and pending usage-evidence verification. Refund and reversal results remain visible after reader updates.

@@ -4,7 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the operation journal, protocol adapter interface, cached projections, subscription demand accounting, storage namespaces and owned-state repair, built on delegate secret operations in `native_api.rs`, state and deadline limits, #5730 startup behavior and #3465 timeout evidence |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the operation journal with its flush hook, export and post-restore reconciliation, protocol adapter interface, cached projections, subscription demand accounting, storage namespaces and owned-state repair, built on delegate secret operations in `native_api.rs`, state and deadline limits, #5730 startup behavior, #3465 timeout evidence and #4642 cold-state evidence |
 | `freenet-appkit` | Modified | River signing adapter fixture |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API and delegate interface definitions for requests, results and `MessageOrigin` |
 | [river](https://github.com/freenet/river) | Used | Chat delegate `SignMessage` and `SignResponse`, `AuthorizedMessageV1` and room state merge rules as fixtures |
@@ -13,11 +13,11 @@
 
 Provide concrete application protocols over delegate access and keep reads, drafts and submitted updates usable through disconnection, restart and supported upgrades. Application code owns orchestration. River's web UI or a custom native control reads room state, asks the chat delegate to sign, and submits the prepared message through the authorized host/SDK interface.
 
-This plan owns delegate request/result protocols and validation, durable operation identity, storage namespaces, observed outcomes, retry rules and retained-state repair for application-owned contracts. [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) adds shared-node scheduling and per-app budgets. Optional generic envelopes, schemas, declared actions, bounded steps, executors, bindings, form state and operation presentation belong to [4.5 SDUI actions and delegate protocols](../4-sdui/05-actions.md) and [4.6 SDUI data and operation presentation](../4-sdui/06-data.md).
+This plan owns delegate request/result protocols and validation, durable operation identity, storage namespaces, observed outcomes, retry rules and retained-state repair for application-owned contracts. [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) adds shared-node scheduling and per-app budgets. Generic SDUI envelopes belong to [4.5 SDUI actions and delegate protocols](../4-sdui/05-actions.md) and [4.6 SDUI data and operation presentation](../4-sdui/06-data.md).
 
 ## Prerequisites
 
-Delegate registration, messaging, request correlation and lifecycle in [1.2 Embedded node and mobile SDK](02-sdk.md), [1.3 Single-application host](03-host.md) and [1.5 Identity, keys and local protection](05-identity.md). Mobile release tests use the required [thin-peer profile and cellular budgets in 1.10 Thin-peer role and cellular data budgets](10-thin-peer.md).
+Delegate registration, messaging, request correlation and lifecycle in [1.2 Embedded node and mobile SDK](02-sdk.md), [1.3 Single-application host](03-host.md) and [1.5 Identity, keys and local protection](05-identity.md).
 
 ## Who does what
 
@@ -101,7 +101,7 @@ Application codecs verify and project state for their screens. Code sets query b
 
 Keep cached values with their observation time, source reference and decoding version. The UI distinguishes loading, ready, stale, missing, error and permission-required outcomes using its own code. A recent response can contain locally cached state. Its arrival time measures when this host observed it, while a domain timestamp has only the meaning its signed protocol assigns.
 
-Reference-count subscription demand by owning session and contract. Releasing one consumer preserves the others. The SDK supplies wire-level cancellation and unsubscribe behavior. On background shutdown, release demand under the supported lifecycle and reject late callbacks. 2.5 Shared node, data and lifecycle schedules this demand across apps within the total traffic budget in 1.10 Thin-peer role and cellular data budgets.
+Reference-count subscription demand by owning session and contract. Releasing one consumer preserves the others. The SDK supplies wire-level cancellation and unsubscribe behavior. On background shutdown, release demand under the supported lifecycle and reject late callbacks.
 
 Evidence for SDK verification includes [TypeScript response matching #5048](https://github.com/freenet/freenet-core/issues/5048) and [delegate unsubscribe #5600](https://github.com/freenet/freenet-core/issues/5600). Use integration results from the selected client build as release evidence.
 
@@ -112,19 +112,19 @@ Concrete application codecs define byte, numeric, timestamp and missing-value be
 | Record | Owner and scope | Lifetime |
 | --- | --- | --- |
 | Route parameters and session values | Application/session | Route entry or session |
-| Drafts, saved values and private records | Application delegate's protected store, under the [host authority policy in 1.3 Single-application host](03-host.md#who-controls-what) and later [shared-node namespace policy in 2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md#delegate-namespace-policy) | Until explicit authorized data deletion or forget |
+| Drafts, saved values and private records | Application delegate's protected store, under the [host authority policy in 1.3 Single-application host](03-host.md#who-controls-what) | Until explicit authorized data deletion or forget |
 | Pending operations | Protected host journal per user, full application identity and installation | Until the outcome and required evidence retention are complete |
 | Cached projections | Host cache, partitioned by authority and keyed by contract identity, codec and delegate version | Until refresh or eviction |
-| Owned contract-state inventory | Protected host storage scoped by app and user | Retain verified recoverable copies under the declared recovery policy |
+| Owned contract-state inventory | Protected host storage scoped by app and user | Retain verified recoverable copies under the declared repair policy |
 | Grants and publisher trust | Trusted host storage | Under the [host's grant rules in 1.3 Single-application host](03-host.md#base-authorization-and-device-access) |
 
-The source snapshot describes delegate key-value operations `get_secret`, `set_secret`, `remove_secret` and prefix-based `list_secrets` in [native_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/native_api.rs). [1.5 Identity, keys and local protection](05-identity.md) owns encryption at rest and export coverage. [1.7 Upgrades and migration](07-migration.md) owns moves to successor delegates.
+The source snapshot describes delegate key-value operations `get_secret`, `set_secret`, `remove_secret` and prefix-based `list_secrets` in [native_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/native_api.rs). [1.5 Identity, keys and local protection](05-identity.md) owns encryption at rest and export coverage.
 
-A draft save is a delegate call. Batch edits and flush on pause, navigation and backgrounding. Mark a save durable only after storage acknowledges it. A later process kill preserves acknowledged data. Storage exhaustion produces a visible failure before the UI claims a durable save. Cache eviction preserves drafts, unresolved operations, the recovery inventory and their required artifacts. Removing an application from the host retains its private records until explicit authorized data deletion or forget.
+A draft save is a delegate call. Batch edits and flush on pause, navigation and backgrounding. Mark a save durable only after storage acknowledges it. A later process kill preserves acknowledged data. Storage exhaustion produces a visible failure before the UI claims a durable save. Cache eviction preserves drafts, unresolved operations, the owned contract-state inventory and their required artifacts. Removing an application from the host retains its private records until explicit authorized data deletion or forget.
 
 ### Owned contract-state inventory and repair
 
-For application-owned contracts covered by the release's recovery policy, retain:
+Network recovery depends on a surviving copy, including the [cold-state case #4642](https://github.com/freenet/freenet-core/issues/4642). For application-owned contracts covered by the release's declared repair policy, retain:
 
 - The full contract identity, original code hash and retained artifact reference, and exact parameter bytes.
 - Verified canonical state with its domain-required signatures, including deletion and conflict records.
@@ -138,7 +138,7 @@ The host coordinates bounded repair through application-owned domain adapters an
 3. Journal the authorized repair under the operation rules below and submit the retained signed canonical state to the same contract identity. Preserve original record and operation identities, and retain the recoverable copy while repair is pending.
 4. Read back and verify the accepted state and domain merge result before recording completion. Record network retrievability through a separate retrieval when reporting restored network availability.
 
-Bound refreshes, submitted bytes and retries within the application's resource limits and the cellular budgets in 1.10 Thin-peer role and cellular data budgets. Keep unresolved repairs and their verified copies available for resume. [1.7 Upgrades and migration](07-migration.md) owns moves to changed component identities. [5.2 Extended customer backup and recovery](../5-optional-extensions/02-recovery.md) adds broader automated backup and destinations.
+Bound refreshes, submitted bytes and retries within the application's resource limits. Keep unresolved repairs and their verified copies available for resume.
 
 ## Submitting updates and pending operations
 
@@ -161,7 +161,9 @@ Allocate and persist an operation ID before delegate preparation or any other si
 
 A delegate request ID belongs to one [protocol exchange](#delegate-requests-and-results). SDK request correlation belongs to [1.2 Embedded node and mobile SDK](02-sdk.md). Neither replaces the durable operation ID.
 
-For paid operations, retain the funded content and contribution bindings with the evidence required by [3.5 Usage evidence, remuneration and payouts](../3-attribution-remuneration-payment/05-remuneration.md). A newer release completing an older operation uses those original bindings. Canonical `publication_ref` and `application_content_ref` definitions remain in [1.4 Application bundles](04-bundles.md#publishing-and-evidence).
+[1.4 Application bundles](04-bundles.md#publishing-and-evidence) defines `publication_ref` and `application_content_ref`.
+
+The journal supplies the [flush hook in 1.2 Embedded node and mobile SDK](02-sdk.md#caller-hooks). On app suspension and on stop, it saves acknowledged journal changes before the SDK stops the node.
 
 ### Outcomes and retries
 
@@ -180,9 +182,19 @@ Accepted describes observed domain evidence, rather than global finality. The ap
 2. Ask application code or its delegate to reconcile uncertain outcomes before retrying.
 3. A retry preserves the operation ID and exact submitted bytes. If repair changes the payload, create a linked successor operation and retain the earlier outcome/evidence.
 4. Cancellation stops local cancellable work. Keep tracking submitted mutations until their outcome is known.
-5. After restart, recovery or release activation, resume from the journal with fresh session authority and the original protocol/content bindings.
+5. After restart, reopening, recovery or release activation, show retained state with its observation time and resume from the journal with fresh session authority and the original protocol/content bindings.
 
 For River, an owner-signed configuration edit can lose to another valid edit under the room's merge rule, as described in [configuration.rs](https://github.com/freenet/river/blob/main/common/src/room_state/configuration.rs). Message reconciliation uses room state evidence such as [version.rs](https://github.com/freenet/river/blob/main/common/src/room_state/version.rs). If a ban rotates the room secret while an offline change is pending, preserve the draft and let the domain adapter decide whether repair needs a successor operation.
+
+### Export, import and reconciliation after a restore
+
+The operation journal is one of the application records declared in the [export package in 1.5 Identity, keys and local protection](05-identity.md#app-specific-export-and-import).
+
+| Package content | Required detail |
+| --- | --- |
+| Pending operations | Operation IDs, exact submitted bytes, references, observed outcomes and publication progress, within declared coverage |
+
+After the restore flow in 1.5 Identity, keys and local protection establishes fresh sessions and refreshes shared state, the host imports the journal into the protected storage namespace and reconciles each pending operation under the [outcome and retry steps](#outcomes-and-retries). A restored operation keeps its original ID and exact payload.
 
 ## Reference definitions
 
@@ -196,6 +208,7 @@ For River, an owner-signed configuration edit can lose to another valid edit und
 | Observation time | When this host received a state response |
 | Operation ID | Durable identity for one user operation |
 | Canonical payload | Exact prepared bytes retained for submission and retry |
+| Repair policy | The release's declared set of application-owned contracts whose verified state the host retains and repairs |
 | Operation outcome | Domain evidence recorded as accepted, superseded, rejected or unresolved |
 
 SDK request correlation belongs to [1.2 Embedded node and mobile SDK](02-sdk.md). Host session authority belongs to [1.3 Single-application host](03-host.md).
@@ -208,7 +221,7 @@ SDK request correlation belongs to [1.2 Embedded node and mobile SDK](02-sdk.md)
 - A small custom Swift/Kotlin integration fixture calls a concrete delegate protocol at the support level declared in 1.1 Mobile feasibility and supported profiles.
 - Fixtures cover malformed bytes, unsupported protocols, wrong signing inputs, missing keys, conflicting request IDs, oversized results, expired sessions and unauthorized targets.
 - Forged payload identities fail caller-policy tests. Delegate-to-delegate calls and origin-free events receive only the authority their attested context supplies.
-- Autonomous private results reach only authorized sessions. The two-app shared-node isolation case has a separate gate in [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md#acceptance).
+- Autonomous private results reach only authorized sessions.
 - Termination during preparation or submission passes the durable operation tests below.
 
 ### Data and operation acceptance
@@ -221,6 +234,5 @@ SDK request correlation belongs to [1.2 Embedded node and mobile SDK](02-sdk.md)
 - Two consumers within the single application share subscription demand correctly. Releasing one preserves the other's subscription.
 - An owned-contract fixture loses its network copy, repairs from the retained signed state with the original code and parameters, and verifies readback while preserving record and operation identities.
 - Repair fixtures cover invalid signatures, mismatched parameters, revoked authority, concurrent state, interrupted submission and budget exhaustion. A local-cache read retains local-only provenance.
-- Upgrade and app-specific export/import fixtures preserve originating content references, pending IDs and completion evidence, including paid-operation bindings when enabled.
-
-The later [2.7 Multi-application acceptance](../2-evy-mobile-app/07-acceptance.md) gate tests cross-app subscription isolation and retained records under the scheduling policy in 2.5 Shared node, data and lifecycle, including app removal followed by a separate authorized data-deletion decision.
+- Release activation and app-specific export/import fixtures preserve originating content references, pending IDs and completion evidence.
+- After a restore under 1.5 Identity, keys and local protection, a pending River reply keeps its original ID and exact payload, then reconciles against current room state without a duplicate effect.

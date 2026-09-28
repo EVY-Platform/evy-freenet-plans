@@ -17,23 +17,48 @@ This plan owns the screen format, component catalogue, navigation, accessibility
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Created | Versioned JSON Schema, generated TypeScript, Rust, Swift and Kotlin models, component catalogue, navigation, accessibility and formatting fixtures and schema comparison |
+| `freenet-sdui` | Created | Versioned JSON Schema, generated TypeScript, Rust, Swift and Kotlin models, value model and display expressions, component catalogue, navigation, accessibility, value and formatting fixtures and schema comparison |
 | [evy](https://github.com/EVY-Platform/evy) | Used | The 21 row-type schemas as source material for the catalogue |
 
 ## Format and compatibility
 
-Publish versioned JSON Schema and generated TypeScript, Rust, Swift and Kotlin models. A screen document describes flows, pages, stable component IDs, relationships, routes, themes and language resources. It names required component versions and host capabilities. [4.2 SDUI bundles and publication](02-bundles.md) pins matching action, view and delegate schemas in one verified archive snapshot.
+Publish versioned JSON Schema and generated TypeScript, Rust, Swift and Kotlin models. A screen document describes flows, pages, stable component IDs, relationships, routes, themes and language resources. It names required component versions and host capabilities.
 
 Define these rules in the schema and shared fixtures:
 
-- Values explicitly select a literal, typed reference or bounded expression. Braces inside a literal remain text.
+- Values explicitly select a literal, typed reference or bounded expression, as [Values and expressions](#values-and-expressions) defines. Braces inside a literal remain text.
 - Each component declares property types, binding slots, events, accessible meaning, and loading, empty, error and disabled states.
 - Required unknown components or incompatible versions block the affected page before activation. Optional components carry a validated safe fallback with compatible bindings and events.
 - Unknown executable behavior fails validation. Optional extension fields use declared namespaces and versions.
 - Publish a schema comparison that classifies additions, removals and type changes. Required features and exact supported versions determine compatibility.
 - Validate at authoring, publication and load time. Errors identify a component or schema path while private values stay redacted.
 
-[Display expressions in 4.6 SDUI data and operation presentation](06-data.md) provide presence checks, fallbacks, boolean and string comparisons, and locale-aware formatting. Bound input size, nesting and evaluation steps. Domain delegates interpret application records and calculate business values under [4.5 SDUI actions and delegate protocols](05-actions.md).
+## Values and expressions
+
+Define a common value model for null, missing, booleans, integers, decimals, strings, bytes, timestamps, durations, lists and objects. Shared fixtures fix numeric ranges, decimal encoding, overflow, comparisons, conversions and missing-value behavior. Host-supplied time, randomness, locale and time zone have deterministic substitutes in tests.
+
+Every binding explicitly selects a literal, reference or expression. References address a declared view, immutable route parameters, a form value or temporary display state. Display expressions provide presence checks, fallbacks, boolean and string comparisons, and locale-aware formatting. Evaluation is side-effect-free. Bound input size, nesting and evaluation steps.
+
+Proposed binding example:
+
+```json
+{
+  "id": "send-button",
+  "type": "appkit.button",
+  "title": { "literal": "Send" },
+  "actions": {
+    "tap": {
+      "action": "river.sendMessage",
+      "args": {
+        "room": { "ref": "param:roomOwner" },
+        "text": { "ref": "local:draft.text" }
+      }
+    }
+  }
+}
+```
+
+The final schema release fixes the serialized component names and reference syntax.
 
 ## Components and source catalogue
 
@@ -47,13 +72,13 @@ Use the 21 EVY row types as the v1 component catalogue. The linked schemas are s
 | Layout | [VerticalContainer](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/vertical_container.schema.json), [HorizontalContainer](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/horizontal_container.schema.json), [TabContainer](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/tab_container.schema.json) |
 | Device | [Map](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/map.schema.json), [SelectPhoto](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/select_photo.schema.json) |
 
-Browser media, including map tiles, uses bundled bytes or content served by the node under Core's sandbox policy. Native readers use approved host adapters. External asset storage needs its own supported service and permission profile. Selecting a photo returns a scoped handle through [4.4 SDUI identity and permissions](04-identity.md).
+Browser media, including map tiles, uses bundled bytes or content served by the node under Core's sandbox policy. External asset storage needs its own supported service and permission profile.
 
 ## Navigation
 
 Routes have stable IDs and typed parameters. Readers support opening or replacing a page, sheets, full-screen views and tab selection. Native navigation emits the same semantic events used by browser tests. The host controls external URL operations and deep-link admission.
 
-Validate restored routes and parameters against the active release. Unknown routes return a defined navigation error. Deep links supply navigation arguments. Any requested side effect passes the declared-action and host authorization checks. [4.6 SDUI data and operation presentation](06-data.md) owns form snapshots, draft saving and recovery.
+Validate restored routes and parameters against the active release. Unknown routes return a defined navigation error. Deep links supply navigation arguments. [4.6 SDUI data and operation presentation](06-data.md) owns form snapshots, draft saving and recovery.
 
 ## Accessibility and language
 
@@ -73,13 +98,11 @@ Strings use literals or keys in verified language files. The host supplies local
 
 Set versioned limits for document bytes, component count, nesting, text and media sizes, expression work, list windows and update frequency. Window long lists. Stop an excessive update before applying it and report the limit reached. Required malformed components block the page. Optional malformed components use their validated fallback. Schema and action errors block publication or page activation.
 
-The host retains a usable release when an installed reader lacks a requirement. Packaging verifies that the bundled web reader supports its screens. [4.9 SDUI migration and conformance](09-migration-and-conformance.md) owns activation and upgrade tests.
+[4.9 SDUI migration and conformance](09-migration-and-conformance.md) owns activation and upgrade tests.
 
 ## Acceptance
 
-- Each catalogue component passes schema, event, fallback and accessibility fixtures on web, iOS and Android.
-- Equivalent inputs produce equivalent values, navigation events, action arguments and errors on all readers.
-- Keyboard, browser screen-reader, VoiceOver and TalkBack tests pass, including large text, right-to-left layout and focus restoration.
-- Shared formatting fixtures fix locale, time zone and current time. Null, missing values and numeric conversions agree.
-- Invalid required components, unknown actions, incompatible schemas and excessive expressions fail before side effects.
-- Applications using custom pages and embedded SDUI pass their own behavior tests alongside the [cross-target suite in 4.9 SDUI migration and conformance](09-migration-and-conformance.md).
+- Each catalogue component has published schema, event, fallback and accessibility fixtures that validate against the schema.
+- Shared value fixtures cover null, missing, numeric ranges, decimal encoding, overflow, comparisons and conversions, and validate against the schema.
+- Shared formatting fixtures fix locale, time zone and current time.
+- Schema validation rejects unknown fields, unknown component types, invalid required components and incompatible schemas.

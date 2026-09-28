@@ -6,13 +6,12 @@
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `web/` Developer workspace, repository integration and merge checks, CLI and CI clients with scoped credentials |
 | `freenet-appkit` | Used | Bundle tooling that CLI and CI drive for artifacts and publication |
-| `evy-marketplace` | Used | First commercial run through the pickup pilot |
 
 ## Owned scope
 
 EVY Developer connects repository work to contribution review, certified releases and earnings. Developers write custom web or native application code in their chosen tools and use concrete application protocols.
 
-The first commercial run uses the [pilot sequence in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#pilot-sequence). Optional extensions cover [4.8 EVY Developer visual authoring](../4-sdui/08-developer.md), [5.3 Device sync and authoring collaboration](../5-optional-extensions/03-sync-and-collaboration.md) and [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
+Optional visual authoring belongs to [4.8 EVY Developer visual authoring](../4-sdui/08-developer.md).
 
 ## Prerequisites
 
@@ -23,8 +22,6 @@ Use release tooling from [1.4 Application bundles](../1-freenet-mobile-appkit/04
 - [3.3 Artifact certification and publication evidence](03-certification.md)
 - [3.4 Payments and checkout adapters](04-payment.md)
 - [3.5 Usage evidence, remuneration and payouts](05-remuneration.md)
-
-Production acceptance also requires [3.7 Operating readiness](07-operations.md#acceptance). The mobile pilot uses [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md) and the required [1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md).
 
 Use TypeScript, React and Vite for the Developer web application, with Bun for development and tests. Connect the workspace, repository integration and CLI/CI clients through versioned service interfaces.
 
@@ -65,7 +62,6 @@ Repository drafts and pending workspace requests survive service outages. A queu
 | [3.4 Payments and checkout adapters](04-payment.md) | Checkout, contributor-fee rules, processor reconciliation and signed payment status |
 | [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) | Usage records, allocations, reservations, balances and payouts |
 | EVY Developer | Workflow screens, repository/CLI/CI integration and requests to those authorities |
-| [3.7 Operating readiness](07-operations.md) | Service backups, queue recovery, audit retention, key rotation and operating readiness |
 
 Version requests and responses. Authenticate each actor and product scope, retain idempotency IDs, and show service validation errors next to the relevant evidence. The workspace displays canonical service results. UI caches and repository check summaries remain derived views.
 
@@ -77,7 +73,7 @@ This plan is complete when a developer can:
 - Complete review, size validation and challenge resolution against exact source evidence.
 - Build a custom application in its own tools, certify its exact artifact and verify publication.
 - Open release history and trace its artifact to accepted work and publisher evidence.
-- See a pilot operation become a funded allocation, then a payout and a reconciled refund.
+- Run a fixture paid operation in the test environments of [3.4 Payments and checkout adapters](04-payment.md) and [3.5 Usage evidence, remuneration and payouts](05-remuneration.md), with the fixture order contract and the fixture completion-evidence producer from those plans. See it become a funded allocation, then a payout and a reconciled refund.
 - Recover interrupted requests with the same IDs and source bytes.
 
 Run browser tests for review, release and earnings screens, plus service integration tests for CLI/CI. Cover stale status, invalid authority, changed source, failed publication, missing payout details, pending identity recovery, service outages and reversals. Test accessibility and redact logs and diagnostics. A custom native fixture exercises the same service interfaces under its own certified-build policy.

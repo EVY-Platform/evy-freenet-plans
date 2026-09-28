@@ -4,8 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Backups, inbox and outbox reconciliation, restore drill tooling, key rotation and runbooks across `services/attribution`, `services/payment` and `services/remuneration` |
-| `evy-marketplace` | Used | Historical pilot transaction replayed in restore drills |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Backups, inbox and outbox reconciliation, restore drill tooling with a fixture historical transaction, key rotation and runbooks across `services/attribution`, `services/payment` and `services/remuneration` |
 
 ## Owned scope
 
@@ -21,7 +20,7 @@ Use the service records and invariants defined by:
 - [3.4 Payments and checkout adapters](04-payment.md)
 - [3.5 Usage evidence, remuneration and payouts](05-remuneration.md)
 
-[1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) owns application operation IDs and producer journals. Operators must establish recovery before the [3.8 Paid application pilot and commercial acceptance](08-marketplace.md) handles live money. Service development can proceed against test environments while these gates are completed.
+[1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) owns application operation IDs and producer journals. Service development can proceed against test environments while operators complete the launch decisions below.
 
 ## Launch decisions
 
@@ -79,7 +78,7 @@ Run a drill before live money, after material storage/key changes and on the ope
 
 1. Restore into an isolated environment with outbound payments and publication paused.
 2. Verify backup integrity, schema versions, actor lineage, signing chains, constraints and ledger totals by currency.
-3. Verify a historical paid operation from exact source/artifact bytes through certification, payment terms, completion evidence and allocation. Use a fixture whose live publication has advanced and whose primary archive is unavailable.
+3. Verify a fixture historical transaction from exact source/artifact bytes through certification, payment terms, completion evidence and allocation. The fixture uses the fixture order contract from [3.4 Payments and checkout adapters](04-payment.md) and the fixture completion-evidence producer from [3.5 Usage evidence, remuneration and payouts](05-remuneration.md). Its live publication has advanced and its primary archive is unavailable.
 4. Reconcile restored processor references against current processor objects before enabling any financial side effect. Recover events committed after the backup from durable evidence and processor history.
 5. Replay inboxes and outboxes from retained cursors. Duplicate events, competing workers and restored reservations must produce the same financial result.
 6. Republish retained Freenet records with their original IDs, revisions and signed bytes. Verify order and usage synchronization separately.
@@ -117,7 +116,7 @@ Keep append-only audit events for policy changes, role changes, certifications, 
 
 This plan passes when:
 
-- Operators approve the region, processor, distribution and financial policy checklist for the actual pilot.
+- Operators approve the region, processor, distribution and financial policy checklist for the first launch.
 - Every financial store, queue and required evidence archive has a tested backup and named owner.
 - Restore drills meet the approved recovery targets and reproduce historical certification and allocation from exact bytes.
 - Replay after restoration, outage or worker races preserves one checkout attempt, allocation and payout result.
@@ -126,4 +125,4 @@ This plan passes when:
 - A claim never retained in its usage contract reaches remuneration through the authenticated recovery path. Restore preserves its timely receipt and deduplicates later contract delivery.
 - Audit exports preserve lineage while excluding protected customer data and secrets.
 
-Acceptance records include drill and processor evidence. Financial recovery readiness is part of the commercial release, while broader consumer recovery and device synchronization follow their own milestone 5 (Optional extensions) plans.
+Acceptance records include drill and processor evidence. Financial recovery readiness is part of the commercial release.

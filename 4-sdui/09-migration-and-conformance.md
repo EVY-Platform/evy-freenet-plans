@@ -81,7 +81,7 @@ Compare values, domain results, navigation events, operation records and typed e
 - Every supported reader/profile passes the shared schema, codec and behavior suite, including real SwiftUI and Compose applications on devices.
 - Form upgrades cover compatible fields, renamed/removed fields, failed conversions, interrupted writes and explicit repair while preserving a recoverable source.
 - An incompatible update keeps a usable installation and required pending-work artifacts. Rollback follows the foundation's version and authority rules.
-- Updates during a submitted operation or checkout retain original operation and commercial bindings through reconciliation.
+- Updates during a submitted operation retain original operation bindings through reconciliation.
 - Custom web/native acceptance passes alongside reader-only and embedded SDUI tests.
 - Mobile tests run under the required [cellular profile in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md), including reader and archive-update traffic.
 - Release reports separate source inspection, compilation, iOS simulator and Android emulator runs and real-device results on both platforms, and list the supported version matrix.

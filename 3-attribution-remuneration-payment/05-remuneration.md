@@ -4,10 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/remuneration`: usage contract, bridge and cursors, admission checks, ledger, settlement policy, payouts and the authenticated recovery endpoint |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/remuneration`: usage contract, bridge and cursors, admission checks, ledger, settlement policy, financial onboarding, payouts, the authenticated recovery endpoint and a fixture completion-evidence producer |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` operation journal gains producer-journal recovery |
 | `freenet-appkit` | Modified | Host service adapter for signed usage claims |
-| `evy-marketplace` | Used | Participant-signed fulfillment records as the pilot's completion evidence |
 
 ## Owned scope
 
@@ -17,14 +16,13 @@ Remuneration's transactional service is the canonical authority for usage decisi
 
 Use:
 
+- Contributor key lineage from [3.1 Product and contributor registration](01-registration.md#roles-and-registration-evidence).
 - Attribution snapshots from [3.3 Artifact certification and publication evidence](03-certification.md#certification-records).
 - Fixed payment evidence from [3.4 Payments and checkout adapters](04-payment.md#fixed-checkout-evidence).
 - Operation IDs and journals from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
 - Protected identities from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md).
 
-Production use also requires [3.7 Operating readiness](07-operations.md#acceptance).
-
-Capability evidence describes domain outcomes independently of UI technology. The Marketplace pilot uses custom application code and participant-signed fulfillment records. The service applies the same attester, certified-content, funding and policy checks to custom web and native clients. Optional SDUI evidence integration belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
+Capability evidence describes domain outcomes independently of UI technology. The service applies the same attester, certified-content, funding and policy checks to custom web and native clients. Optional SDUI evidence integration belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
 
 Attribution units measure accepted work. Usage credits record verified paid usage and its allocation within one payment. Payable balances express funded allocations in a named currency. Usage outside a paid operation remains analytics.
 
@@ -36,7 +34,7 @@ Attribution units measure accepted work. Usage credits record verified paid usag
 4. Remuneration verifies payment funding, completion and original attribution bindings, then commits one allocation decision.
 5. The bridge acknowledges processing after commit and periodically scans for missed events.
 
-Funding evidence proves a real payment. Domain evidence proves qualifying capability use. A claim stays pending until both pass. An order's validated fulfillment transition is one such domain outcome. Rendering a screen supplies no completion evidence.
+Funding evidence proves a real payment. Domain evidence proves qualifying capability use. A claim stays pending until both pass. An order's validated fulfillment transition is one such domain outcome. Tests use a fixture completion-evidence producer that signs such an outcome. Rendering a screen supplies no completion evidence.
 
 ## Usage record and admission
 
@@ -68,7 +66,7 @@ The contract requires a bridge-signed payment record bound to the same payment, 
 | Variants per event ID | Retain two by lowest digest as explicit conflict evidence |
 | Instance parameters | Product, epoch number and bridge root key |
 
-The profile follows the bounded set approach of [Marketplace transport in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#public-first-contact-and-bounded-transport). A usage epoch is a separate contract instance. Remuneration assigns the epoch for checkout, and payment includes it in the signed record. On saturation, open a successor for new payments and record the boundary. Delayed claims remain bound to their payment's epoch.
+A usage epoch is a separate contract instance. Remuneration assigns the epoch for checkout, and payment records its ID in the [fixed checkout evidence in 3.4 Payments and checkout adapters](04-payment.md#fixed-checkout-evidence) and the signed record. On saturation, open a successor for new payments and record the boundary. Delayed claims remain bound to their payment's epoch.
 
 Merge as an idempotent set with deterministic selection over the combined set. Lowest-digest selection can permanently exclude a valid claim. Preserve original claims in producer journals until the service acknowledges them, then retain evidence for the policy's recovery period. Report eviction, saturation and pending delivery accurately. Repeated bridge notifications or invented event IDs for the same payment and capability resolve to one allocation.
 
@@ -77,7 +75,7 @@ Merge as an idempotent set with deterministic selection over the combined set. L
 Expose an authenticated recovery endpoint through the authorized host service adapter. A producer can submit directly when a claim lacks a service acknowledgement, including when the contract has never retained it. Authenticate the producer against the attester policy bound at checkout.
 
 - Accept one original signed claim of at most 4 KiB per request, including its embedded payment record. Carry its original contract/epoch reference and retain the same event, operation and payment IDs.
-- Apply versioned per-producer and per-product request/byte quotas, concurrency limits and bounded supporting-evidence fetches. Configure these limits under 3.7 Operating readiness before launch. Return explicit retry or rejection status within the published cutoff.
+- Apply versioned per-producer and per-product request/byte quotas, concurrency limits and bounded supporting-evidence fetches. Return explicit retry or rejection status within the published cutoff.
 - Run the same schema, signature, payment-root, product, operation, epoch, size, attester, certification, funding and domain-completion checks used by the contract/bridge path. Contract set membership is delivery evidence, while these checks establish claim validity.
 - Commit the original bytes and a durable receipt before acknowledging service admission. Both routes use the same inbox and allocation uniqueness constraints. Conflicting bytes under one event ID enter the same conflict process.
 - Apply the payment's original epoch and claim cutoff. The service records the first durable receipt time for either route. On-time receipts can finish processing or be replayed after the cutoff. A new receipt after the cutoff gets the policy's late-claim outcome. Producer timestamps alone cannot establish timely receipt.
@@ -98,6 +96,8 @@ Enforce uniqueness on event IDs, processor fee receipts and payment-capability-r
 Each payment funds its own qualifying usage. Fabricated activity can recover at most that payment's contributor fee through remuneration. Payment's operating budget separately covers processor costs, fraud losses and subsidies.
 
 ## Funding and settlement policy
+
+This plan defines the signed settlement policy, the product's signed capability-allocation policy and the usage epoch. Checkout records their IDs as `settlement_policy_id`, `allocation_policy_id` and `usage_epoch_id` in the [fixed checkout evidence in 3.4 Payments and checkout adapters](04-payment.md#fixed-checkout-evidence).
 
 Track each currency in integer minor units. Reserve each payment's available contributor fee once. Split it among qualifying capabilities using the weights fixed at checkout, then among their contributors, reviewers and validators using the bound snapshot. Total allocations remain within the collected fee after reversals. [3.4 Payments and checkout adapters](04-payment.md#contributor-fee) owns the fee rate, payer and collection rules.
 
@@ -121,7 +121,14 @@ Calculate the cumulative refunded proportion of the original contributor fee wit
 
 A share already returned as unclaimed covers its corresponding portion of a later refund target. Request only the additional fee cash return. If a purchase refund arrives first, the later unclaimed return covers the share's remaining amount. Track this overlap per original share so return order preserves the same result and total fee returns stay within the collected fee.
 
-Serialize calculations per fee receipt, including pending return reservations. Send authenticated fee-return instructions to payment under the [refund flow in 3.4 Payments and checkout adapters](04-payment.md#refunds-and-fee-returns). Reconcile an in-flight instruction before replacing it. Record calculated allocation effects as pending until their required cash adjustments reconcile. Payment alone publishes those cash adjustments. Consume each adjustment once by its immutable ID, link the resulting allocation entries and preserve the original credits.
+Serialize calculations per fee receipt, including pending return reservations.
+
+1. Calculate the application-fee return from payment's reconciled facts, including unclaimed shares after the cutoff, and reserve it.
+2. Send an authenticated fee-return instruction to payment under the [refund flow in 3.4 Payments and checkout adapters](04-payment.md#refunds-and-fee-returns). Each instruction carries a stable return ID, the original payment/fee receipt, amount, beneficiary, policy and source adjustment revision. Reconcile an in-flight instruction before replacing it.
+3. Record calculated allocation effects as pending until their required cash adjustments reconcile. Payment alone publishes those cash adjustments.
+4. Consume each adjustment once by its immutable ID, release or resolve the matching reservation, link the resulting allocation entries and preserve the original credits.
+
+Contributor payout execution and post-payout recovery accounting follow the bound policy.
 
 ### Combined return and refund fixture
 
@@ -132,7 +139,7 @@ Use a 10,000-minor-unit purchase with a 100-unit contributor fee. The fixed poli
 3. Remuneration calculates a 50-unit cumulative fee-refund target. Of that, 20 belongs to the unclaimed share already returned. It requests the remaining 30-unit fee return through payment and records the pending 30-unit contributor allocation reversal.
 4. Payment returns 30 more fee units to the seller and publishes its adjustment. Remuneration consumes it once and applies the policy's post-payout reserve/recovery rules. Preserve the original 60-unit payout and link the 30-unit recovery obligation.
 
-Assert 70 total fee units returned to the seller, 5,000 purchase units refunded to the buyer and 30 net contributor units. Replay duplicate/reordered inputs, timeouts and a restore during each handoff. Also run the refund before the unclaimed return. Both orders preserve these totals, one cash effect per operation and the original receipt lineage.
+Assert 70 total fee units returned to the seller, 5,000 purchase units refunded to the buyer and 30 net contributor units. Replay duplicate/reordered inputs and timeouts during each handoff. Also run the refund before the unclaimed return. Both orders preserve these totals, one cash effect per operation and the original receipt lineage.
 
 ## Payout reservations and reversals
 
@@ -140,17 +147,17 @@ The service atomically reserves fee receipts and payable balances before creatin
 
 Release payable funds only after processor settlement and the policy's payout delay, retaining the required reversal reserve. Use stable payout IDs and processor idempotency keys. After a timeout, reconcile the existing processor operation before retrying. Persist pending, processing, paid, failed and reversed outcomes. Release a reservation only after the processor confirms failure or cancellation.
 
-Keep legal identity, payout endpoints, tax records and processor credentials in protected service storage. A contributor views credits, payable funds and payout history through authorized service interfaces. Record currency conversion separately when selected. Recovery or payout-destination changes require verified authority under [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) and attribution's lineage checks.
+Before a first payout, the contributor completes financial onboarding through protected service interfaces. Accepted units and funded balances remain separate while onboarding is pending. Keep legal identity, payout endpoints, tax records and processor credentials in protected service storage. A contributor views credits, payable funds and payout history through authorized service interfaces. Record currency conversion separately when selected.
+
+Recovery or payout-destination changes require verified authority under [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) and the lineage checks in [3.1 Product and contributor registration](01-registration.md#roles-and-registration-evidence). Freeze payout-identity changes while key recovery is unresolved. Payout-account and balance recovery require the financial service's authorization. A 1.5 Identity, keys and local protection export package never restores them.
 
 Payment publishes the reconciled cash adjustment for a refund or chargeback, including after contributor payout. Remuneration consumes it once and records the allocation effects under the calculation rules above. Apply the signed reserve and recovery policy to unsettled funds or future allocations. Record recovery obligations and recoveries separately from the original payout. Preserve receipt and settlement linkage through every adjustment.
 
 ## Recovery and authority
 
-The service signs auditable statements of credits and settlements. Its ledger owns contributor allocations, balances and payouts. Payment owns purchase and application-fee cash adjustments. Freenet records and authenticated recovery receipts supply the usage evidence trail. [3.7 Operating readiness](07-operations.md) owns backups, event archives, durable queues, reconciliation, restore drills and operating responsibilities.
+The service signs auditable statements of credits and settlements. Its ledger owns contributor allocations, balances and payouts. Payment owns purchase and application-fee cash adjustments. Freenet records and authenticated recovery receipts supply the usage evidence trail.
 
-During an outage, applications preserve signed claims and show queued processing. Recovery resumes from durable cursors and deduplicates events. Credit and payout displays include their last confirmed service update. Restore tests verify a historical allocation from retained exact evidence after live application content has changed.
-
-Transferring accounting into Freenet requires exclusive fund reservation, double-spend prevention, final settlement decisions and recoverable financial history. Preserve usage IDs and ledger lineage, and prove concurrent-spend and replay safety before transferring authority. Fiat collection and payout also require authenticated processor integration and custody primitives.
+During an outage, applications preserve signed claims and show queued processing. Recovery resumes from durable cursors and deduplicates events. Credit and payout displays include their last confirmed service update.
 
 ## Acceptance and evidence
 
@@ -160,11 +167,12 @@ This plan passes when:
 - Admission rejects missing or invalid payment records, wrong epochs, substituted operations and invalid producer signatures. Merge tests prove convergence and encoded size bounds.
 - Racing workers, new event IDs and repeated notifications produce one funded allocation per payment/capability/recipient.
 - Unrelated capabilities, unauthorized attesters and incomplete domain outcomes fail eligibility.
+- Checkout requires complete signed policies. A checkout whose policy IDs lack a complete signed settlement or capability-allocation policy fails.
 - Application updates, publisher transfers, key recovery and policy changes preserve the checkout's original evidence and weights.
 - Allocations, reserves, deterministic remainders and unclaimed returns reconcile per payment and currency, including missing weights and on-time claims still awaiting a decision. Cumulative refund-share rounding stays monotone, capped and conserved.
 - Timeout retries create one payout. Duplicate, partial and post-payout reversals retain receipt lineage and respect the recovery policy.
 - A valid claim that is never retained by a saturated contract reaches the service through authenticated journal recovery and receives one allocation. A later bridge delivery returns that decision. Wrong epochs, altered evidence, unauthorized producers and late first receipts receive the same rejection or cutoff treatment on both paths.
 - Recovery endpoint tests enforce request, byte, concurrency and evidence-fetch bounds. Service outages, full epochs, evicted events and late evidence have explicit outcomes under the published retention and cutoff rules.
-- The combined return and refund fixture reconciles unclaimed shares, partial refunds and post-payout recovery through duplicates, reordered inputs and restore.
+- The combined return and refund fixture reconciles unclaimed shares, partial refunds and post-payout recovery through duplicates and reordered inputs.
 
-These are proposed protocol and service requirements. Acceptance records must include actual contract, database, processor and outage test results. The [pilot sequence in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#pilot-sequence) exercises them as one commercial flow.
+These are proposed protocol and service requirements. Acceptance records must include actual contract, database, processor and outage test results.

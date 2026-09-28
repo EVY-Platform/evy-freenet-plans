@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-appkit` | Modified | River scenario suite, Atlas compatibility fixtures, destructive-migration test contract and published results |
-| [atlas](https://github.com/freenet/atlas) | Modified | Atlas's website packaged with host metadata under 1.4 Application bundles, iOS and Android WebView demos on its browser client and a separate test index |
+| [atlas](https://github.com/freenet/atlas) | Modified | Separate test index for the compatibility fixtures |
 | [river](https://github.com/freenet/river) | Used | Pinned container, publisher, room contract, chat delegate, registries and predecessor artifacts driven through River's own UI |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Pointer resolution for Atlas's re-keyed index |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | TypeScript SDK and Rust browser build as protocol comparisons |
@@ -25,17 +25,11 @@ Own reference application setup, pinned test artifacts, app-specific scenarios a
 - [1.5 Identity, keys and local protection](05-identity.md)
 - [Durable operations in 1.6 Application protocols, data and operations](06-data-and-operations.md)
 - [1.7 Upgrades and migration](07-migration.md)
-- The [thin role in 1.10 Thin-peer role and cellular data budgets](10-thin-peer.md) for release runs
-
-Controlled full-peer fixtures can support development.
 
 | Use | Plan and gate |
 | --- | --- |
 | River end-to-end release application | Milestone 1 (Freenet mobile AppKit), through River's own UI and protocols |
 | Atlas SDK and index compatibility | Bounded fixtures in this plan after 1.1 Mobile feasibility and supported profiles, 1.2 Embedded node and mobile SDK, 1.6 Application protocols, data and operations and 1.7 Upgrades and migration |
-| Atlas hosted application | Later [2.1 EVY shell and curated catalogue](../2-evy-mobile-app/01-catalogue.md) and [2.7 Multi-application acceptance](../2-evy-mobile-app/07-acceptance.md), with a verified website container and bundle that passes [2.3 Installation and updates](../2-evy-mobile-app/03-installation-and-updates.md) |
-| Optional reader comparison | [4.9 SDUI migration and conformance](../4-sdui/09-migration-and-conformance.md), after the relevant milestone 4 (SDUI) readers and protocols |
-| Optional search provider | [5.4 Discovery and catalogue extensions](../5-optional-extensions/04-discovery.md), after verified installation and reference handling in milestone 2 (EVY mobile app) |
 
 ## River scope
 
@@ -57,7 +51,7 @@ River publishes a signed tar.xz website archive through its [web container contr
 | Uncertain send | Terminate or time out after submission. Restart retains the operation ID and bytes, checks room evidence and reconciles before retry. Duplicate delivery preserves one domain operation. |
 | Changed room authority | Queue work offline, change membership or rotate the room secret, then reconnect. River preserves the draft and applies its protocol's conflict/repair rules. Changed payloads use successor operations. |
 | Foreground lifecycle | Lock, background, terminate and resume during startup, signing, submission and refresh. Retain committed drafts, keys and journals, invalidate old callbacks and release ports/store locks. Alerts follow the foreground scope in 1.1 Mobile feasibility and supported profiles. |
-| Connectivity and role | Change Wi-Fi/cellular paths and remove the serving peer. Reconnect preserves the thin role, restores demand and passes the separate upload/download and total-use limits in 1.10 Thin-peer role and cellular data budgets. |
+| Connectivity | Change Wi-Fi/cellular paths and remove the serving peer. Reconnect restores demand. |
 | Compatible web update | Stage a verified archive while a session remains on its selected compatible archive. Activate through host rules and preserve pending work's originating release references. |
 | Interrupted component upgrade | Exercise River's predecessor registry and application migration adapters. Interrupt contract carry-forward and delegate export/import, then resume with preserved parameters, authorized access and verified readback. |
 | Protected data | Test permission revocation, locked or invalidated keys and app-specific encrypted export/import through 1.5 Identity, keys and local protection. Show coverage and preserve unresolved work. |
@@ -85,28 +79,14 @@ Use a bounded deterministic index first, then a separate test index. Keep the pu
 | Publication | Application domain code prepares canonical updates. The signing fixture uses an authorized on-device delegate with keys protected by Core. The host saves the operation ID and exact signed bytes, submits and verifies readback. |
 | Restart and retry | Termination after preparation or uncertain submission retains the original operation and bytes. Reconciliation prevents duplicate domain effects. Changed content creates a successor operation. |
 | Upgrade adapter | A separate test contract changes code, recovers predecessor state through the application adapter, resumes an interrupted migration and verifies successor readback. |
-| Resource costs | Measurements separate transport/bindings, Core execution and UI work. Record large-record copying, delegate calls, subscription rate and elapsed time against the device limits in 1.1 Mobile feasibility and supported profiles and the cellular budgets in 1.10 Thin-peer role and cellular data budgets. |
+| Resource costs | Measurements separate transport/bindings, Core execution and UI work. Record large-record copying, delegate calls, subscription rate and elapsed time against the device limits in 1.1 Mobile feasibility and supported profiles. |
 
-The existing TypeScript SDK and Rust browser build provide protocol comparisons. Swift/Kotlin examples use the native SDK's supported APIs. Each application supplies its own domain codecs and delegate messages through [application operations in 1.6 Application protocols, data and operations](06-data-and-operations.md#delegate-requests-and-results). Milestone 4 (SDUI) owns generic typed views, declared-action schemas and reader execution.
+The existing TypeScript SDK and Rust browser build provide protocol comparisons. Swift/Kotlin examples use the native SDK's supported APIs. Each application supplies its own domain codecs and delegate messages through [application operations in 1.6 Application protocols, data and operations](06-data-and-operations.md#delegate-requests-and-results).
 
-## Atlas product flows for the later 2.7 Multi-application acceptance gate
+## Release scope
 
-Atlas's own web UI covers search, details, saved items and publisher submission. Application code owns orchestration and Atlas's domain protocol. The signed website can run in a browser or an isolated mobile WebView.
-
-Pin Atlas's verified website container ID in the [catalogue in 2.1 EVY shell and curated catalogue](../2-evy-mobile-app/01-catalogue.md#catalogue-and-shell). Keep that application identity separate from the index pointer, author key and index contract identity recorded above. Run the compatibility fixtures against the pinned application release.
-
-Through Atlas's own web UI on iOS and Android, test search, details, saved items and publisher submission to a separate test index. Saved items survive restart, subscriptions refresh displayed records, and interrupted submissions reconcile to their original operation and signed bytes. Preserve the published Atlas index throughout these tests.
-
-These app-specific checks are defined here for reuse. Their hosted-product release gate is [2.7 Multi-application acceptance](../2-evy-mobile-app/07-acceptance.md), which owns cross-app isolation, concurrent lifecycle and shared cellular-budget tests. Milestone 1 (Freenet mobile AppKit) release acceptance covers River and the bounded Atlas compatibility fixtures above.
-
-## Website packaging and later integrations
-
-Package Atlas's own `index.html`, browser code and assets as an ordinary signed website. Include required contract/delegate artifacts and host metadata under [1.4 Application bundles](04-bundles.md). Verify installation and compatible updates with its own UI. Record native-build distribution separately when exercising custom native examples.
-
-Full-peer fixtures are development-only. Mobile release tests use the [required thin-peer profile in 1.10 Thin-peer role and cellular data budgets](10-thin-peer.md). River remains the milestone 1 (Freenet mobile AppKit) end-to-end release application.
-
-[4.9 SDUI migration and conformance](../4-sdui/09-migration-and-conformance.md) owns optional comparisons using these canonical records across web, iOS and Android. It also owns reader-only and embedded-reader variants, screen/action compatibility and their acceptance. [5.4 Discovery and catalogue extensions](../5-optional-extensions/04-discovery.md) owns provider adoption. Each extension has its own gate.
+River is the milestone 1 (Freenet mobile AppKit) end-to-end release application. Release acceptance in 1.9 Developer package and release acceptance covers River and the bounded Atlas compatibility fixtures above. Record native-build distribution separately when exercising custom native examples.
 
 ## Acceptance evidence
 
-Publish results with exact revisions, devices, OS versions, network conditions and redacted logs. All release cases use the thin profile on both platforms. Apply the River and Atlas compatibility cases to 1.9 Developer package and release acceptance and the hosted Atlas product cases to the later 2.7 Multi-application acceptance gate.
+Publish results with exact revisions, devices, OS versions, network conditions and redacted logs.

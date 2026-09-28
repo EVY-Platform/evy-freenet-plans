@@ -4,6 +4,7 @@ Bind controls to typed views, forms and local state, and display durable operati
 
 Prerequisites:
 
+- [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md)
 - [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md)
 - [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md)
 - [4.1 SDUI format and compatibility](01-format.md)
@@ -16,14 +17,12 @@ The foundation owns storage, journals, operation identity, idempotence and retry
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Modified | Logical resources, views, value model, expressions, forms, saved state and pending-operation presentation |
+| `freenet-sdui` | Modified | Views, bindings, forms, protected-store bindings for private fields and drafts, saved state and pending-operation presentation |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Bounded reads, subscription demand accounting, storage adapter and operation handles in `crates/mobile` from 1.6 Application protocols, data and operations |
 
-## Logical resources and views
+## Views
 
-A logical resource, such as `river.room`, binds to declared contracts and delegates from the verified bundle. Each view names typed inputs and outputs, its allowed resource/query scope, result bounds and maximum age. The host fetches bounded records. A domain delegate or approved adapter decodes and verifies them and supplies a projection.
-
-Large search declares bounded index shards and result windows. Validate a delegate-proposed shard reference against the resource policy before fetching it. Tie each view's subscription demand to its page or action lifetime. The host reference-counts shared demand and schedules refreshes within the total cellular budget. Closing one view releases its demand.
+Each view reads a [logical resource from 4.5 SDUI actions and delegate protocols](05-actions.md#logical-resources-and-query-policy). It names typed inputs and outputs, its allowed query within that resource's policy, result bounds and maximum age. Tie each view's subscription demand to its page or action lifetime. The host reference-counts shared demand and schedules refreshes within the total cellular budget. Closing one view releases its demand.
 
 | View state | Meaning and presentation |
 | --- | --- |
@@ -38,32 +37,11 @@ Freshness uses the host-recorded response time, or an application timestamp whos
 
 Key cached projections by their resource identity and definition/delegate versions. Notify changed views and show stale metadata when restoring a cache. Cache retention and private-data protection use the foundation's storage policy.
 
-## Values and expressions
+## Bindings
 
-Define a common value model for null, missing, booleans, integers, decimals, strings, bytes, timestamps, durations, lists and objects. Shared fixtures fix numeric ranges, decimal encoding, overflow, comparisons, conversions and missing-value behavior. Host-supplied time, randomness, locale and time zone have deterministic substitutes in tests.
+Bindings use the [value model and display expressions in 4.1 SDUI format and compatibility](01-format.md#values-and-expressions). A reference resolves to a declared view output, an immutable route parameter, a form value or temporary display state. [Domain adapters under 4.5 SDUI actions and delegate protocols](05-actions.md) calculate business values.
 
-Every binding explicitly selects a literal, reference or expression. References address a declared view, immutable route parameters, a form value or temporary display state. Expressions provide bounded presence checks, fallbacks, comparisons and formatting. Evaluation is side-effect-free. [Domain adapters under 4.5 SDUI actions and delegate protocols](05-actions.md) calculate business values.
-
-Proposed binding example:
-
-```json
-{
-  "id": "send-button",
-  "type": "appkit.button",
-  "title": { "literal": "Send" },
-  "actions": {
-    "tap": {
-      "action": "river.sendMessage",
-      "args": {
-        "room": { "ref": "param:roomOwner" },
-        "text": { "ref": "local:draft.text" }
-      }
-    }
-  }
-}
-```
-
-Check action names, argument types and binding paths at publication and page activation. The final schema release fixes the serialized component names and reference syntax.
+Check binding paths at publication and page activation.
 
 ## Forms and saved state
 
@@ -75,13 +53,15 @@ Check action names, argument types and binding paths at publication and page act
 | Saved private value | Approved protected-store operation, using the application's delegate where that is its storage profile |
 | Operation status | Read-only projection of the host's durable operation record |
 
+Private form fields and saved drafts use approved protected-store operations from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) and [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md). Saving, recovery and deletion of private values follow the host's retention policy.
+
 A form declares validation feedback, submission action, save policy and discard policy. Submission captures one consistent snapshot of its values. An explicit action writes shared state. Keep recoverable input after validation failure, denied access or domain conflict.
 
 Batch draft saves through the storage adapter and flush on pause, navigation and backgrounding according to the foundation lifecycle. Show whether a save is local, durable or waiting for storage. Restore only compatible form data under [4.9 SDUI migration and conformance](09-migration-and-conformance.md). Revocation and lock handling use [4.4 SDUI identity and permissions](04-identity.md).
 
 ## Pending-operation presentation
 
-Bind a control to the operation handle returned by the host. Display the foundation's queued, submitted, rejected, accepted, superseded or unresolved outcome with its evidence and available next action. An accepted domain result follows the application's observation rule. A local submission response or a checkout return supplies only the status its owning interface guarantees.
+Bind a control to the operation handle returned by the host. Display the foundation's queued, submitted, rejected, accepted, superseded or unresolved outcome with its evidence and available next action. An accepted domain result follows the application's observation rule. A local submission response supplies only the status its owning interface guarantees.
 
 For an unresolved send, keep the message pending while the host reconciles it. Retrying asks the host to resume the existing operation. Repairing its content requests a successor under the foundation rules. Canceling closes local cancellable work while the host continues tracking submitted mutations. Reopening a page reconnects to that operation by its durable reference.
 

@@ -48,7 +48,7 @@ Coverage must distinguish:
 - Interrupted exports and data changed since the last completed backup.
 - Service-managed contributor or financial accounts whose authority requires the service's checks.
 
-Keep a verified recoverable copy while a replacement package or destination is being validated. Reconcile restored operations through [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) before retries. [Consumer device sync in 5.3 Device sync and authoring collaboration](03-sync-and-collaboration.md#consumer-device-sync) supplies continuous synchronization under its own gate. Financial service queues, backups and restore drills belong to [3.7 Operating readiness](../3-attribution-remuneration-payment/07-operations.md).
+Keep a verified recoverable copy while a replacement package or destination is being validated. Reconcile restored operations through [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) before retries. [5.3 Device sync and authoring collaboration](03-sync-and-collaboration.md#consumer-device-sync) adds continuous sync. Financial service queues, backups and restore drills belong to [3.7 Operating readiness](../3-attribution-remuneration-payment/07-operations.md).
 
 ## Acceptance
 

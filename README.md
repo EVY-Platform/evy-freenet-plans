@@ -12,17 +12,19 @@ EVY starts with a simple idea: a super app on your phone that acts as your ident
 
 A server-driven UI system ensures consistent design and allows contributors and agents to quickly create applications and release them to customers in realtime instead of going through app store release cycles.
 
-The launch product is a Marketplace for buying and selling locally. It arranges pickup, delivery and shipping as signed structured terms, and it shows the exact address only to the two people meeting.
+The launch product is a Marketplace for buying and selling locally. It arranges pickup as signed structured terms, and it shows the exact address only to the two people meeting.
 
-**Why Freenet fits EVY very well**: Freenet distributes applications through its peer network with verified authorship, this means the app is distributed by the community, not a single entity. Its delegate system keeps private data and signing keys on the device, exactly as EVY intended with it's device-only privacy.
+**Why Freenet fits EVY very well**: Freenet distributes applications through its peer network with verified authorship, this means the app is distributed by the community, not a single entity. Its delegate system keeps private data and signing keys on the device, exactly as EVY intended with its device-only privacy.
 
 ## Roadmap
 
-Start with River running on a reusable mobile AppKit, then extend it into a dynamic host that can run River + Atlas + anything else. The last piece before we can go live is to add contribution and payment services with a Marketplace pickup pilot. At this point we should be able to go live to real customers with an MVP! The next miletones are optional but build important pieces on the EVY ecosystem that we should build shortly after.
+Start with River running on a reusable mobile AppKit, then extend it into a host that runs River and Atlas. The last piece before we can go live is to add contribution and payment services with a Marketplace pickup pilot. At this point we should be able to go live to real customers with an MVP! The next milestones are optional but build important pieces on the EVY ecosystem that we should build shortly after.
 
 ### 1. Freenet mobile AppKit
 
 Package a single defined application for iOS and Android. As MVP we will use river's signed web UI run in an in-app WebView served by the embedded node but enable developers to build custom Swift/Kotlin screens against the SDK.
+
+1.9 Developer package and release acceptance delivers the developer release on the default node role. 1.10 Thin-peer role and cellular data budgets adds the thin-peer role and is the production mobile release gate.
 
 ```mermaid
 flowchart LR
@@ -79,8 +81,8 @@ Add screen definitions, readers and visual authoring to the released platform. A
 | Plan | Scope |
 | --- | --- |
 | [4.1 SDUI format and compatibility](4-sdui/01-format.md) | Screens, components, navigation and accessibility |
-| [4.2 SDUI bundles and publication](4-sdui/02-bundles.md) | SDUI artifacts, schema packaging and bundled web reader |
-| [4.3 SDUI hosts and readers](4-sdui/03-readers.md) | Browser, SwiftUI and Compose readers and SDK adapters |
+| [4.2 SDUI bundles and publication](4-sdui/02-bundles.md) | SDUI artifacts, schema packaging and publication |
+| [4.3 SDUI hosts and readers](4-sdui/03-readers.md) | Browser, SwiftUI and Compose readers, web reader packaging and SDK adapters |
 | [4.4 SDUI identity and permissions](4-sdui/04-identity.md) | Reader bindings to host sessions, grants and protected operations |
 | [4.5 SDUI actions and delegate protocols](4-sdui/05-actions.md) | Declared-action executor and typed domain convention |
 | [4.6 SDUI data and operation presentation](4-sdui/06-data.md) | Views, forms, local state and operation-status presentation |
@@ -92,10 +94,16 @@ Add screen definitions, readers and visual authoring to the released platform. A
 
 | Plan | Scope | Prerequisites |
 | --- | --- | --- |
-| [5.1 Peer reputation](5-optional-extensions/01-reputation.md) | Private evidence, purpose-bound proofs and disclosure policy | Protected identity, authenticated host access and application-defined evidence |
-| [5.2 Extended customer backup and recovery](5-optional-extensions/02-recovery.md) | Automated backups, selected destinations and cross-app recovery | App-specific recovery, durable operations and supported migrations |
-| [5.3 Device sync and authoring collaboration](5-optional-extensions/03-sync-and-collaboration.md) | Consumer device sync and opt-in authoring sessions, with separate gates | Identity, durable operations and verified Core sync support for consumer sync. Released 4.8 EVY Developer visual authoring and checkpoints for collaboration |
+| [5.1 Peer reputation](5-optional-extensions/01-reputation.md) | Private evidence, purpose-bound proofs and disclosure policy | Protected identity in 1.5 Identity, keys and local protection, authenticated host access in 1.3 Single-application host and application-defined evidence |
+| [5.2 Extended customer backup and recovery](5-optional-extensions/02-recovery.md) | Automated backups, selected destinations and cross-app recovery | App-specific recovery, durable operations, supported migrations, 2.2 Multi-application sessions and authority, and 2.4 Identity, permissions and device access |
+| [5.3 Device sync and authoring collaboration](5-optional-extensions/03-sync-and-collaboration.md) | Consumer device sync and opt-in authoring sessions, with separate gates | Identity, durable operations, 2.2 Multi-application sessions and authority, 2.4 Identity, permissions and device access, and verified Core sync support for consumer sync. Released 4.8 EVY Developer visual authoring and checkpoints for collaboration |
 | [5.4 Discovery and catalogue extensions](5-optional-extensions/04-discovery.md) | Replaceable search providers and signed catalogue updates | Milestone 2 (EVY mobile app) installation, sessions, permissions, lifecycle and navigation, plus the Atlas fixtures in 1.8 Reference apps and compatibility fixtures |
+
+#### Upstream suggestions
+
+| Suggestion | Repository | What it enables |
+| --- | --- | --- |
+| Request IDs on client API replies: the client sets an ID on each contract request, and the node copies it into the reply | [freenet-stdlib](https://github.com/freenet/freenet-stdlib), with node support in [freenet-core](https://github.com/freenet/freenet-core) | The SDK in [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests) sends parallel requests of the same type for one contract, where today it queues them |
 
 ## Sources
 

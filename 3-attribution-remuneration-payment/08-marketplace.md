@@ -4,7 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `evy-marketplace` | Created | Admission, continuation, store, listing and order contracts, domain delegates, cryptographic profile, custom web UI and fixtures |
+| `evy-marketplace` | Created | Admission, continuation, store, listing and order contracts, domain delegates, cryptographic profile, custom web UI and fixtures; the order contract links the payment-status verifier crate from 3.4 Payments and checkout adapters |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Catalogue entry and pilot wiring in the iOS and Android apps; the attribution, payment and remuneration services serve the pilot |
 | `freenet-appkit` | Used | Bundles and the checkout adapter from milestone 1 (Freenet mobile AppKit) and milestone 3 (Attribution, remuneration and payment) |
 | [harvest](https://github.com/freenet/harvest) | Used | Design references listed at the end of this plan |
@@ -15,7 +15,7 @@
 
 Marketplace proves one commercial flow through a certified application release: listing, agreed pickup, checkout, fulfillment evidence, contributor allocation, payout and refunds. This plan owns the pilot, fulfillment protocol, bounded storage profiles, product release approvals and supporting Harvest source references.
 
-The first UI is custom web application code hosted in EVY's isolated WebView session. It calls concrete Marketplace contracts and delegates through AppKit, then uses the authorized native checkout bridge. Developers can also write custom native clients against those protocols. Optional [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md) uses the same domain evidence, with reader conformance in milestone 4 (SDUI).
+The first UI is custom web application code hosted in EVY's isolated WebView session. It calls concrete Marketplace contracts and delegates through AppKit, then uses the authorized native checkout bridge. Developers can also write custom native clients against those protocols. SDUI support is added by [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
 
 ## Prerequisites
 
@@ -52,7 +52,7 @@ Name the people holding these roles in the release record. Both roles approve th
 | Marketplace product owner | Enabled modes, participant terms, privacy disclosures, baseline moderation, dispute handling and passing product fixtures |
 | Financial operations lead | Supported regions/processors and actual accounts, costs, refund and reserve rules, regional/distribution policy, abuse-response capacity, recovery readiness and passing operational fixtures |
 
-Pilot tests reject unsupported bargaining, rescheduling, delivery, shipping and automatic acceptance before signing a commitment or opening checkout. Expansion approval names each added mode, its policy versions and passing [mode-specific tests](#expansion-acceptance). Neighborhood search and wider moderation tools also require product and operations approval. Optional reputation and provider-based discovery follow [5.1 Peer reputation](../5-optional-extensions/01-reputation.md) and [5.4 Discovery and catalogue extensions](../5-optional-extensions/04-discovery.md).
+Pilot tests reject unsupported bargaining, rescheduling, delivery, shipping and automatic acceptance before signing a commitment or opening checkout. Expansion approval names each added mode, its policy versions and passing [mode-specific tests](#expansion-acceptance). Neighborhood search and wider moderation tools also require product and operations approval.
 
 ## Pilot sequence
 
@@ -107,11 +107,11 @@ Keep signed events and derive status from verified evidence. Incompatible concur
 | Authorized writers | Buyer, seller and payment bridge, with fixed bridge root key in parameters |
 | Record size | 4 KiB including signed envelope |
 | Records per writer/event kind | 16, with lowest-digest selection beyond the limit |
-| Payment revisions | 32 revision slots per payment, keeping the highest revision numbers |
+| Payment revisions | 32 revision slots per payment, keeping the highest revision numbers, as set in [signed payment status in 3.4 Payments and checkout adapters](04-payment.md#signed-payment-status) |
 | Disputes | 4 records per participant, with lowest-digest selection beyond the limit |
 | Variants per slot | Two lowest digests retained as conflict evidence |
 
-Full-state and delta merges apply deterministic selection over the combined valid set. Fix and test the finite event-kind schema, maximum payment attempts per order and maximum encoded succession evidence before pilot launch so total state is bounded. [3.4 Payments and checkout adapters](04-payment.md#signed-payment-status) owns revision-conflict and predecessor-recovery rules. Participant journals and service archives retain evidence that falls outside network bounds.
+Full-state and delta merges apply deterministic selection over the combined valid set. Fix and test the finite event-kind schema, maximum payment attempts per order and maximum encoded succession evidence before pilot launch so total state is bounded. The order contract links the payment-status verifier crate from [3.4 Payments and checkout adapters](04-payment.md#signed-payment-status), which owns revision-conflict and predecessor-recovery rules. Participant journals and service archives retain evidence that falls outside network bounds.
 
 Progress runs through proposed, agreed, payment pending, paid, fulfillment pending and completed states. Decline, conflict, cancellation and dispute are explicit outcomes. Processor refunds and chargebacks append financial evidence even after completion. Payment idempotency applies to each bound payment operation. [Listing rules](#listings-and-storage-profiles) govern competing inventory commitments.
 
@@ -146,7 +146,7 @@ A signed admission receipt means the recipient verified and persisted a record l
 
 Sender queues survive restart and uncertain submission. Re-fetch state, obtain delegate reconciliation and republish eligible pending records within budgets, including a bounded previous-generation window. A local deadline stops retries. Participant schedules describe agreed appointments. Contract expiry follows the evidence rules in [bounded transport](#public-first-contact-and-bounded-transport).
 
-Confirm protected persistence of private order evidence before checkout. [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) owns recovery coverage, explicit device enrollment and local deletion. Warn before forgetting an active order whose keys or evidence support fulfillment or a claim. Report failed deletion and the continued existence of network copies, exports or recipient-held data. Optional [5.3 Device sync and authoring collaboration](../5-optional-extensions/03-sync-and-collaboration.md) and [5.2 Extended customer backup and recovery](../5-optional-extensions/02-recovery.md) have separate gates.
+Confirm protected persistence of private order evidence before checkout. [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) owns recovery coverage, explicit device enrollment and local deletion. Warn before forgetting an active order whose keys or evidence support fulfillment or a claim. Report failed deletion and the continued existence of network copies, exports or recipient-held data.
 
 Filter blocked keys in the domain delegate before presentation and acknowledgement. Apply the [public metadata disclosures](#pilot-privacy-and-disputes) before collecting data.
 
@@ -200,7 +200,7 @@ Validate recovered state, publish it and verify readback before changing indexes
 
 ## Later fulfillment and product scope
 
-Enable each mode only after both roles approve it under [product release approval](#product-release-approval). Custom application code calls the approved operations directly. An optional SDUI adapter can map them under milestone 4 (SDUI).
+Enable each mode only after both roles approve it under [product release approval](#product-release-approval). Custom application code calls the approved operations directly.
 
 | Operation | Domain meaning | Product scope |
 | --- | --- | --- |
@@ -218,9 +218,7 @@ Pickup proposes time windows and an encrypted meeting place. Delivery adds a ser
 
 A later seller policy may authorize its delegate to accept offers matching fixed listing terms while the seller is away. [Harvest's instant-checkout PR #159](https://github.com/freenet/harvest/pull/159) is the source reference. The [automatic-acceptance tests](#expansion-acceptance) gate activation.
 
-Neighborhood indexes provide bounded results by region, category and freshness policy. Atlas is a possible provider under [5.4 Discovery and catalogue extensions](../5-optional-extensions/04-discovery.md). Every result points to signed listing state that the delegate verifies on opening. Users choose providers and their published moderation policies. Discovery adoption has its own release gate.
-
-Optional classifiers flag content for review after measured phone cost and language coverage tests. Human appeals remain part of the policy. Optional proofs from [5.1 Peer reputation](../5-optional-extensions/01-reputation.md) use Marketplace's validated positive-event receipts and purpose-bound thresholds. Validated positive activity, authenticated allegations and financial results remain separate facts. [Seller-standing sources](#seller-standing-and-later-reputation) inform later policy decisions.
+Optional classifiers flag content for review after measured phone cost and language coverage tests. Human appeals remain part of the policy. [Seller-standing sources](#seller-standing) inform later policy decisions.
 
 ## Acceptance
 
@@ -246,7 +244,7 @@ This plan passes when one certified custom web release completes the [pilot sequ
 - Independent known-answer vectors cover key agreement, direction-specific derivation, authenticated encryption and signatures. Reflected ciphertext and incomplete signature coverage fail.
 - Crash fixtures cover persistence before acknowledgement, pending retries and uncertain submission. Reorder asynchronous replies and verify correlation at the consumer.
 
-Run the [restore drill in 3.7 Operating readiness](07-operations.md#restore-drills) against the pilot's historical transaction. Retain the cryptographic profile, canonical codec fixtures and measured bounds. Unresolved transport capacity or recovery behavior blocks the product flow that depends on it. Broader fulfillment, discovery and optional SDUI have separate acceptance gates in their owning plans.
+Run the [restore drill in 3.7 Operating readiness](07-operations.md#restore-drills) against the pilot's historical transaction. Retain the cryptographic profile, canonical codec fixtures and measured bounds. Unresolved transport capacity or recovery behavior blocks the product flow that depends on it.
 
 ### Expansion acceptance
 
@@ -272,22 +270,19 @@ Marketplace uses its own application code and contracts. Harvest's repository, d
 | Purchase flow | [Buy-flow PR #24](https://github.com/freenet/harvest/pull/24) | [Order rules](#orders-canonical-terms-and-conflicts) bind accepted terms to the buyer's own request. [Record identity](#record-identity) covers complete canonical terms |
 | Private communication | [Messaging PR #23](https://github.com/freenet/harvest/pull/23) | [Bounded first contact and continuation](#public-first-contact-and-bounded-transport), with [encrypted participant-held evidence](#encryption-receipts-and-recovery) |
 | Payment proof placement | [Bitcoin integration status document](https://github.com/freenet/harvest/blob/main/docs/bitcoin-integration-status.md) | [Signed payment status in 3.4 Payments and checkout adapters](04-payment.md#signed-payment-status) embeds proof in the order, with a fixed bridge root key in parameters and succession evidence in records |
-| Seller accountability | [Standing proposal #8](https://github.com/freenet/harvest/issues/8) | [Signed pre-payment claims and dispute evidence](#pilot-privacy-and-disputes), plus later reputation policy |
+| Seller accountability | [Standing proposal #8](https://github.com/freenet/harvest/issues/8) | [Signed pre-payment claims and dispute evidence](#pilot-privacy-and-disputes) |
 | Automatic acceptance | [Instant-checkout PR #159](https://github.com/freenet/harvest/pull/159) | [Later seller-authorized acceptance](#later-fulfillment-and-product-scope) of requests matching fixed terms |
 | Migration | [Migration design](https://github.com/freenet/harvest/blob/main/docs/design/migratability.md) | [Evidence retention](#migration-and-evidence-retention) across contract changes, with application-specific recovery tests |
 | Design context | [Design index](https://github.com/freenet/harvest/blob/main/docs/design/README.md) | Review payment-proof, timestamp and privacy constraints during product scoping |
 
 Harvest's payment design uses Bitcoin verification through a bridge. Marketplace's payment design in [3.4 Payments and checkout adapters](04-payment.md) uses processor Checkout and service-signed, order-bound status. The integration-status document discusses embedding payment proof and moving trusted-bridge information out of store parameters into signed order evidence. Marketplace's root-key and succession-chain protocol is a separate proposed design.
 
-### Seller standing and later reputation
+### Seller standing
 
-Harvest's standing proposal connects complaints to payment evidence. The pilot's [dispute policy](#pilot-privacy-and-disputes) owns bounded disputes and named manual review. [5.1 Peer reputation](../5-optional-extensions/01-reputation.md) owns optional private proofs of positive activity. Broader standing requires its own scope and acceptance decision.
+Harvest's standing proposal connects complaints to payment evidence. The pilot's [dispute policy](#pilot-privacy-and-disputes) owns bounded disputes and named manual review. Broader standing requires its own scope and acceptance decision.
 
 | Source | Design relevance |
 | --- | --- |
 | [Bonded sellers and pre-signed claims #8](https://github.com/freenet/harvest/issues/8) | Proposed donation-backed standing, public order commitments, payment-backed complaints and refunds restoring standing. Includes exposure limits, buyer extortion, identity-level accounting and Bitcoin verification |
-| [Incentive mechanism design](https://github.com/freenet/harvest/blob/main/docs/design/incentive-mechanism.md) | Identity replacement, exit scams, false complaints, penalty multipliers and privacy costs of publishing orders |
-| [Gaming feedback #3](https://github.com/freenet/harvest/issues/3) | Category-only feedback as a response to misleading text in negative categories |
-| [Feedback signature coverage #22](https://github.com/freenet/harvest/issues/22) | Coverage of text and categories, competing variants and suppressed complaints |
 | [Purchase-flow security findings, PR #21](https://github.com/freenet/harvest/pull/21) | Payment verification, Ghostkey identity checks and feedback-token authorization |
 | [Buyer-seller messaging, PR #23](https://github.com/freenet/harvest/pull/23) | Durable encrypted messages retaining the buyer's seller-signed claim |

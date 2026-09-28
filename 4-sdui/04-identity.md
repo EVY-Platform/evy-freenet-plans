@@ -17,7 +17,7 @@ This plan owns reader bindings and UI behavior. The foundation owns caller authe
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Modified | Reader session handle use, permission bindings, protected-field handling and diagnostics redaction |
+| `freenet-sdui` | Modified | Reader session handle use, permission bindings, clearing of reader-held private values and diagnostics redaction |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains opaque session handles for readers |
 | `freenet-appkit` | Modified | Reader prompt requests and scoped device handles |
 | [river](https://github.com/freenet/river) | Used | Notification component as evidence for permission-dependent UI |
@@ -32,11 +32,11 @@ Reader callbacks carry request and session correlation from the adapter. Expired
 
 ## Permission bindings
 
-The bundle declares required and optional capabilities under [4.2 SDUI bundles and publication](02-bundles.md). Components and actions refer to those capabilities by typed name. The host checks the current grant and target before each protected step, including resumed work.
+The bundle declares required and optional capabilities under [4.2 SDUI bundles and publication](02-bundles.md). Components refer to those capabilities by typed name. The host checks the current grant and target before a component uses a protected capability.
 
 | Reader request | Host result | Reader behavior |
 | --- | --- | --- |
-| Use a declared capability | Scoped handle or typed result | Continue the declared action |
+| Use a declared capability | Scoped handle or typed result | Use the handle or result in the component |
 | Use a capability needing consent | Trusted host prompt | Keep the form and show that authorization is pending |
 | User declines or revokes access | Typed denial | Explain the affected feature and preserve recoverable input |
 | Platform lacks the adapter | Typed unavailable result | Use the declared optional fallback or block the required flow |
@@ -50,17 +50,16 @@ A photo picker supplies the chosen item through a bounded handle scoped to the a
 
 ## Protected data and signing
 
-Bind private form fields and saved drafts to approved protected-store operations from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md) and [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md). Delegates perform private operations and signing under their policy. The reader receives the allowed projection or result. Keys, node credentials and service secrets remain behind their owning interfaces.
+Delegates perform private operations and signing under their policy. The reader receives the allowed projection or result. Keys, node credentials and service secrets remain behind their owning interfaces.
 
-Clear reader-held private values when the host signals lock, logout, revocation or session expiry, according to the host's retention policy. Saving, recovery and deletion use that same policy. Redact private values from validation reports, component diagnostics, preview recordings and exported support reports.
+Clear reader-held private values when the host signals lock, logout, revocation or session expiry, according to the host's retention policy. Redact private values from validation reports, component diagnostics and exported support reports.
 
 Applications that share delegate code and parameters use the [tested namespace policy in 2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md). Reader-local component IDs and storage keys add UI addressing within that scope. Host authorization determines who can access it.
 
 ## Acceptance
 
 - Forged app/user fields, expired sessions, unknown handles and cross-app callbacks fail through the host adapter before protected work.
-- Real browser, iOS and Android tests distinguish permission denial, unavailable adapters, locked data and expired sessions while preserving permitted drafts.
-- Revocation during an action or queued operation stops newly unauthorized steps. The foundation continues tracking any submitted mutation.
+- Real browser, iOS and Android tests distinguish permission denial, unavailable adapters, locked data and expired sessions.
 - Two applications using the same delegate code and parameters retain the namespace isolation established by the foundation.
 - Publisher content cannot obtain protected handles by imitating a host prompt. Signing and recovery use trusted UI.
-- Exported diagnostics and recorded previews pass checks for private field and secret disclosure.
+- Exported diagnostics pass checks for private field and secret disclosure.

@@ -12,15 +12,16 @@ Prerequisites:
 - [4.3 SDUI hosts and readers](03-readers.md)
 - [4.5 SDUI actions and delegate protocols](05-actions.md)
 - [4.6 SDUI data and operation presentation](06-data.md)
+- [4.7 SDUI commerce and attribution](07-commerce.md)
 
-Commercial publication also uses [4.7 SDUI commerce and attribution](07-commerce.md). Opt-in real-time sessions have their own [acceptance gate in 5.3 Device sync and authoring collaboration](../5-optional-extensions/03-sync-and-collaboration.md#optional-real-time-collaboration). Repository-authored SDUI uses CLI/CI publication independently of this plan.
+[5.3 Device sync and authoring collaboration](../5-optional-extensions/03-sync-and-collaboration.md#optional-real-time-collaboration) adds real-time sessions. Repository-authored SDUI uses CLI/CI publication independently of this plan.
 
 ## Repositories
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-app-builder` | Created | Editor, project model, EVY importer, schema-driven editors, preview, validation, deterministic export, authoring-project contract and checkpoint protocol |
-| [evy](https://github.com/EVY-Platform/evy) | Used | Canvas, row factories, action editor, design system and schema generation reused; `web/` Developer service clients integrated |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Canvas, row factories, action editor, design system and schema generation reused; `web/` Developer service clients integrated; `services/attribution` gains the checkpoint-evidence path and checkpoint author registration |
 | `freenet-sdui` | Used | Released schema packages and web reader for preview |
 | `freenet-appkit` | Used | Memory host adapter and publication tooling |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Operation journal in `crates/mobile` from 1.6 Application protocols, data and operations; fdev conformance #5344 and merge properties #5320 for contract tests; traffic issues #5153 and #5050 |
@@ -45,7 +46,7 @@ Apply edits immediately and append them to a local draft journal with stable IDs
 
 Generate configuration controls from released JSON Schema. Provide curated editors for typed bindings, selectors, action steps, delegate arguments/results, routes, responsive layout and accessible labels.
 
-A binding picker shows a data source and its typed fields. An action editor shows the available primitive versions and domain operations. Query controls show permitted indexes and result limits. Keep domain decoding and business calculations in the declared adapters. Presentation expressions use the limits from [4.6 SDUI data and operation presentation](06-data.md).
+A binding picker shows a data source and its typed fields. An action editor shows the available primitive versions and domain operations. Query controls show permitted indexes and result limits. Keep domain decoding and business calculations in the declared adapters. Presentation expressions use the limits from [4.1 SDUI format and compatibility](01-format.md#values-and-expressions).
 
 Explain fields in plain language. An advanced view exposes the underlying schema and protocol reference. Component insertion supplies required states and flags missing accessible labels.
 
@@ -86,9 +87,9 @@ Convert only bounded supported expressions. Produce explicit repair tasks for un
 
 Export a validated checkpoint under the protocol below. Pin schema packages, reader builds, domain artifacts and exporter version. Deterministic export produces the same application files and mapping for those exact inputs. The base publication tool owns archive signing and publication versioning.
 
-Preserve a custom web entry point and relative assets. Generate a reader-only entry point for a project that selects that target. Package the web reader and validate every declared native reader requirement under [4.2 SDUI bundles and publication](02-bundles.md). Custom native distribution remains a separately identified build.
+Preserve a custom web entry point and relative assets. Generate a reader-only entry point for a project that selects that target. Package the web reader under [reader packaging in 4.3 SDUI hosts and readers](03-readers.md#reader-packaging) and validate every declared native reader requirement. Custom native distribution remains a separately identified build.
 
-Submit exact signed checkpoint evidence through [3.6 Contribution and release workspace](../3-attribution-remuneration-payment/06-developer.md). For commercial products, [4.7 SDUI commerce and attribution](07-commerce.md) connects the reviewed mapping to the attribution service. Contribution review, certification authority and earnings remain with their milestone 3 (Attribution, remuneration and payment) owners.
+Submit exact signed checkpoint evidence through [3.6 Contribution and release workspace](../3-attribution-remuneration-payment/06-developer.md). For commercial products, the [checkpoint evidence path](#checkpoint-evidence) connects the reviewed mapping to the attribution service. Contribution review, certification authority and earnings remain with their milestone 3 (Attribution, remuneration and payment) owners.
 
 ## Durable checkpoint protocol
 
@@ -154,15 +155,37 @@ Measure payload bytes, protocol overhead and update counts against the published
 - Test broken references, cycles, conflicting IDs and maximum encoded size, including two divergent valid states from one member.
 - Thousands of local edits produce bounded save batches. Restart and uncertain-submission tests recover the journal and verify the saved digest.
 - Compaction preserves required predecessor evidence, and deterministic export reproduces the same files from the checkpoint and pinned inputs.
-- Single-author and offline checkpoint workflows pass independently of live-session infrastructure.
+- Single-author and offline checkpoint workflows pass.
+
+## Checkpoint evidence
+
+This plan adds the checkpoint evidence path to the attribution service for projects that select visual authoring. It sits beside the [repository evidence path in 4.7 SDUI commerce and attribution](07-commerce.md#sdui-artifact-integration). A release that combines repository and visually authored content uses both paths.
+
+| Authoring path | Reviewed source and build evidence |
+| --- | --- |
+| Visual authoring | Exact signed checkpoint from the [durable checkpoint protocol](#durable-checkpoint-protocol), project identity, membership epoch and roster digest, author-operation evidence, accepted contribution references, and pinned exporter version and inputs |
+
+The checkpoint evidence path maps its reviewed inputs to the same digests, versions, artifacts and capability IDs as the repository evidence path in 4.7 SDUI commerce and attribution. Changed checkpoint content creates a new evidence revision and requires renewed review.
+
+The attribution service owns these checks and their signed decisions. The editor submits evidence and displays the result.
+
+- Register a checkpoint author by verifying a signed request, the author's project membership and control of the signing key. Bind the verified author key to the contributor's `ActorId` lineage and retain the registration evidence.
+- Verify the project identity, membership epoch, owner-signed roster and roster digest against the exact signed checkpoint. Verify included author-operation signatures, causal references and the operation frontier against that checkpoint and the membership authority for each operation.
+- Bind contributor claims and co-contributor signatures to that exact evidence revision. Record the verified checkpoint and roster digests with the acceptance and source-to-artifact mapping. Apply the existing product-scoped review, role-separation and challenge rules through [3.2 Attribution workflow and allocation weights](../3-attribution-remuneration-payment/02-attribution.md).
+- Require renewed review when checkpoint content changes. Preserve the signed evidence behind earlier accepted revisions.
+
+A checkpoint author's recovery profile follows the [contributor recovery profile in 4.7 SDUI commerce and attribution](07-commerce.md#contributor-recovery-profile). It names the authorized recovery authority and project/identity evidence it accepts. Project membership establishes project access.
 
 ## Acceptance
 
 - A new author creates, previews, validates and publishes a reader-only project and a custom web project with embedded SDUI.
 - Playwright flows cover create, edit, undo, conflict resolution, import, validation, restart recovery and publish-and-open using released readers.
 - Thousands of typing and drag edits coalesce into batches within fixed byte, operation and update-rate budgets. A crash preserves the acknowledged local journal.
-- The checkpoint suite above passes with real contract execution and offline/reconnect cases independently of live collaboration.
+- The checkpoint suite above passes with real contract execution and offline/reconnect cases.
 - Repeated export of the same checkpoint and pinned inputs produces identical files and source mappings.
 - Representative EVY imports retain supported behavior and report every unsupported item with a repair path.
-- Browser preview agrees with real delegate fixtures. Native behavior passes the [cross-target suite in 4.9 SDUI migration and conformance](09-migration-and-conformance.md).
+- Browser preview agrees with real delegate fixtures.
 - The builder itself passes keyboard and screen-reader tests, and preview recordings and reports redact protected data.
+- Checkpoint certification verifies registered author lineage, project identity, epoch, roster signatures/digest and included operation signatures against the exact checkpoint. Substituted checkpoints, unauthorized authors and invalid successor lineage fail.
+- Changed checkpoint content requires a new evidence revision and renewed review.
+- Certification detects changed screens, actions, schemas, reader builds and domain artifacts against the reviewed checkpoint mapping.

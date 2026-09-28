@@ -6,11 +6,11 @@
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts |
 | `freenet-appkit` | Modified | Swift package and Kotlin library that wrap the bindings, package the XCFramework and AAR builds |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API request correlation, with an upstream request-ID extension as one selectable option |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API requests and replies, matched to each other by the SDK's per-contract queue |
 
 ## Purpose
 
-Manage embedded Core, transport, lifecycle and platform bindings. The app supplies storage paths. [1.3 Single-application host](03-host.md) adds session authority and grants to the same crate. Core verifies contract state and executes delegates on the device. [1.10 Thin-peer role and cellular data budgets](10-thin-peer.md) later layers the thin-peer role and cellular budgets onto this SDK.
+Manage embedded Core, transport, lifecycle and platform bindings. The app supplies storage paths. Core verifies contract state and executes delegates on the device.
 
 ## Prerequisites
 
@@ -24,8 +24,8 @@ Compatible versions and profiles from [1.1 Mobile feasibility and supported prof
 | Get and put | Validate code, original parameter bytes and returned instance identity. |
 | Update by delta or full state | Correlate the result and preserve an uncertain outcome after timeout. |
 | Subscribe and release | Return owned handles, count them per session and contract, and close the subscription when the last handle is released. |
-| Register, unregister and message delegates | Authenticate the app/user/session and check current grants through the session authority from [1.3 Single-application host](03-host.md). |
-| Delegate startup and prompts | Apply the trusted host's installation and permission policy, including approved foreground startup. |
+| Register, unregister and message delegates | Authenticate the app/user/session and call the [authority hook](#caller-hooks) before each delegate call. |
+| Delegate startup and prompts | Call the [policy hook](#caller-hooks) for installation and permission decisions, including approved foreground startup. |
 | Events and cancellation | Include SDK request and session identity, typed errors and submission uncertainty. Deliver callbacks on the platform's expected executor and reject expired-session callbacks. |
 
 #### Build
@@ -34,21 +34,20 @@ Build the mobile crate fresh from Core main. [UniFFI](https://mozilla.github.io/
 
 #### Matching replies to requests
 
-Today stdlib matches a reply to its request only by the reply's type and contract key. Alice's room list and her conversation screen might both read the "Skate club" room at the same moment. Both replies then arrive as "read result for Skate club", and the SDK sees them as identical.
+A stdlib reply carries its type and contract key, and nothing more. Alice's room list and her conversation screen might both read the "Skate club" room at the same moment. Both replies then arrive as "read result for Skate club", and the SDK sees them as identical.
 
-Pick one of these fixes and test it:
+So the SDK sends one request of each type per contract at a time and queues the rest. The next reply of that type and contract then belongs to the request in flight.
 
-- The SDK sends only one request of each type per contract at a time and queues the rest.
-- Freenet stdlib adds a request ID to every reply. This is an upstream change.
-
-The SDK uses two kinds of ID:
-
-| ID | What it names | How long it lasts | Owner |
+| Step | "Skate club" read in flight | Queue | What the SDK does |
 | --- | --- | --- | --- |
-| SDK request ID | One message between the SDK and the node | Until the reply arrives or the call is cancelled | This plan |
-| Operation ID | One user action, such as Bob sending "Skate session Saturday?" | Through retries, restarts and upgrades | [1.6 Application protocols, data and operations](06-data-and-operations.md#operation-identity-and-journal) |
+| The room list reads the room | Room list | Empty | Sends the read |
+| The conversation screen reads the room | Room list | Conversation | Holds the second read |
+| A read result for "Skate club" arrives | Conversation | Empty | Hands the result to the room list and sends the queued read |
+| A second read result arrives | None | Empty | Hands the result to the conversation screen |
 
-For example, Bob taps Send and his phone loses signal. When River retries, it sends a new SDK request ID with the same operation ID, so the retry counts as the same send.
+Requests of other types, or for other contracts, go out in parallel. For example, Alice's new message to "Skate club" goes out as an update while her room list's read of the room is still in flight.
+
+When a request times out, the SDK tells the app its outcome is uncertain, and the request keeps its place in flight. The queue moves on when the late reply arrives or the connection resets, so a late reply never reaches the next request.
 
 #### Ending subscriptions
 
@@ -65,18 +64,15 @@ Releasing handles in one session leaves other sessions' subscriptions open.
 
 Freenet stdlib plans a client Unsubscribe request ([stdlib wire-format pins #95](https://github.com/freenet/freenet-stdlib/pull/95)). Until the pinned stdlib has it, a subscription lasts as long as its client connection ([disconnect unsubscribe test #4691](https://github.com/freenet/freenet-core/issues/4691)). So the SDK ends a subscription by closing that connection. Once the pinned stdlib has Unsubscribe, the SDK sends it instead.
 
-#### Trusted calls
+#### Caller hooks
 
-Some calls act with the app's authority. Examples are registering River's chat delegate and asking it to sign Bob's message. The host sends each of these calls to Core over a trusted path tied to:
+The code that embeds the SDK supplies three hooks. The SDK calls each one and acts on its answer.
 
-- the verified app (River)
-- the exact release it runs (its content reference)
-- the user (Bob)
-- the current session
-
-This includes calls over the node's local WebSocket port. If another app on the same phone connects to that port and claims to be River, Core rejects its calls. [Session admission #5264](https://github.com/freenet/freenet-core/issues/5264) tracks this Core change upstream.
-
-[1.3 Single-application host](03-host.md) owns the base rules for who may call what. [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md#delegate-namespace-policy) adds rules for several apps sharing one node, for example two apps that ship the same delegate.
+| Hook | When the SDK calls it | What the SDK does with the answer |
+| --- | --- | --- |
+| Authority | Before each delegate call | Sends the call only when the hook allows it |
+| Policy | Before delegate installation, startup and prompts | Applies the installation and permission decision the hook returns |
+| Flush | On stop | Waits until the hook reports that the caller's work is saved |
 
 ## Runtime, packaging and lifecycle
 
@@ -103,7 +99,7 @@ Keep compiled modules on the phone and key them by engine version, so an engine 
 
 #### Storage
 
-The host supplies the storage paths. The SDK keeps those paths and a node role setting through restarts, reinstalls and moves of the app's data folder by iOS or Android. Test fixtures use their own store, separate from the network store. The role setting is there for [1.10 Thin-peer role and cellular data budgets](10-thin-peer.md) to select the thin role.
+The host supplies the storage paths. The SDK keeps those paths through restarts, reinstalls and moves of the app's data folder by iOS or Android. Test fixtures use their own store, separate from the network store.
 
 #### Start, stop and reconnect
 
@@ -122,7 +118,7 @@ stateDiagram-v2
   Stopping --> Stopped
 ```
 
-On stop, the SDK saves the operation journal, then drops callbacks and releases the port, runtime and store locks. Test killing the app in every state.
+On stop, the SDK waits for the [flush hook](#caller-hooks), then drops callbacks and releases the port, runtime and store locks. Test killing the app in every state.
 
 When Alice's phone moves from Wi-Fi to cellular, the SDK:
 
@@ -141,6 +137,8 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 
 ## Acceptance
 
-Acceptance requires concurrent request isolation, real delegate calls, safe cancellation, local subscription release that preserves other sessions' handles and repeated start/stop/reconnect on both platforms. Verify pending work and original operation IDs through termination.
+- Concurrent requests stay isolated: two screens reading the same contract each get their own result, and a late reply after a timeout never reaches a queued request. Real delegate calls succeed, cancellation is safe, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes on iOS and Android.
+- A test policy supplies the authority, policy and flush hooks. Delegate calls run only when the test policy allows them, and stop waits for the test flush hook.
+- CI runs a two-peer contract exchange, leak checks with thresholds tuned to measured noise, the update key-learning fallback and binding generation.
 
 Regression sources: [response correlation #5048](https://github.com/freenet/freenet-core/issues/5048), [streaming PUT #5458](https://github.com/freenet/freenet-core/issues/5458), [UPDATE lookup #5475](https://github.com/freenet/freenet-core/pull/5475), [timeout uncertainty #3465](https://github.com/freenet/freenet-core/issues/3465), [wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951) and [missed updates #4681](https://github.com/freenet/freenet-core/issues/4681). Record the pinned revision and outcome when testing each behavior.

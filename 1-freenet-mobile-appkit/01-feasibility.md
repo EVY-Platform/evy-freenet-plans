@@ -13,7 +13,7 @@
 
 ## Purpose
 
-Establish supported River WebView and custom Swift/Kotlin profiles from pinned builds and reproducible real-device evidence. Measure the workloads that set mobile limits and release budgets.
+Establish supported River WebView and custom Swift/Kotlin profiles from pinned builds and reproducible real-device evidence. Measure the workloads that set device limits.
 
 ## Recorded evidence
 
@@ -25,7 +25,7 @@ Source versions, local-build notes and issue states here are recorded planning e
 | Existing [TypeScript SDK](https://github.com/freenet/freenet-stdlib/tree/main/typescript) | Preserve its supported web path and use it as a protocol comparison baseline. |
 | Earlier local iOS prototype (Core `ios` branch) | Build the mobile crate again from a clean Core main with [UniFFI](https://mozilla.github.io/uniffi-rs/latest/) Swift and Kotlin bindings, iOS and Android packaging and equal device coverage. Carry forward the [prototype learnings](#prototype-learnings). |
 | Atlas browser client in a WebView | Build fresh iOS and Android WebView demos on Atlas's browser Wasm client for browser-client evidence. Define the WebView host to Wasm client protocol in the new crate from the [prototype learnings](#prototype-learnings). Verify native application behavior separately. |
-| Recorded Core stdlib 0.12.0 and [migration library status](https://github.com/freenet/freenet-migrate#status) targeting 0.8.x with unreleased APIs | Pin compatible Core, stdlib, bindings and migration-library versions or a tested adapter before measurement. [Atlas fixtures in 1.8 Reference apps and compatibility fixtures](08-reference-apps.md#atlas-recorded-evidence-and-pinned-identity) record their own compatibility constraints. |
+| Recorded Core stdlib 0.12.0 and [migration library status](https://github.com/freenet/freenet-migrate#status) targeting 0.8.x with unreleased APIs | Pin compatible Core, stdlib, bindings and migration-library versions or a tested adapter before measurement. |
 
 ## Prototype learnings
 
@@ -37,10 +37,10 @@ The earlier local iOS prototype proved the behaviors below. The fresh build star
 | Own one process-wide async runtime in the mobile crate and build the node inside it. Install no process-global signal or abort handlers. Stop is an explicit call. | [1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
 | Use the node's loopback WebSocket as the client API. Let the node pick a free loopback port at start, report it to the host and pass the resolved port explicitly so a persisted config never replaces it. | [owned API in 1.2 Embedded node and mobile SDK](02-sdk.md#owned-api), [1.3 Single-application host](03-host.md#browser-and-native-hosts) |
 | Take data, config and log directories from the host. Keep local-mode and network-mode stores apart and discard a persisted config whose data directory or mode differs. | [storage paths in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
-| Pass gateway overrides in Core's `--gateway` JSON shape. Fetch the public gateway index when network mode has no overrides. | [1.2 Embedded node and mobile SDK](02-sdk.md), [1.10 Thin-peer role and cellular data budgets](10-thin-peer.md#scope-and-trust-boundary) |
-| Wait for at least one connected peer before the first network request, then retry reads for a bounded window. | [events in 1.2 Embedded node and mobile SDK](02-sdk.md#owned-api), [1.10 Thin-peer role and cellular data budgets](10-thin-peer.md) |
+| Pass gateway overrides in Core's `--gateway` JSON shape. Fetch the public gateway index when network mode has no overrides. | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| Wait for at least one connected peer before the first network request, then retry reads for a bounded window. | [events in 1.2 Embedded node and mobile SDK](02-sdk.md#owned-api) |
 | Keep the WebView bridge to JSON commands and events. The Wasm client opens its own WebSocket to the loopback API. The host serves only a fixed set of bundle files, verified through a per-file SHA-256 manifest that carries a protocol version, and ignores unknown manifest keys. The bridge's message handling lives in `crates/mobile`, so iOS and Android handle every message the same way. | [1.3 Single-application host](03-host.md#browser-and-native-hosts), [archive in 1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) |
-| Test concurrent requests through one node actor, a two-peer contract exchange, leak thresholds tuned to measured noise, the update key-learning fallback and binding generation in CI. | [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance), [fixtures in 1.8 Reference apps and compatibility fixtures](08-reference-apps.md#atlas-fixture-scope-and-acceptance) |
+| Test concurrent requests through one node actor, a two-peer contract exchange, leak thresholds tuned to measured noise, the update key-learning fallback and binding generation in CI. | [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) |
 
 ## Scope
 
@@ -75,15 +75,9 @@ Split each cost by layer:
 | Core execution | Contract and delegate Wasm runs, the store and the network |
 | UI | WebView, SwiftUI or Compose rendering |
 
-These measurements set:
-
-- device limits and test durations
-- the mobile Wasm limits in [running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)
-- the workloads for [1.10 Thin-peer role and cellular data budgets](10-thin-peer.md#cellular-budget-contract)
+These measurements set device limits and test durations.
 
 #### Network tests
-
-Run these tests together with 1.10 Thin-peer role and cellular data budgets.
 
 | Test | River example |
 | --- | --- |
@@ -92,7 +86,7 @@ Run these tests together with 1.10 Thin-peer role and cellular data budgets.
 | Wi-Fi/cellular transition | Alice leaves home Wi-Fi mid-conversation |
 | Resume | Alice returns to River after time in another app |
 
-Publish upload and download bytes separately for each workload, next to the limit approved for that workload.
+Publish upload and download bytes separately for each workload.
 
 #### Foreground lifecycle
 
@@ -107,15 +101,6 @@ stateDiagram-v2
   Stopped --> Resuming: host returns
   Resuming --> Foreground: fresh session, state refreshed, operations reconciled
 ```
-
-For example, Bob taps Send and switches to his camera before the message reaches the network:
-
-1. River saves the pending send in the journal.
-2. The host stops transport work and shuts down Core.
-3. Bob returns. The host opens a fresh session and refreshes "Skate club".
-4. River reconciles the pending send. It keeps its [operation ID](06-data-and-operations.md#operation-identity-and-journal), so the message posts once.
-
-[1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) owns start and stop. [1.3 Single-application host](03-host.md#saving-work-and-reopening-an-app) owns saving work and reopening.
 
 #### Message alerts
 

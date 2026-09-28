@@ -28,6 +28,4 @@ The shell in [2.1 EVY shell and curated catalogue](01-catalogue.md) and canonica
 
 ## Acceptance
 
-Valid invites reach the intended session, malformed or substituted references fail visibly, and handoffs preserve authority boundaries. Revocation invalidates privileged access. Management and diagnostic screens pass keyboard, focus, large-text and screen-reader tests on real devices.
-
-[3.4 Payments and checkout adapters](../3-attribution-remuneration-payment/04-payment.md) owns the authenticated host checkout adapter, web-to-native handoff, return and reconciliation. It has a separate milestone 3 (Attribution, remuneration and payment) acceptance gate. Broader recovery in [5.2 Extended customer backup and recovery](../5-optional-extensions/02-recovery.md) and [5.3 Device sync and authoring collaboration](../5-optional-extensions/03-sync-and-collaboration.md) are optional. Restart durability, base identity protection and supported migrations remain required foundation behavior.
+Valid invites reach the intended session, malformed or substituted references fail visibly, and handoffs preserve authority boundaries. Revocation invalidates privileged access. Removing an app keeps its private records. Data deletion is a separate, authorized decision, and failures are reported. Management and diagnostic screens pass keyboard, focus, large-text and screen-reader tests on real devices.

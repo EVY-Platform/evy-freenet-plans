@@ -17,6 +17,7 @@ Own scheduling and resource allocation across applications. Combine subscription
 
 - [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md)
 - [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md)
+- [2.1 EVY shell and curated catalogue](01-catalogue.md) for the account and settings area
 - [2.2 Multi-application sessions and authority](02-sessions.md)
 - [2.3 Installation and updates](03-installation-and-updates.md)
 - [1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md)
@@ -35,8 +36,19 @@ On app suspension, save acknowledged drafts and journal changes, release that ap
 
 Closing one app preserves the node and other active sessions within their remaining budgets. Retained compatible archives and artifacts needed by pending work remain subject to [storage policy in 2.3 Installation and updates](03-installation-and-updates.md#retention-and-recovery-choices).
 
+## Per-app caps and status
+
+Apply the [cap-enforcement steps in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md#cellular-budget-contract) to each app's allocation as well as to the node-wide caps.
+
+- At a per-app cap, release that app's demand. Other demand remains eligible within its allocation and the node-wide limits.
+- Show each app's storage use and cellular budget status in the [account and settings area of 2.1 EVY shell and curated catalogue](01-catalogue.md#catalogue-and-shell).
+
 ## Acceptance
 
-Concurrent River and Atlas workloads pass the shared thin-node limits, including idle, active, reconnect and serving-peer loss. One app's closure, excessive demand or failed refresh preserves the other's permitted work. Termination and storage exhaustion preserve committed drafts and journals.
+- Concurrent River and Atlas workloads pass the shared thin-node limits, including idle, active, reconnect and serving-peer loss.
+- One app's closure, excessive demand or failed refresh preserves the other's permitted work.
+- Releasing one app's subscription preserves the other app's subscriptions and eligible demand.
+- A per-app cap releases only that app's demand. A node-wide cap releases all demand and closes all cellular serving connections.
+- Termination and storage exhaustion preserve committed drafts and journals.
 
-Cross-app subscription isolation, retained records after app removal, separate authorized data deletion, and per-app/node-wide cap enforcement pass the later [2.7 Multi-application acceptance](07-acceptance.md). The [foundation tests in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#data-and-operation-acceptance) exercise two consumers within one application.
+The [foundation tests in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#data-and-operation-acceptance) exercise two consumers within one application.

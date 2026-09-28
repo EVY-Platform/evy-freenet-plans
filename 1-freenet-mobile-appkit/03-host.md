@@ -4,43 +4,54 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains caller admission, session authority and grants; session admission #5264, permissions #4014, storage #5165 and #5254, `RequestUserInput` and delegate startup #5730 are the pinned admission evidence |
-| `freenet-appkit` | Modified | Host bridge, single-app installation interface, iOS and Android WebView hosts and diagnostics redaction |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains caller admission, trusted calls, session authority, release activation at session boundaries, the host side of the SDK authority and policy hooks, and grants; session admission #5264, permissions #4014, storage #5165 and #5254, `RequestUserInput` and delegate startup #5730 are the pinned admission evidence |
+| `freenet-appkit` | Modified | Host bridge, iOS and Android WebView hosts and diagnostics redaction |
 | [river](https://github.com/freenet/river) | Used | UI package, bundle configuration and notification integration as fixtures for the WebView route |
 
 ## Purpose
 
-Run one defined application's code through authorized access to a Freenet node. Own the core host bridge, caller admission, basic session authority, base authorization, single-app installation interface and diagnostic redaction.
+Run one defined application's code through authorized access to a Freenet node. Own the core host bridge, caller admission, basic session authority, release activation, base authorization and diagnostic redaction.
 
-The first mobile route is River's web UI in a WebView served by the embedded node. Custom Swift/Kotlin applications use the same SDK from [1.2 Embedded node and mobile SDK](02-sdk.md). [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md), [2.3 Installation and updates](../2-evy-mobile-app/03-installation-and-updates.md) and [2.4 Identity, permissions and device access](../2-evy-mobile-app/04-permissions.md) compose these foundations for several applications. Optional reader integration belongs to [milestone 4 (SDUI)](../README.md#4-sdui).
+The first mobile route is River's web UI in a WebView served by the embedded node. Custom Swift/Kotlin applications use the same SDK from [1.2 Embedded node and mobile SDK](02-sdk.md).
 
 ## Prerequisites
 
 - Supported profiles in [1.1 Mobile feasibility and supported profiles](01-feasibility.md)
 - The SDK in [1.2 Embedded node and mobile SDK](02-sdk.md)
-- Bundle tooling in [1.4 Application bundles](04-bundles.md)
-- Protection in [1.5 Identity, keys and local protection](05-identity.md)
-- Operations in [1.6 Application protocols, data and operations](06-data-and-operations.md)
-
-All mobile profiles inherit the required [thin-peer and cellular gate in 1.10 Thin-peer role and cellular data budgets](10-thin-peer.md).
 
 ## Who controls what
 
 | Part | Authority |
 | --- | --- |
-| Trusted host | Verify releases, create sessions, enforce grants, scope storage and route callbacks |
+| Trusted host | Activate releases, create sessions, enforce grants, scope storage and route callbacks |
 | Host-owned screens | Show installation, permission, identity and recovery decisions outside application-controlled content |
 | Application code | Own screens and orchestration through the permitted host/SDK interfaces |
 | Core | Enforce authenticated client access and attest the immediate caller to delegates |
 | Delegate | Apply its policy to the attested caller and protect its secret namespace |
 
-The host binds each session to the full application container identity, verified `application_content_ref`, user, installation ID and session generation. [1.4 Application bundles](04-bundles.md#publishing-and-evidence) owns content references. The installation ID identifies one installed copy. Every new session gets a new generation. These local identifiers select host authority and callback routing. Copies supplied by application payloads are untrusted.
-
-Before a protected request reaches Core, the host checks the current grant, target and session. It routes each response only to its authorized requester and discards expired-session callbacks. The [delegate protocol in 1.6 Application protocols, data and operations](06-data-and-operations.md#delegate-requests-and-results) defines `MessageOrigin` handling. Core's web-app attestation identifies a contract, while user, installation and session bindings require the trusted host path.
-
-Core's device-node delegate secret store uses the full delegate key as its namespace. [1.5 Identity, keys and local protection](05-identity.md#protected-keys-and-records) owns key and record protection. The later [namespace policy in 2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md#delegate-namespace-policy) governs admission of several apps using the same delegate identity.
+Core's device-node delegate secret store uses the full delegate key as its namespace. [1.5 Identity, keys and local protection](05-identity.md#protected-keys-and-records) owns key and record protection.
 
 In the hosted source profile, the per-user secret context derives from a shell-minted token stored in browser local storage. Verify its binding and isolation against the selected Core build before relying on it.
+
+## Trusted calls
+
+Some calls act with the app's authority. Examples are registering River's chat delegate and asking it to sign Bob's message. The host sends each of these calls to Core over a trusted path tied to:
+
+- the verified app (River), by its full application container identity
+- the exact release it runs, by the verified release reference supplied at installation
+- the user (Bob) and the installation ID
+- the current session generation
+
+The host treats the release reference as an opaque value. [1.4 Application bundles](04-bundles.md#publishing-and-evidence) defines its encoding.
+
+The host supplies the [caller hooks in 1.2 Embedded node and mobile SDK](02-sdk.md#caller-hooks):
+
+- **Authority**: checks the current grant, target and session before each delegate call.
+- **Policy**: checks the trusted installation and permission decisions, including approved foreground startup.
+
+The host routes each response only to its authorized requester and discards expired-session callbacks. Core's web-app attestation identifies a contract, while user, installation and session bindings require the trusted host path.
+
+The trusted path covers calls over the node's local WebSocket port. If another app on the same phone connects to that port and claims to be River, Core rejects its calls. [Session admission #5264](https://github.com/freenet/freenet-core/issues/5264) tracks this Core change upstream, and the [admission table](#host-admission-and-permission-dependencies) holds its release check.
 
 ## Browser and native hosts
 
@@ -54,16 +65,15 @@ River's [UI package](https://github.com/freenet/river/blob/main/ui/Cargo.toml) a
 
 The host must:
 
-- Keep node credentials and privileged bridge methods in trusted code. Authenticate each caller, including loopback and alternate API paths.
-- Bind frames, WebView messages and native calls to the verified session. Validate message source, navigation and target before forwarding requests.
-- Scope cookies, web storage, caches, file access and native handles by application and user. Preserve the declared storage lifetime across reloads and restarts.
-- Apply the node-only web sandbox policy to app code and loaded media. Route outside services, embedded pages and external links through approved adapters.
-- Validate deep-link application identities, destinations and parameters before routing. External/native handoffs obtain explicit authority for keys or private data.
-- When milestone 3 (Attribution, remuneration and payment) enables checkout, use the authenticated [payment adapter in 3.4 Payments and checkout adapters](../3-attribution-remuneration-payment/04-payment.md) for handoff and return reconciliation.
+- Keep node credentials and privileged bridge methods in trusted code, and authenticate each caller, including loopback and alternate API paths.
+- Bind frames, WebView messages and native calls to the verified session, and validate message source, navigation and target before forwarding requests.
+- Scope cookies, web storage, caches, file access and native handles by application and user, and preserve the declared storage lifetime across reloads and restarts.
+- Apply the node-only web sandbox policy to app code and loaded media, and route outside services, embedded pages and external links through approved adapters.
+- Validate deep-link application identities, destinations and parameters before routing, and ensure external/native handoffs obtain explicit authority for keys or private data.
 
 ## Host admission and permission dependencies
 
-This table owns host admission and permission evidence. The source snapshot records the gaps below. Links identify implementation or review evidence, and their current upstream status remains to be checked against the versions pinned in 1.1 Mobile feasibility and supported profiles. [1.2 Embedded node and mobile SDK](02-sdk.md) owns mobile API, runtime, key-store and subscription gaps.
+Links identify implementation or review evidence, and their current upstream status remains to be checked against the versions pinned in 1.1 Mobile feasibility and supported profiles. [1.2 Embedded node and mobile SDK](02-sdk.md) owns mobile API, runtime, key-store and subscription gaps.
 
 | Requirement | Evidence | Release check |
 | --- | --- | --- |
@@ -71,34 +81,25 @@ This table owns host admission and permission evidence. The source snapshot reco
 | Private delegate response routing | Source snapshot describes locality-based delivery to local clients. [Admission #5264](https://github.com/freenet/freenet-core/issues/5264) covers the caller boundary | Targeted replies and autonomous private events reach only authorized sessions |
 | Declared, revocable capabilities and per-app embedding | [Permissions #4014](https://github.com/freenet/freenet-core/issues/4014), [security discussion #5380](https://github.com/freenet/freenet-core/discussions/5380) | Enforce grants at the capability boundary, including page-initiated access |
 | Fresh consent for expanded access | [Permissions implementation #4086](https://github.com/freenet/freenet-core/pull/4086), [review findings #4090](https://github.com/freenet/freenet-core/pull/4090) | A changed manifest prompts before any new access, and grants remain revocable |
-| Durable, isolated web storage | [Storage #5165](https://github.com/freenet/freenet-core/issues/5165), [sandbox/storage #5254](https://github.com/freenet/freenet-core/issues/5254) | Reload and termination preserve only authorized records. The second-application case belongs to the later gates in 2.2 Multi-application sessions and authority and 2.7 Multi-application acceptance |
-| Delegate prompts | Core's `RequestUserInput` interface, described in [delegate protocols in 1.6 Application protocols, data and operations](06-data-and-operations.md#delegate-requests-and-results) | Trusted prompts identify the requester and return only to the authorized request |
+| Durable, isolated web storage | [Storage #5165](https://github.com/freenet/freenet-core/issues/5165), [sandbox/storage #5254](https://github.com/freenet/freenet-core/issues/5254) | Reload and termination preserve only authorized records |
+| Delegate prompts | Core's `RequestUserInput` message in the [stdlib delegate interface](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs) | Trusted prompts identify the requester and return only to the authorized request |
 
-## Single-app installation interface
+## Activating a release
 
-The single-app host implements verified installation and recoverable activation for milestone 1 (Freenet mobile AppKit). [1.4 Application bundles](04-bundles.md#installing-a-copy) owns content checks and [1.7 Upgrades and migration](07-migration.md) owns application migration. [2.3 Installation and updates](../2-evy-mobile-app/03-installation-and-updates.md) owns the staged installation workflow composed across apps through this shared per-app interface.
+The host runs a release only after installation has verified it and supplied its release reference.
 
-| Interface responsibility | Milestone 1 (Freenet mobile AppKit) requirement |
-| --- | --- |
-| Verify a candidate | Check the selected app's snapshot before execution, including host APIs, concrete protocols, setup, device adapters and data compatibility. Obtain consent for changed delegates, setup or access |
-| Track release selection | Keep active content separate from the newest observed version/digest and observation time. Preserve the highest-observed version during local rollback |
-| Stage and migrate | Stage checked files and host database changes with recoverable copies. Run application-owned migrations and verify readback |
-| Activate | Activate checked files and compatible storage together at a session boundary. Create a fresh generation and retain pending work's originating content references |
-| Retain and recover | Keep the working copy, one backup and artifacts required by pending operations within the storage budget. Preserve a usable copy and saved work on failure |
+- Activate a release only at a session boundary. Each session runs one release and its selected component and protocol versions.
+- Create a fresh session generation for each activated release.
+- Reject callbacks from older session generations.
+- Keep the previous release active when activation is interrupted.
 
-An older publication preserves the active copy and newest-observed record. Same-version divergence retains accepted bytes and both pieces of evidence, suspending automatic activation and transfer until a higher signed version resolves the conflict. Unsupported host APIs or protocols retain the compatible copy and report the unmet requirement. Deliberate local rollback passes current data compatibility checks. Component changes and publisher transfer follow 1.7 Upgrades and migration with required consent.
+Subscriptions keep refreshing application data within a session.
 
-State subscriptions refresh live application data. Signed archives replace verified web releases. Component code or parameter changes can re-key contracts or delegates and require migration. Each session uses one consistent release and selected component/protocol versions.
+## Suspending and reopening an app
 
-Milestone 1 (Freenet mobile AppKit) acceptance tests this interface for River. Milestone 2 (EVY mobile app) adds per-app composition and tests that an update preserves another application's session.
+[1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) owns node start and stop.
 
-## Saving work and reopening an app
-
-[1.6 Application protocols, data and operations](06-data-and-operations.md) owns draft durability, subscriptions, journal states and retry safety. [1.2 Embedded node and mobile SDK](02-sdk.md) owns node start/stop.
-
-On app suspension, save acknowledged drafts and journal changes, release cancellable demand and invalidate the session. Reopening establishes fresh authority, shows retained state with its observation time, and reconciles pending operations. [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) adds scheduling across applications.
-
-App-specific import/export follows [1.5 Identity, keys and local protection](05-identity.md). The host verifies the destination, reports uncovered records and imports shared records only with the signatures their domain requires. Network recovery depends on a surviving copy, including the [cold-state case #4642](https://github.com/freenet/freenet-core/issues/4642).
+On app suspension, release cancellable demand and invalidate the session. Reopening establishes fresh authority with a new session generation.
 
 ## Base authorization and device access
 
@@ -107,25 +108,24 @@ A grant records the full application identity, user, installed copy, permitted o
 - Declare required and optional capabilities in bundle metadata. Prompt in trusted host UI when the user first needs an ungranted capability.
 - Recheck grants before each protected operation and before queued work runs. Revocation stops further use immediately.
 - Prompt before an update gains newly declared access. Changed delegates and setup require installation approval.
-- Require explicit authorization when sharing identity or private records between WebViews and native contexts. [2.4 Identity, permissions and device access](../2-evy-mobile-app/04-permissions.md) adds cross-app sharing and grant management.
+- Require explicit authorization when sharing identity or private records between WebViews and native contexts.
 - Return typed denial, unavailable, locked-device and expired-handle results. Bind selected files or photos to the requesting operation and session.
 
-Camera, photos, files, notifications, clipboard, location, maps, contacts and outside services use only the adapters in the selected release profile. River's [notification integration](https://github.com/freenet/river/blob/main/ui/src/components/app/notifications.rs) is an application fixture. Notification taps validate the target and refresh application state before showing it. The foreground/background delivery promise belongs to [1.1 Mobile feasibility and supported profiles](01-feasibility.md#scope-and-acceptance).
+Camera, photos, files, notifications, clipboard, location, maps, contacts and outside services use only the adapters in the selected release profile. River's [notification integration](https://github.com/freenet/river/blob/main/ui/src/components/app/notifications.rs) is an application fixture. Notification taps validate the target and refresh application state before showing it. The foreground/background delivery promise belongs to [1.1 Mobile feasibility and supported profiles](01-feasibility.md#message-alerts).
 
-Startup execution is declared by the delegate's Wasm manifest, as described in [#5730](https://github.com/freenet/freenet-core/pull/5730). The mobile embedder may approve it as part of the trusted installation decision for that application. Browser hosts obtain the corresponding grant. Runtime work remains subject to the SDK lifecycle, current authority and budgets.
+Startup execution is declared by the delegate's Wasm manifest, as described in [#5730](https://github.com/freenet/freenet-core/pull/5730). The mobile embedder may approve it as part of the trusted installation decision for that application. Browser hosts obtain the corresponding grant. Runtime work remains subject to the SDK lifecycle and current authority.
 
 ## Diagnostics
 
-Expose per-app connection state, subscription demand, last observation time, pending-operation counts, storage use, verified release, grants and typed failures. [2.6 Navigation and application management](../2-evy-mobile-app/06-navigation.md) owns multi-app screens. [1.9 Developer package and release acceptance](09-release.md) owns the developer diagnostic package. Exported reports redact keys, message bodies, session tokens, private references and private records by default.
+Expose per-app connection state, subscription demand, last observation time, pending-operation counts, storage use, verified release, grants and typed failures. Exported reports redact keys, message bodies, session tokens, private references and private records by default.
 
 ## Acceptance
 
 - Open River's real web UI on iOS and Android and exercise join, read, send, deep links, reload, termination and reconnect. A native fixture proves the declared SDK support level.
 - Forged app identities, frames, bridge messages, loopback requests and expired sessions fail admission. App code stays within its supported network and storage policy.
 - Targeted delegate replies and autonomous private results reach only authorized sessions.
-- The single-app installation interface passes interrupted activation, replayed content, same-version divergence, rollback, data changes, failed migration and cleanup with pending work.
+- Activation happens only at a session boundary, creates a fresh session generation and rejects old-generation callbacks. Interrupted activation keeps the previous release active.
+- Suspension invalidates the session, and reopening obtains fresh authority.
 - Trusted prompts, expanded permissions, immediate revocation, locked devices and web/native handoffs enforce base authorization. Queued work rechecks authority.
-- Resource-exhaustion and malicious-input tests contain failure to the affected request or session. Measured traffic passes the cellular budgets in 1.10 Thin-peer role and cellular data budgets.
+- Resource-exhaustion and malicious-input tests contain failure to the affected request or session.
 - Each required browser or native admission path passes on the pinned Core build before that profile ships.
-
-Cross-app admission, shared delegate namespaces, concurrent updates and grant UX pass the separate [2.7 Multi-application acceptance](../2-evy-mobile-app/07-acceptance.md).

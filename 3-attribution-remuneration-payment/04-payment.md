@@ -4,28 +4,25 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/payment`: Stripe Connect Checkout, webhook inbox, refunds, signed status record with its verifier crate, Freenet bridge peer and outbox |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/payment`: Stripe Connect Checkout, webhook inbox, refunds, fee-return instruction endpoint, signed status record with its verifier crate, a fixture order contract that links the verifier, Freenet bridge peer and outbox |
 | `freenet-appkit` | Modified | Host checkout adapter: authenticated request binding, native trusted confirmation, browser handoff and return reconciliation |
-| `evy-marketplace` | Used | Order contract links the status verifier and the pilot exercises the whole flow |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` operation journal retains the funded content and contribution bindings of paid operations |
 
 ## Owned scope
 
-Payment is the canonical authority for Checkout, purchase and application-fee refunds, reconciled cash adjustments and signed payment status. [3.3 Artifact certification and publication evidence](03-certification.md) owns certified-content eligibility. [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) owns allocation calculations and contributor payout execution.
+Payment is the canonical authority for Checkout, purchase and application-fee refunds, reconciled cash adjustments and signed payment status. [3.3 Artifact certification and publication evidence](03-certification.md) owns certified-content eligibility.
 
 ## Prerequisites
 
 Use:
 
 - Certification and publication evidence from [3.3 Artifact certification and publication evidence](03-certification.md).
-- The settlement interface from [3.5 Usage evidence, remuneration and payouts](05-remuneration.md#funding-and-settlement-policy).
 - The trusted host from [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md).
 - Protected keys from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md).
 - Operation IDs and journals from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
 - Authenticated multi-app sessions from [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md).
 
-Production use requires [3.7 Operating readiness](07-operations.md#acceptance), including processor and regional approval checks.
-
-Custom web and native application code requests Checkout through an authorized service adapter. The first paid pilot uses Marketplace's custom web UI inside EVY's curated WebView host and a native checkout bridge. Optional SDUI invocation belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
+Custom web and native application code requests Checkout through an authorized service adapter. Optional SDUI invocation belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
 
 ## Trusted checkout handoff
 
@@ -46,10 +43,11 @@ Record these bindings against the operation and agreed terms:
 
 - The exact `application_content_ref` defined by [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md), naming a publication or certified native build.
 - The signed contribution record, immutable attribution snapshot and retained source/publication or distribution evidence from [3.3 Artifact certification and publication evidence](03-certification.md#certification-records).
-- The product's signed capability-allocation policy and the signed settlement policy owned by remuneration.
-- The usage epoch assigned under remuneration's admission profile.
+- Opaque identifiers for the capability-allocation policy, the settlement policy and the usage epoch that apply to this checkout: `allocation_policy_id`, `settlement_policy_id` and `usage_epoch_id`. Payment records them unchanged.
 
 Verify product authority, content eligibility, included capabilities and required completion evidence before accepting a digest or contribution record. Persist the verified signed evidence alongside its IDs. These bindings remain fixed through application updates, different clients, publisher transfer and delayed fulfillment.
+
+For paid operations, the `crates/mobile` operation journal from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) retains the funded content and contribution bindings. A newer release that completes an older operation uses the original bindings.
 
 Commercial suspension governs new Checkout requests under the product policy. Record the authority and latest verified observation used for that decision. Existing attempts, refunds and settlement keep their recorded bindings.
 
@@ -61,9 +59,9 @@ The contributor fee is 100 basis points of the agreed checkout amount, taken fro
 
 Use Stripe Connect Checkout with a connected seller destination and `payment_intent_data.application_fee_amount`. Reconcile successful application-fee collection into a fee receipt. Stripe holds the money in its account balances. The destination-charge model charges processor costs to the payment service balance. Budget those costs separately so the contributor fund receives its promised amount.
 
-[Stripe's destination-charge guide](https://docs.stripe.com/connect/destination-charges) describes the processor mechanism. Account, country, payment-method and distribution-policy checks are launch gates. The selected integration remains subject to processor and platform approval.
+[Stripe's destination-charge guide](https://docs.stripe.com/connect/destination-charges) describes the processor mechanism. The selected integration remains subject to processor and platform approval.
 
-Send fee receipts and reconciled cash adjustments to remuneration through a durable outbox under the refund flow below. Each service commits and recovers its own transaction. Remuneration owns allocation arithmetic, reserves and contributor payout execution.
+Publish fee receipts and reconciled cash adjustments through a durable outbox under the refund flow below. Each service commits and recovers its own transaction.
 
 ## Payment states
 
@@ -94,14 +92,10 @@ Receive the Checkout, PaymentIntent, charge, refund, dispute and application-fee
 ## Refunds and fee returns
 
 1. Payment authorizes and executes purchase refunds under the agreed order policy. It reconciles buyer refunds, chargebacks and destination-transfer recovery with the processor.
-2. Remuneration consumes those reconciled facts and calculates allocation effects and any application-fee return, including unclaimed shares after the cutoff. It reserves the return and submits an authenticated instruction with a stable return ID, original payment/fee receipt, amount, beneficiary, policy and source adjustment revision.
-3. Payment verifies that instruction against the original fee receipt, beneficiary and remaining returnable fee. It serializes execution per receipt and uses the processor's purchase/application-fee refund APIs with stable idempotency keys. Reconcile an uncertain operation before retrying or accepting a replacement calculation.
-4. Payment publishes immutable reconciled cash adjustments through its durable outbox. Each names the adjustment ID, kind, original receipt, related return/refund ID, currency, amount, beneficiary and revision. Distinguish buyer purchase refunds, seller application-fee returns and destination-transfer recovery. Corrections append linked adjustments.
-5. Remuneration consumes each adjustment once, records its allocation effects and releases or resolves the matching reservation. It owns contributor payout execution and post-payout recovery accounting under its bound policy.
+2. Payment accepts authenticated fee-return instructions through its fee-return instruction endpoint. Each instruction names a stable return ID, the original payment/fee receipt, amount, beneficiary, policy and source adjustment revision. Payment verifies it against the original fee receipt, beneficiary and remaining returnable fee. It serializes execution per receipt and uses the processor's purchase/application-fee refund APIs with stable idempotency keys. Reconcile an uncertain operation before retrying or accepting a replacement instruction.
+3. Payment publishes immutable reconciled cash adjustments through its durable outbox. Each names the adjustment ID, kind, original receipt, related return/refund ID, currency, amount, beneficiary and revision. Distinguish buyer purchase refunds, seller application-fee returns and destination-transfer recovery. Corrections append linked adjustments.
 
-The v1 unclaimed-fee beneficiary is the original seller whose proceeds bore the fee. Purchase refunds go to the buyer. Payment validates the seller's original account binding before returning an application fee. Use the explicit fee-return amount calculated by remuneration so earlier unclaimed returns and later purchase refunds reconcile against the same receipt. Total application-fee cash returns stay within the amount collected.
-
-[3.5 Usage evidence, remuneration and payouts](05-remuneration.md#return-calculations-and-allocation-effects) owns the return arithmetic, overlap accounting and the [combined unclaimed-return/partial-refund/post-payout fixture in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#combined-return-and-refund-fixture). 3.7 Operating readiness replays this flow through the owning services.
+The v1 fee-return beneficiary is the original seller whose proceeds bore the fee. Purchase refunds go to the buyer. Payment validates the seller's original account binding before returning an application fee. Use the explicit amount in each fee-return instruction so earlier fee returns and later purchase refunds reconcile against the same receipt. Total application-fee cash returns stay within the amount collected.
 
 ## Signed payment status
 
@@ -115,12 +109,12 @@ currency, amount_minor, contributor_fee_minor
 payment_status, processor_status
 captured_minor, refunded_minor, dispute_status
 application_content_ref, contribution_record_id, attribution_snapshot_id
-allocation_policy_id, settlement_policy_id, usage_epoch
+allocation_policy_id, settlement_policy_id, usage_epoch_id
 revision, previous_record_digest
 bridge_key_id, key_succession_chain, signature
 ```
 
-Retain raw processor payloads, customer details and processor object IDs in private service records. Public Freenet records use opaque payment IDs. The public record still reveals its order, amount and content links under the [pilot privacy policy in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#pilot-privacy-and-disputes).
+Retain raw processor payloads, customer details and processor object IDs in private service records. Public Freenet records use opaque payment IDs. The public record still reveals its order, amount and content links.
 
 Embed the signed record in the order update. The order contract verifies its schema, signature, amount, currency and terms digest deterministically from that evidence. It uses the fixed bridge root key in its parameters. Every verification input needed by the contract travels in the update or its existing state.
 
@@ -130,19 +124,17 @@ Embed the signed record in the order update. The order contract verifies its sch
 | Signed status record | Append-only key succession from the root to the signer, each successor authorized by its predecessor |
 | Order state | Bounded records by payment ID and revision |
 
-Parameters hash into contract identity, so rotating keys appear in the signed succession chain. Earlier records remain verifiable under their original signer. [3.7 Operating readiness](07-operations.md#signing-keys-and-access) owns rotation and compromise runbooks.
+Parameters hash into contract identity, so rotating keys appear in the signed succession chain. Earlier records remain verifiable under their original signer.
 
-Merge identical revisions once. Retain different signed payloads at one revision as a conflict, keeping the two lowest digests. The [order profile in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#orders-canonical-terms-and-conflicts) retains at most 32 revision slots per payment. Use the highest unconflicted verified revision for display. Automated order actions require predecessor recovery across gaps and an authorized signed resolution naming conflicting digests and the replacement chain. Pause those actions for the affected payment while preserving the evidence.
+Merge identical revisions once. Retain different signed payloads at one revision as a conflict, keeping the two lowest digests. An order retains at most 32 revision slots per payment, keeping the highest revision numbers. Use the highest unconflicted verified revision for display. Automated order actions require predecessor recovery across gaps and an authorized signed resolution naming conflicting digests and the replacement chain. Pause those actions for the affected payment while preserving the evidence.
 
-An optional audit contract can mirror the records. The order validates against its embedded evidence. Marketplace applies its own fulfillment transitions after matching payment amount, currency and terms. Inventory and completion evidence remain separate domain facts.
+An optional audit contract can mirror the records. The order validates against its embedded evidence.
 
 ## Bridge delivery and recovery
 
 The payment service runs a Freenet peer and a durable outbound queue. Retry an order update with the same payment ID, revision and signed bytes. Retain target order bindings and all signed revisions for reconciliation and republication.
 
 During a Freenet outage, processor collection and webhook accounting continue. The queue retains pending order updates. The app distinguishes service-confirmed payment from order synchronization. A client can fetch and verify the signed record, then submit the same order update when its node resumes.
-
-[3.7 Operating readiness](07-operations.md#durable-queues-and-reconciliation) requires recoverable service state, signing evidence, queue cursors and tested processor reconciliation. A future transfer of payment authority into Freenet also needs authenticated processor-event and custody primitives, alongside the [migration gates in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#recovery-and-authority).
 
 ## Acceptance and evidence
 
@@ -154,7 +146,8 @@ This plan passes when:
 - Backgrounding, termination and node suspension preserve request IDs. Return reconciliation uses signed status and resumes order delivery.
 - Duplicate and reordered webhooks, refund retries and racing workers produce one reconciled financial result.
 - Changed application content, publisher authority or allocation policy during checkout preserves the original attempt's bindings.
-- Wrong-order payment proofs fail. Bridge-key rotation verifies through the root, and revision conflicts pause automated transitions.
-- Refunds and disputes update both the order record and contributor funding, including after payout. The [combined return fixture in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#combined-return-and-refund-fixture) separates seller fee returns from buyer refunds and produces one cash adjustment per processor effect.
+- Release activation and app-specific export/import keep paid-operation bindings.
+- The fixture order contract links the verifier crate. Wrong-order payment proofs fail, order state stays within 32 revision slots per payment, bridge-key rotation verifies through the root, and revision conflicts pause automated transitions.
+- Refunds and disputes update the order record and publish one cash adjustment per processor effect, separating seller fee returns from buyer refunds.
 
-Retain processor test evidence, tested host/Core revisions and real-device results. Stripe documentation describes API behavior, while the service, adapter and signed-status protocol here are planned work. The [Harvest source map in 3.8 Paid application pilot and commercial acceptance](08-marketplace.md#harvest-design-references) records the separate source for embedded payment-proof design.
+Retain processor test evidence, tested host/Core revisions and real-device results. Stripe documentation describes API behavior, while the service, adapter and signed-status protocol here are planned work.
