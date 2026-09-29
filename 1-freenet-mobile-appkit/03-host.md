@@ -143,3 +143,10 @@ Expose per-app connection state, subscription demand, last observation time, pen
 - On iOS and Android, River's first-message notification request and first clipboard use both reach the trusted prompt and store a grant in Core's table. Undeclared requests fail, a stored denial answers without a new prompt, and removing River deletes its grants.
 - Resource-exhaustion and malicious-input tests contain failure to the affected request or session.
 - Each required browser or native admission path passes on the pinned Core build before that profile ships.
+
+## One node per app
+
+| Platform | Node placement | Cross-app requests |
+| --- | --- | --- |
+| iOS | Each app embeds its own node, as a full or thin peer. Apps from one developer team may share one node store in an App Group container, run by whichever app is in the foreground. That app closes the store and releases file locks before suspension. | A foreground app switch through universal links, carrying one request and one reply |
+| Android | Each app embeds its own node. A node app may also offer a bound service that other apps call, protected by a permission. | An intent with a result, or calls to the bound service |
