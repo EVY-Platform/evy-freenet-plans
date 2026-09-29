@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `services/remuneration`: usage contract, bridge and cursors, admission checks, ledger, settlement policy, financial onboarding, payouts, the authenticated recovery endpoint and a fixture completion-evidence producer |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` operation journal gains producer-journal recovery |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the producer journal, which keeps each original signed claim until the service acknowledges it, and producer-journal recovery |
 | `freenet-appkit` | Modified | Host service adapter for signed usage claims |
 
 ## Owned scope
@@ -19,7 +19,7 @@ Use:
 - Contributor key lineage from [3.1 Product and contributor registration](01-registration.md#roles-and-registration-evidence).
 - Attribution snapshots from [3.3 Artifact certification and publication evidence](03-certification.md#certification-records).
 - Fixed payment evidence from [3.4 Payments and checkout adapters](04-payment.md#fixed-checkout-evidence).
-- Operation IDs and journals from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
+- Operation IDs and the paid-operation record from [3.4 Payments and checkout adapters](04-payment.md).
 - Protected identities from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md).
 
 Capability evidence describes domain outcomes independently of UI technology. The service applies the same attester, certified-content, funding and policy checks to custom web and native clients. Optional SDUI evidence integration belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
@@ -29,7 +29,7 @@ Attribution units measure accepted work. Usage credits record verified paid usag
 ## Usage flow
 
 1. Application code obtains domain evidence for the completion condition fixed at checkout. Its authorized delegate or protected signer signs the usage claim.
-2. The application journals the original claim bytes and submits them to the designated Freenet usage contract.
+2. The application saves the original claim bytes in the producer journal and submits them to the designated Freenet usage contract.
 3. The contract validates admission. A bridge subscribes, delivers retained events to remuneration and saves its delivery cursor. Claims awaiting service acknowledgement can also use producer-journal recovery below.
 4. Remuneration verifies payment funding, completion and original attribution bindings, then commits one allocation decision.
 5. The bridge acknowledges processing after commit and periodically scans for missed events.
@@ -168,7 +168,7 @@ This plan passes when:
 - Racing workers, new event IDs and repeated notifications produce one funded allocation per payment/capability/recipient.
 - Unrelated capabilities, unauthorized attesters and incomplete domain outcomes fail eligibility.
 - Checkout requires complete signed policies. A checkout whose policy IDs lack a complete signed settlement or capability-allocation policy fails.
-- Application updates, publisher transfers, key recovery and policy changes preserve the checkout's original evidence and weights.
+- Application updates, key recovery and policy changes preserve the checkout's original evidence and weights.
 - Allocations, reserves, deterministic remainders and unclaimed returns reconcile per payment and currency, including missing weights and on-time claims still awaiting a decision. Cumulative refund-share rounding stays monotone, capped and conserved.
 - Timeout retries create one payout. Duplicate, partial and post-payout reversals retain receipt lineage and respect the recovery policy.
 - A valid claim that is never retained by a saturated contract reaches the service through authenticated journal recovery and receives one allocation. A later bridge delivery returns that decision. Wrong epochs, altered evidence, unauthorized producers and late first receipts receive the same rejection or cutoff treatment on both paths.

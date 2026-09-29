@@ -24,7 +24,7 @@ Prerequisites:
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Canvas, row factories, action editor, design system and schema generation reused; `web/` Developer service clients integrated; `services/attribution` gains the checkpoint-evidence path and checkpoint author registration |
 | `freenet-sdui` | Used | Released schema packages and web reader for preview |
 | `freenet-appkit` | Used | Memory host adapter and publication tooling |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Operation journal in `crates/mobile` from 1.6 Application protocols, data and operations; fdev conformance #5344 and merge properties #5320 for contract tests; traffic issues #5153 and #5050 |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Update handling from 1.6 Application protocols, data and operations; fdev conformance [#5344](https://github.com/freenet/freenet-core/pull/5344) and merge properties [#5320](https://github.com/freenet/freenet-core/issues/5320) for contract tests; traffic issues [#5153](https://github.com/freenet/freenet-core/issues/5153) and [#5050](https://github.com/freenet/freenet-core/issues/5050) |
 
 ## Scope and implementation
 
@@ -60,7 +60,7 @@ Provide recorded user-flow playback and these scenarios:
 - Light, dark and high-contrast themes, large text and right-to-left text.
 - Loading, stale, empty, offline, error, permission-denied and unavailable-adapter states.
 - Sample identities, a River room and domain-specific typed results.
-- Pending, superseded and unresolved operations, with simulated checkout and evidence outcomes when enabled.
+- Drafts, sent updates and rejected sends, with simulated checkout and evidence outcomes when enabled.
 
 Mobile frames approximate layout. Native conformance uses real SwiftUI and Compose test applications. Shared fixtures compare memory preview with live delegate behavior, and fixed clock/locale settings make playback repeatable.
 
@@ -135,7 +135,7 @@ A checkpoint contains canonical entity state, the included operation frontier, c
 
 Coalesce local edits deterministically into bounded checkpoint batches before they become shared signed operations. Shared operations retain their identity. Compaction verifies which operations the source checkpoint includes, then creates an owner-signed successor checkpoint and epoch. Preserve predecessor references and required audit evidence under the project's retention policy.
 
-Use the foundation's operation journal for checkpoint submission and uncertain-outcome reconciliation. The authoring client shows checkpoint outcomes and retries publication through durable host operations. Track a pending save until a verified readback of the expected digest marks it as shared. Local project drafts, mutable shared project state and exact published archives have separate identities and retention rules.
+Checkpoint submission follows [sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates). The authoring client saves each signed checkpoint batch before it submits it, resends those same bytes after a restart and shows checkpoint outcomes. Track a pending save until a verified readback of the expected digest marks it as shared. Local project drafts, mutable shared project state and exact published archives have separate identities and retention rules.
 
 ### Capacity and traffic
 
@@ -145,7 +145,7 @@ The admission and conflict-retention rules must be merge-closed. Any two valid s
 
 Advance a validated checkpoint or split a project before exhausting the published capacity. Bound save batches and enforce update-rate limits in the client and service. Contract validation uses deterministic state rules. The client and service own wall-clock rate enforcement.
 
-Measure payload bytes, protocol overhead and update counts against the published authoring profile. Mobile authoring also inherits the [cellular budgets in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md). The [traffic issue #5153](https://github.com/freenet/freenet-core/issues/5153) and [update-volume issue #5050](https://github.com/freenet/freenet-core/issues/5050) are source context for this batching requirement. Record the measured profile with the checkpoint release.
+Measure payload bytes, protocol overhead and update counts against the published authoring profile. Mobile authoring also inherits the [cellular budgets in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md). The [traffic issue #5153](https://github.com/freenet/freenet-core/issues/5153) and [update-volume issue #5050](https://github.com/freenet/freenet-core/issues/5050) are source context for this batching requirement. Record the measured profile with the checkpoint release.
 
 ### Checkpoint acceptance
 
@@ -153,7 +153,7 @@ Measure payload bytes, protocol overhead and update counts against the published
 - Test malformed signatures, cross-project replay, missing rosters, successor-roster conflicts, stale epochs and removal of a member with offline edits.
 - Concurrent writes, moves and deletions preserve conflicts. Resolution and restoration produce a valid checkpoint with intact evidence.
 - Test broken references, cycles, conflicting IDs and maximum encoded size, including two divergent valid states from one member.
-- Thousands of local edits produce bounded save batches. Restart and uncertain-submission tests recover the journal and verify the saved digest.
+- Thousands of local edits produce bounded save batches. Restart tests resend the saved checkpoint batch and verify the saved digest.
 - Compaction preserves required predecessor evidence, and deterministic export reproduces the same files from the checkpoint and pinned inputs.
 - Single-author and offline checkpoint workflows pass.
 

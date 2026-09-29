@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution`: contribution records, snapshots, publication observations, native artifact records, eligibility lookup and retention |
-| `freenet-appkit` | Modified | Packaging CLI from 1.4 Application bundles gains the independent-node fetch and the `native_links` field in `app_definition.json`. It supplies exact envelope retention and local readback unchanged |
+| `freenet-appkit` | Modified | Packaging CLI from 1.4 Application bundles gains the independent-node fetch and the `native_links` field in `app_definition.json`. It supplies saved copies of the exact envelope and local readback unchanged |
 
 ## Owned scope
 
@@ -13,15 +13,15 @@ The attribution service owns source-to-artifact mappings, contribution records, 
 
 ## Prerequisites
 
-Use the product's [commercial eligibility policy from 3.1 Product and contributor registration](01-registration.md#product-and-identity-records), accepted work from [3.2 Attribution workflow and allocation weights](02-attribution.md) and release tooling from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md). 1.4 Application bundles owns `publication_ref` and the tagged `application_content_ref` format, plus building, signing, submission, exact-envelope retention and publication readback.
+Use the product's [commercial eligibility policy from 3.1 Product and contributor registration](01-registration.md#product-and-identity-records), accepted work from [3.2 Attribution workflow and allocation weights](02-attribution.md) and release tooling from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md). 1.4 Application bundles owns `publication_ref` and the tagged `application_content_ref` format, plus building, signing, submission, saved copies of the exact envelope and publication readback.
 
 ## Additions to the packaging CLI
 
-The packaging CLI in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence) retains each release and reads it back from the publishing node. Verified readback bytes and their envelope are the certification input. This plan adds two things to that CLI.
+The packaging CLI in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence) saves a copy of each release and reads it back from the publishing node. Verified readback bytes and their envelope are the certification input. This plan adds two things to that CLI.
 
 | Addition | What it does |
 | --- | --- |
-| Independent-node fetch | Fetches a published container from a node other than the publishing node. Verifies the signature, version and digest against the retained `publication_ref`, and saves the observing node and time as a publication observation |
+| Independent-node fetch | Fetches a published container from a node other than the publishing node. Verifies the signature, version and digest against the saved `publication_ref`, and saves the observing node and time as a publication observation |
 | `native_links` in `app_definition.json` | Lists publisher-endorsed iOS and Android builds with their build identity, digest and distribution link. A native build is tied to a container only through this endorsement |
 
 ```jsonc
@@ -55,7 +55,7 @@ Attribution consumes bundle evidence in this commercial order:
 
 The contribution record stays outside the archive it certifies. Sign every binding field with a specified, versioned encoding. Repeating an identical certification request returns the existing record. Changed bytes require matching certification and review of changed evidence. Retain source bytes or a verifiable source archive alongside repository references, dependency/build inputs and provenance. A repository URL alone is insufficient recovery evidence.
 
-A publishing-node read proves local acceptance, while an independent-node read proves retrievability at that observation time. The same archive can appear at several container versions, each with its own verified publication observation. Ongoing availability follows the bundle retention and republishing rules.
+A publishing-node read proves local acceptance, while an independent-node read proves retrievability at that observation time. The same archive can appear at several container versions, each with its own verified publication observation. Ongoing availability follows the saved-copy and republishing rules in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#saved-copies-and-recovery).
 
 Native builds use their own artifact certification and publisher/distribution evidence under a declared verification policy. A client-supplied digest becomes verified evidence only after those checks pass.
 
@@ -76,6 +76,6 @@ Retain exact source and artifact bytes, mappings, snapshots, signatures and publ
 
 ## Acceptance
 
-This plan requires changed-byte rejection, idempotent certification and certification from verified local readback while paid eligibility awaits independent observation. A matching later observation can enable paid use under policy. A mismatched observation keeps it pending. Tests also reject absent capabilities, open challenges on included acceptances and unverified native digests, preserve original weights after updates, publisher transfer and commercial suspension, and consume the bundle tooling's uncertain-publication recovery evidence. Independent-node fetch fixtures save the observing node and time, and reject a mismatched signature, version or digest. The packaging CLI rejects a `native_links` entry without a build identity or digest for iOS or Android.
+This plan requires changed-byte rejection, idempotent certification and certification from verified local readback while paid eligibility awaits independent observation. A matching later observation can enable paid use under policy. A mismatched observation keeps it pending. Tests also reject absent capabilities, open challenges on included acceptances and unverified native digests, preserve original weights after updates and commercial suspension, and consume the bundle tooling's uncertain-publication recovery evidence. Independent-node fetch fixtures save the observing node and time, and reject a mismatched signature, version or digest. The packaging CLI rejects a `native_links` entry without a build identity or digest for iOS or Android.
 
 These are planned service requirements. [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md) establishes the publication mechanism. Acceptance must retain tested revisions and results for the certification and service checks.

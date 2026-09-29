@@ -43,7 +43,7 @@ Use TypeScript, React and Vite for the Developer web application, with Bun for d
 5. Request certification and publication verification through attribution's release sequence. Display pending, verified, conflicted and failed results with the evidence needed to resolve them.
 6. Use the services' confirmed records to show commercial eligibility and earnings.
 
-The workspace keeps request IDs and submitted bytes through interrupted requests under [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md). Reconcile an uncertain service or publication result before retrying. CLI/CI credentials have separate scopes for repository access, certification requests and publisher signing. Keep publisher keys and service secrets in their protected stores.
+The workspace keeps request IDs and submitted bytes through interrupted requests. Reconcile an uncertain service or publication result before retrying. CLI/CI credentials have separate scopes for repository access, certification requests and publisher signing. Keep publisher keys and service secrets in their protected stores.
 
 ## Release and earnings screens
 

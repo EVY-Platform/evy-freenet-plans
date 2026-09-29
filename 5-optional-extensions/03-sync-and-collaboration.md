@@ -6,7 +6,7 @@ Optional consumer sync synchronizes selected private application records across 
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains sync group enrollment, encrypted record exchange, key epochs, membership transitions and budget-bound shards; sync delegate RFC #5587, #4560, #5542, #5467, PR #5493 and PR #5728 verified on the selected build |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains sync group enrollment, encrypted record exchange, key epochs, membership transitions and budget-bound shards; sync delegate RFC [#5587](https://github.com/freenet/freenet-core/issues/5587), [#4560](https://github.com/freenet/freenet-core/issues/4560), [#5542](https://github.com/freenet/freenet-core/issues/5542), [#5467](https://github.com/freenet/freenet-core/issues/5467), PR [#5493](https://github.com/freenet/freenet-core/pull/5493) and PR [#5728](https://github.com/freenet/freenet-core/pull/5728) verified on the selected build |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Sync selection, device enrollment and budget screens in the iOS and Android apps |
 | `freenet-app-builder` | Modified | Collaboration-session shard contracts, presence hints and live-session checkpoint commits |
 | [river](https://github.com/freenet/river) | Used | `OutboundDmStore` hidden-thread merge fixture |
@@ -23,7 +23,7 @@ Prerequisites:
 - [2.4 Identity, permissions and device access](../2-evy-mobile-app/04-permissions.md).
 - The Core integrations below.
 
-Mobile sync inherits the required [gate in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md). Consumer sync can ship independently of visual authoring and live collaboration.
+Mobile sync inherits the required [gate in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md). Consumer sync can ship independently of visual authoring and live collaboration.
 
 ### 1. Enrollment and encryption
 
@@ -68,7 +68,7 @@ Enrolled offline devices converge under application merge rules, retain conflict
 
 Consumer tests cover forged enrollment, copied delegate parameters, replayed membership, conflicting rosters, key-epoch changes, long-offline devices, late deletions and interrupted upload. The River fixture preserves outbound plaintext and applies its hide-time rule on both devices.
 
-Measure sync bytes and retry behavior under the approved workload budgets in 1.10 Thin-peer role and cellular data budgets. Test node restart, mobile suspension, unavailable replicas and storage exhaustion. [5.2 Extended customer backup and recovery](02-recovery.md) may retain additional copies, while the sync gate reports its own coverage and recovery prerequisites.
+Measure sync bytes and retry behavior under the approved workload budgets in 1.8 Thin-peer role and cellular data budgets. Test node restart, mobile suspension, unavailable replicas and storage exhaustion. [5.2 Extended customer backup and recovery](02-recovery.md) may retain additional copies, while the sync gate reports its own coverage and recovery prerequisites.
 
 ## Optional real-time collaboration
 

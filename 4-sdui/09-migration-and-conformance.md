@@ -28,9 +28,9 @@ Paid-flow fixtures add [4.7 SDUI commerce and attribution](07-commerce.md). Auth
 
 ## Ownership and scope
 
-The foundation owns contract/delegate re-keying, publisher continuity, protected-record migration, operation journals and atomic installation. This plan adds reader compatibility, screen/form conversion and cross-target fixtures. Application-owned adapters perform domain data conversion under the foundation rules.
+[1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md) owns contract and delegate re-keying and delegate secret migration. This plan adds reader compatibility, screen/form conversion and cross-target fixtures. Application-owned adapters perform domain data conversion under the foundation rules.
 
-Use the same verified screen/action/schema snapshot throughout a session. Activation follows the host's release-switching rules. The selected delegate code, parameters and protocols remain recorded with that session and its durable operations.
+Use the same verified screen/action/schema snapshot throughout a session. Activation follows the host's release-switching rules. The selected delegate code, parameters and protocols remain recorded with that session and its drafts.
 
 ## Compatibility and activation
 
@@ -56,7 +56,7 @@ Keep canonical domain values separate from formatted display strings. Test null,
 
 Validate restored routes and parameters against the activated release. Map a renamed route through an explicit versioned rule, or offer a supported destination with the saved draft retained. Preserve focus and navigation semantics when a compatible page resumes.
 
-A changed draft can start a new operation through the foundation. Submitted operations retain their original identity, payload and protocol/content references. Reader upgrades reconnect to their journal entries and display reconciliation outcomes. [Paid operations under 4.7 SDUI commerce and attribution](07-commerce.md) also retain their original commercial bindings.
+A changed draft signs a new update. Drafts keep their signed bytes and protocol/content references through reader upgrades. [Paid operations under 4.7 SDUI commerce and attribution](07-commerce.md) also keep their original commercial bindings.
 
 ## Cross-target suite
 
@@ -64,7 +64,7 @@ Use shared protocol and behavior fixtures with fixed locale, time zone, clock, r
 
 | Fixture | Required observation |
 | --- | --- |
-| [Atlas in 1.8 Reference apps and compatibility fixtures](../1-freenet-mobile-appkit/08-reference-apps.md) | Equivalent query or update through SDUI and custom web/native controls, preserving the published index identity |
+| Atlas, from [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#atlas-fixture-scope-and-acceptance) | Equivalent query or update through SDUI and custom web/native controls, preserving the published index identity |
 | River signing | Equivalent canonical signing inputs, prepared bytes and observed message result |
 | [Paid pilot in 3.8 Paid application pilot and commercial acceptance](../3-attribution-remuneration-payment/08-marketplace.md) | Equivalent checkout terms, domain completion evidence and original payment bindings |
 | Reader-only and embedded pages | Matching actions and errors while custom entry points, assets and navigation keep working |
@@ -83,5 +83,5 @@ Compare values, domain results, navigation events, operation records and typed e
 - An incompatible update keeps a usable installation and required pending-work artifacts. Rollback follows the foundation's version and authority rules.
 - Updates during a submitted operation retain original operation bindings through reconciliation.
 - Custom web/native acceptance passes alongside reader-only and embedded SDUI tests.
-- Mobile tests run under the required [cellular profile in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md), including reader and archive-update traffic.
+- Mobile tests run under the required [cellular profile in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md), including reader and archive-update traffic.
 - Release reports separate source inspection, compilation, iOS simulator and Android emulator runs and real-device results on both platforms, and list the supported version matrix.

@@ -14,7 +14,7 @@ Prerequisites:
 - [4.1 SDUI format and compatibility](01-format.md)
 - [4.2 SDUI bundles and publication](02-bundles.md)
 
-Mobile releases inherit [1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md).
+Mobile releases inherit [1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md).
 
 ## Repositories
 
@@ -29,7 +29,7 @@ Mobile releases inherit [1.10 Thin-peer role and cellular data budgets](../1-fre
 
 ## Reader boundary
 
-Keep generated models, rendering, action execution and SDK transport in separate packages. Readers draw application content and emit typed events. The [executor in 4.5 SDUI actions and delegate protocols](05-actions.md) runs declared steps through the host. The foundation owns sessions, grants, storage, operation journals, subscriptions and node lifecycle. [4.4 SDUI identity and permissions](04-identity.md) binds the reader to those interfaces.
+Keep generated models, rendering, action execution and SDK transport in separate packages. Readers draw application content and emit typed events. The [executor in 4.5 SDUI actions and delegate protocols](05-actions.md) runs declared steps through the host. The foundation owns sessions, grants, storage, subscriptions and node lifecycle. [4.4 SDUI identity and permissions](04-identity.md) binds the reader to those interfaces.
 
 | Reader function | Browser | iOS | Android |
 | --- | --- | --- | --- |

@@ -36,7 +36,7 @@ Applications adopt this plan when they add SDUI to a commercial flow. The base c
 
 ## Checkout binding
 
-Expose the released host checkout adapter as a versioned service step under [4.5 SDUI actions and delegate protocols](05-actions.md). Bind typed order references, agreed terms and the durable operation handle to the request. The adapter supplies the authenticated application/session context and verified content reference required by the payment service.
+Expose the released host checkout adapter as a versioned service step under [4.5 SDUI actions and delegate protocols](05-actions.md). Bind typed order references, agreed terms and the paid-operation record's operation ID to the request. The adapter supplies the authenticated application/session context and verified content reference required by the payment service.
 
 The host opens the approved checkout destination through its browser or native handoff. [Reader identity bindings in 4.4 SDUI identity and permissions](04-identity.md) enforce the same session and capability checks as other protected steps. Keep processor credentials in the payment service.
 
@@ -44,7 +44,7 @@ Verify the service-signed payment record and display its status using the [canon
 
 A return link selects the order and starts reconciliation. Domain actions follow the order's verified evidence and policy, including its manual-capture rules. Show captured/refunded amounts and disputes from their authoritative fields.
 
-Pending operations retain the original content, contribution-record, snapshot and policy bindings fixed at checkout. A reader, bundle or delegate update resumes that operation through the foundation and payment adapters. The new screen displays its existing bindings.
+Paid operations keep the original content, contribution-record, snapshot and policy bindings fixed at checkout in the [paid-operation record from 3.4 Payments and checkout adapters](../3-attribution-remuneration-payment/04-payment.md). A reader, bundle or delegate update resumes that operation through the payment adapter. The new screen displays its existing bindings.
 
 ## Domain evidence
 
@@ -65,7 +65,7 @@ The repository evidence path maps its reviewed inputs to:
 - Contract/delegate artifacts and any custom web build included in the archive.
 - Capability IDs present in the reviewed contents.
 
-Keep reviewed source evidence, prepared archive, contribution record and publication observation as separate records. The [certification owner in 3.3 Artifact certification and publication evidence](../3-attribution-remuneration-payment/03-certification.md) certifies exact retained archive bytes and verifies publication evidence. A dedicated native build follows its native-artifact policy. The service decides how reviewed SDUI and native artifacts share contribution weights.
+Keep reviewed source evidence, prepared archive, contribution record and publication observation as separate records. The [certification owner in 3.3 Artifact certification and publication evidence](../3-attribution-remuneration-payment/03-certification.md) certifies the exact archive bytes in the packaging CLI's saved copy and verifies publication evidence. A dedicated native build follows its native-artifact policy. The service decides how reviewed SDUI and native artifacts share contribution weights.
 
 Changed source content creates a new evidence revision and requires renewed review. Changed artifact bytes require matching certification of their reviewed source-to-artifact mapping. Browser publication readback and independent-node observation retain their base meanings. Payment eligibility follows the commercial service decision.
 

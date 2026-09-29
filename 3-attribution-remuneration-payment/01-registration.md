@@ -26,7 +26,7 @@ Use protected signing keys and recovery from [1.5 Identity, keys and local prote
 
 [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md) owns `PublicationRef`, the exact publication reference.
 
-Verify product/repository ownership and publisher authority before approving a product-to-container mapping. Retain the signed mapping history. Publisher transfers follow [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md), with separate attribution approval of the successor mapping. Marketplace and River have separate products even when EVY hosts both.
+Verify product/repository ownership and publisher authority before approving a product-to-container mapping. Retain the signed mapping history. Marketplace and River have separate products even when EVY hosts both.
 
 Security permissions and credited capabilities use separate identifiers and schemas.
 

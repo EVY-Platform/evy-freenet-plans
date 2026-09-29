@@ -8,7 +8,7 @@ Prerequisites: [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.m
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Application definition gains the SDUI descriptor; the packaging CLI validates SDUI documents |
+| `freenet-appkit` | Modified | Application definition gains the SDUI descriptor and a `predecessors` list per component; the packaging CLI validates SDUI documents and copies the predecessor registry |
 | `freenet-sdui` | Modified | Validation library consumed by the packager |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev website publish` and the website container as the unchanged publication base |
 
@@ -62,7 +62,7 @@ Apply the foundation's file, download, expansion and memory caps to the complete
 
 ## Publication
 
-Keep predecessor references with the domain artifacts under the [migration rules in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md). SDUI descriptors carry the references needed by the host's shared migration adapter.
+Each contract and delegate entry in the application definition gains a `predecessors` list: the earlier versions of that component. The packaging CLI copies it from the app's [predecessor registry in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#predecessor-registry), and the host's shared migration adapter reads it.
 
 Publication uses the [release tooling in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md).
 

@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Deep-link validation, app management, notification routing and diagnostics export screens in the iOS and Android apps |
 | `freenet-appkit` | Used | Host redaction rules and installation state |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Forget and export policy in `crates/mobile` from 1.5 Identity, keys and local protection; hosted mode #4381 as the reference for external browser handoff |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Forget and export policy in `crates/mobile` from 1.5 Identity, keys and local protection; hosted mode [#4381](https://github.com/freenet/freenet-core/issues/4381) as the reference for external browser handoff |
 | [river](https://github.com/freenet/river) | Used | Invite links as the route validation fixture |
 
 ## Purpose

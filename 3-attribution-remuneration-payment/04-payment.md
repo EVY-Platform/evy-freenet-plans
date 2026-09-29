@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `services/payment`: Stripe Connect Checkout, webhook inbox, refunds, fee-return instruction endpoint, signed status record with its verifier crate, a fixture order contract that links the verifier, Freenet bridge peer and outbox |
 | `freenet-appkit` | Modified | Host checkout adapter: authenticated request binding, native trusted confirmation, browser handoff and return reconciliation |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` operation journal retains the funded content and contribution bindings of paid operations |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the paid-operation record: request, operation, payment and attempt IDs, order, terms digest, return correlation, and the funded `application_content_ref` and contribution bindings |
 
 ## Owned scope
 
@@ -19,7 +19,7 @@ Use:
 - Certification and publication evidence from [3.3 Artifact certification and publication evidence](03-certification.md).
 - The trusted host from [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md).
 - Protected keys from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md).
-- Operation IDs and journals from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
+- Update handling from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
 - Authenticated multi-app sessions from [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md).
 
 Custom web and native application code requests Checkout through an authorized service adapter. Optional SDUI invocation belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
@@ -33,7 +33,7 @@ Custom web and native application code requests Checkout through an authorized s
 5. The adapter opens only the service-returned, validated Stripe HTTPS Checkout URL in the system browser or approved browser session. A browser-only integration uses an authorized host path and popup or redirect compatible with Core's sandbox policy.
 6. The return handler validates its correlation state and routes to the original application and order. It obtains signed status from the payment service, verifies it, and reconciles the order update.
 
-The adapter persists the request ID, operation ID, payment/attempt IDs, order, terms digest and return correlation before leaving the app. It handles the embedded node being suspended or the app being terminated. On return, restore the authenticated session and resume the node under the host's lifecycle policy. Fetch signed service status even when Freenet synchronization is pending. A redirect or a success-looking URL supplies navigation evidence only.
+The adapter saves the request ID, operation ID, payment/attempt IDs, order, terms digest and return correlation in the paid-operation record before leaving the app. It handles the embedded node being suspended or the app being terminated. On return, restore the authenticated session and resume the node under the host's lifecycle policy. Fetch signed service status even when Freenet synchronization is pending. A redirect or a success-looking URL supplies navigation evidence only.
 
 The payment service's Freenet peer publishes signed order updates while the phone is backgrounded. The client can also submit the same signed status after reconnecting. Both paths merge as one payment revision. [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md), [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md) and [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) remain the security boundary. Payment credentials stay in the service's secrets store.
 
@@ -45,9 +45,9 @@ Record these bindings against the operation and agreed terms:
 - The signed contribution record, immutable attribution snapshot and retained source/publication or distribution evidence from [3.3 Artifact certification and publication evidence](03-certification.md#certification-records).
 - Opaque identifiers for the capability-allocation policy, the settlement policy and the usage epoch that apply to this checkout: `allocation_policy_id`, `settlement_policy_id` and `usage_epoch_id`. Payment records them unchanged.
 
-Verify product authority, content eligibility, included capabilities and required completion evidence before accepting a digest or contribution record. Persist the verified signed evidence alongside its IDs. These bindings remain fixed through application updates, different clients, publisher transfer and delayed fulfillment.
+Verify product authority, content eligibility, included capabilities and required completion evidence before accepting a digest or contribution record. Persist the verified signed evidence alongside its IDs. These bindings remain fixed through application updates, different clients and delayed fulfillment.
 
-For paid operations, the `crates/mobile` operation journal from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) retains the funded content and contribution bindings. A newer release that completes an older operation uses the original bindings.
+The paid-operation record in `crates/mobile` also holds the funded `application_content_ref` and contribution bindings. A newer release that completes an older operation uses the original bindings.
 
 Commercial suspension governs new Checkout requests under the product policy. Record the authority and latest verified observation used for that decision. Existing attempts, refunds and settlement keep their recorded bindings.
 

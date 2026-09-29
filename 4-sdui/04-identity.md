@@ -32,17 +32,17 @@ Reader callbacks carry request and session correlation from the adapter. Expired
 
 ## Permission bindings
 
-The bundle declares required and optional capabilities under [4.2 SDUI bundles and publication](02-bundles.md). Components refer to those capabilities by typed name. The host checks the current grant and target before a component uses a protected capability.
+The bundle's `permissions` field in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) declares required and optional permissions. Components refer to those permissions by name. The host checks the current grant and target before a component uses a permission.
 
 | Reader request | Host result | Reader behavior |
 | --- | --- | --- |
-| Use a declared capability | Scoped handle or typed result | Use the handle or result in the component |
-| Use a capability needing consent | Trusted host prompt | Keep the form and show that authorization is pending |
+| Use a granted permission | Scoped handle or typed result | Use the handle or result in the component |
+| Use a permission without a grant | Trusted host prompt | Keep the form and show that authorization is pending |
 | User declines or revokes access | Typed denial | Explain the affected feature and preserve recoverable input |
 | Platform lacks the adapter | Typed unavailable result | Use the declared optional fallback or block the required flow |
 | Session expires or device locks protected data | Typed session or locked-state result | Release protected views and offer the host's resume flow |
 
-The host draws permission, identity-selection, signing-approval and recovery prompts outside publisher-controlled content. The reader can request a prompt and display its result. Trusted host UI supplies the application identity and requested scope. Newly declared access follows the foundation's consent policy.
+The host draws permission, identity-selection, signing-approval and recovery prompts outside publisher-controlled content. The reader can request a permission when a screen needs it, under the [permission request rules in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission), and display the result. Trusted host UI shows the application identity and the requested permission. Newly declared access follows the foundation's consent policy.
 
 A photo picker supplies the chosen item through a bounded handle scoped to the action and session. Camera, files, clipboard, maps, notifications and outside links follow the same adapter boundary. Validate returned handles and targets before use. Media, previews and automatic loads use the host's network policy as well as explicit button actions.
 

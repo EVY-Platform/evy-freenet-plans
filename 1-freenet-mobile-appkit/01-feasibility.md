@@ -6,20 +6,16 @@
 | --- | --- | --- |
 | `freenet-appkit` | Created | iOS and Android WebView demos, measurement harness, support matrix and device results |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | New `crates/mobile` started from clean main, with Pulley conformance runs on iOS and Android |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Rust client API transports and the TypeScript SDK as the protocol comparison baseline |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Pinned compatible version or tested adapter before measurement |
-| [river](https://github.com/freenet/river) | Used | Pinned browser UI and CLI builds for the WebView route |
-| [atlas](https://github.com/freenet/atlas) | Used | Browser Wasm client behind the WebView demos |
 
 ## Purpose
 
 Establish supported River WebView and custom Swift/Kotlin profiles from pinned builds and reproducible real-device evidence. Measure the workloads that set device limits.
 
-## Recorded evidence
+## Things to re-check when we implement this plan
 
 Source versions, local-build notes and issue states here are recorded planning evidence. This plan rechecks them against pinned revisions and real-device results.
 
-| Evidence | What to verify |
+| Evidence | What to re-verify |
 | --- | --- |
 | [Rust client API](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/client_api.rs), [River browser](https://github.com/freenet/river/blob/main/ui/Cargo.toml) and [CLI](https://github.com/freenet/river/blob/main/cli/Cargo.toml) dependencies | Rust stdlib has browser and native transports. Exercise their request encodings and errors with shared fixtures. |
 | Existing [TypeScript SDK](https://github.com/freenet/freenet-stdlib/tree/main/typescript) | Preserve its supported web path and use it as a protocol comparison baseline. |
@@ -97,9 +93,9 @@ stateDiagram-v2
   direction LR
   [*] --> Foreground
   Foreground --> Backgrounding: host backgrounds
-  Backgrounding --> Stopped: journals and drafts saved, transport stopped, Core shut down
+  Backgrounding --> Stopped: drafts saved, transport stopped, Core shut down
   Stopped --> Resuming: host returns
-  Resuming --> Foreground: fresh session, state refreshed, operations reconciled
+  Resuming --> Foreground: fresh session, state refreshed
 ```
 
 #### Message alerts
@@ -130,4 +126,4 @@ For each distribution channel, such as the App Store and Google Play, record the
 
 ## Acceptance
 
-Acceptance requires reproducible device results for both platforms and an explicit supported-profile decision. Compilation establishes build coverage. Device runs establish usable behavior, and [1.9 Developer package and release acceptance](09-release.md) applies the release gates.
+Acceptance requires reproducible device results for both platforms and an explicit supported-profile decision. Compilation establishes build coverage. Device runs establish usable behavior, and [1.9 Testing and release](09-testing-and-release.md) applies the release gates.

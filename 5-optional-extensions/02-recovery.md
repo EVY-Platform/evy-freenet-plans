@@ -11,7 +11,7 @@ Prerequisites:
 - [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
 - [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md) for records spanning component versions.
 
-Mobile use inherits the [gate in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md).
+Mobile use inherits the [gate in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md).
 
 ## Repositories
 
@@ -32,7 +32,7 @@ Mobile use inherits the [gate in 1.10 Thin-peer role and cellular data budgets](
 | Broader recovery | Restore selected apps onto an authorized device, including supported lineage and component migrations |
 | Recovery drills | Prove retained packages and their keys can restore the declared coverage after device loss |
 
-Customer recovery uses the package cryptography, same-key FNSX rule, session renewal and privacy disclosures owned by [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md). Application adapters declare their export/import support and recovery prerequisites. Cross-key delegate imports and publisher continuity follow [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md).
+Customer recovery uses the package cryptography, same-key FNSX rule, session renewal and privacy disclosures owned by [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md). Application adapters declare their export/import support and recovery prerequisites. Cross-key delegate imports follow [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md).
 
 The user selects applications, records and destinations. Each destination states who can read metadata, who holds decryption authority, any service cost, and who retains copies. Automatic backups follow user-approved network, byte, retry and retention limits. On mobile, backup traffic shares the application's budget under [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md).
 
@@ -52,7 +52,7 @@ Keep a verified recoverable copy while a replacement package or destination is b
 
 ## Acceptance
 
-- Restore selected applications on a fresh device after loss of the source device. Report exactly which keys, records and pending operations recovered.
+- Restore selected applications on a fresh device after loss of the source device. Report exactly which keys, records and drafts recovered.
 - Interrupt export, upload, destination changes and restore at each durable boundary. Resume safely and retain the last verified recovery copy.
 - Test an unavailable destination, expired credentials, stale package, lost hardware-bound key, corrupt data and exhausted storage.
 - Revoke a destination and stop subsequent uploads. Report which retained copies remain under that destination's policy.

@@ -20,7 +20,7 @@ This plan owns the executor, its step versions and the typed request/result conv
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-sdui` | Modified | Declared-action executor, its integration into the SwiftUI and Compose readers, step versions, logical resources and query policy, typed delegate convention codecs and the River adapter fixture |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the executor host interface: authority rechecks, journal integration and budget enforcement |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the executor host interface: authority rechecks and budget enforcement |
 | `freenet-appkit` | Modified | Packaging CLI gains action, delegate-schema and resource-target checks |
 | [atlas](https://github.com/freenet/atlas) | Used | Domain operation run through a declared action and custom controls |
 | [river](https://github.com/freenet/river) | Used | Concrete signing protocol behind the adapter fixture |
@@ -50,7 +50,7 @@ Definitions in `ui/sdui/actions/` name resources, input/output schemas and requi
 
 A new composition of supported steps arrives in a bundle. A new primitive requires a released executor implementation. Build the executor into the SwiftUI and Compose readers from [4.3 SDUI hosts and readers](03-readers.md) and ship it with the host application. Native executors update with the host. Bundled browser executors update through verified reader packaging and declare the host capabilities they need.
 
-Definitions, schemas and selected delegate artifacts come from one verified release. Before executing a protected step, including resumed work, the host rechecks session authority, grants and the concrete target. Actions refer to the bundle's declared capabilities by typed name. When the host returns a scoped handle or typed result, the executor continues the declared action. The executor uses the [journal in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) for operation identity, exact submitted bytes, reconciliation and retry. Nested actions declare how their side effects map to those durable operations.
+Definitions, schemas and selected delegate artifacts come from one verified release. Before executing a protected step, including resumed work, the host rechecks session authority, grants and the concrete target. Actions refer to the bundle's declared permissions by name. When the host returns a scoped handle or typed result, the executor continues the declared action. The executor follows [sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates): it saves prepared bytes with the draft before it submits them and resends those same bytes after a restart. Nested actions declare the updates their side effects send.
 
 For example, `river.sendMessage` reads the room, sends typed signing arguments to the chat delegate, validates the prepared result and requests submission. A later view shows the host's observed outcome. `river.createRoom` can use a delegate's authorized Core request to create the room under the domain's contract and parameter rules.
 
@@ -77,22 +77,21 @@ Ship domain decoding and protocol translation in the application's verified dele
 | --- | --- | --- |
 | Protocol version | Selected SDUI-facing convention and domain-schema versions | Echoed |
 | Request ID | Unique within the active session | Echoed |
-| Operation reference | Durable foundation operation ID when the call changes state | Preserved in the corresponding operation result |
 | Body | Typed arguments and bounded source-record bytes | Typed projection, prepared bytes and target, or structured error |
 
-Transport request IDs correlate one exchange. Durable operation IDs follow the user operation across retries and restarts under the foundation rules. Pure view calls use request correlation without allocating a mutation journal entry.
+Transport request IDs correlate one exchange.
 
-Specify canonical encodings, numeric ranges, byte ownership and error variants. Distinguish permission denial, unavailable adapter, invalid input, protocol mismatch, conflict and uncertain outcome. Bound payload and delegate-context sizes by both the selected Core version and the reader profile. Use the delegate-context limit recorded in [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) and pin the effective value in release fixtures.
+Specify canonical encodings, numeric ranges, byte ownership and error variants. Distinguish permission denial, unavailable adapter, invalid input, protocol mismatch and conflict. Bound payload and delegate-context sizes by both the selected Core version and the reader profile. Use the delegate-context limit recorded in [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) and pin the effective value in release fixtures.
 
 Reject conflicting reuse of a request ID, unknown handles, mismatched protocols and expired-session completions. Validate the complete result before exposing it to bindings or starting a side effect. Measure copies across the SDK boundary for large records.
 
-Domain adapters own record decoding, source identity and signature checks, canonical signing inputs, projections, business calculations, preparation and reconciliation. A prepared update still passes host authorization and contract validation. Contracts enforce the shared-state rules for every writer.
+Domain adapters own record decoding, source identity and signature checks, canonical signing inputs, projections, business calculations, preparation and merge-result handling. A prepared update still passes host authorization and contract validation. Contracts enforce the shared-state rules for every writer.
 
 ## Execution limits and security
 
 Treat definitions and results as untrusted input. Validate action names, arguments, declared data paths, returned targets and prepared bytes. A delegate-proposed shard or contract reference must fit the declared resource and query policy before the host fetches or submits it. A side effect requested by a deep link passes the declared-action and host authorization checks.
 
-Run bounded work away from the UI thread. Apply host limits for storage, subscriptions, event frequency, memory and device operations as well as the executor's own work limits. Cancel overdue work and report which budget ended it. Preserve the durable operation journal for work already prepared or submitted. Direct networking, native objects and signing keys stay behind approved interfaces.
+Run bounded work away from the UI thread. Apply host limits for storage, subscriptions, event frequency, memory and device operations as well as the executor's own work limits. Cancel overdue work and report which budget ended it. Keep the saved prepared bytes of work already prepared. Direct networking, native objects and signing keys stay behind approved interfaces.
 
 ## Acceptance
 
@@ -104,5 +103,5 @@ Run bounded work away from the UI thread. Apply host limits for storage, subscri
 - The packager rejects mismatched action/delegate schemas and undeclared resource access before publication.
 - Reader-requested initialization and delegate registration pass the foundation's permission tests.
 - Malformed results, forged authority, undeclared targets, conflicting request IDs and excessive nested work fail before unauthorized effects.
-- Revocation during an action or queued operation stops newly unauthorized steps. The foundation continues tracking any submitted mutation.
-- Duplicate, canceled, unsolicited and late responses reach only their valid handler. Retry and restart cases retain the foundation's operation identity and exact prepared bytes.
+- Revocation during an action stops newly unauthorized steps. An update Core already answered stays in the node's copy.
+- Duplicate, canceled, unsolicited and late responses reach only their valid handler. Retry and restart cases resend the exact saved prepared bytes.

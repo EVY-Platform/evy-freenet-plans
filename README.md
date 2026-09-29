@@ -24,7 +24,7 @@ Start with River running on a reusable mobile AppKit, then extend it into a host
 
 Package a single defined application for iOS and Android. As MVP we will use river's signed web UI run in an in-app WebView served by the embedded node but enable developers to build custom Swift/Kotlin screens against the SDK.
 
-1.9 Developer package and release acceptance delivers the developer release on the default node role. 1.10 Thin-peer role and cellular data budgets adds the thin-peer role and is the production mobile release gate.
+1.8 Thin-peer role and cellular data budgets makes the phone a thin peer. 1.9 Testing and release then tests River and Atlas on it and releases the developer package.
 
 ```mermaid
 flowchart LR
@@ -43,9 +43,8 @@ flowchart LR
 - [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md)
 - [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md)
 - [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md)
-- [1.8 Reference apps and compatibility fixtures](1-freenet-mobile-appkit/08-reference-apps.md)
-- [1.9 Developer package and release acceptance](1-freenet-mobile-appkit/09-release.md)
-- [1.10 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/10-thin-peer.md)
+- [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md)
+- [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md)
 
 ### 2. EVY mobile app
 
@@ -95,9 +94,9 @@ Add screen definitions, readers and visual authoring to the released platform. A
 | Plan | Scope | Prerequisites |
 | --- | --- | --- |
 | [5.1 Peer reputation](5-optional-extensions/01-reputation.md) | Private evidence, purpose-bound proofs and disclosure policy | Protected identity in 1.5 Identity, keys and local protection, authenticated host access in 1.3 Single-application host and application-defined evidence |
-| [5.2 Extended customer backup and recovery](5-optional-extensions/02-recovery.md) | Automated backups, selected destinations and cross-app recovery | App-specific recovery, durable operations, supported migrations, 2.2 Multi-application sessions and authority, and 2.4 Identity, permissions and device access |
-| [5.3 Device sync and authoring collaboration](5-optional-extensions/03-sync-and-collaboration.md) | Consumer device sync and opt-in authoring sessions, with separate gates | Identity, durable operations, 2.2 Multi-application sessions and authority, 2.4 Identity, permissions and device access, and verified Core sync support for consumer sync. Released 4.8 EVY Developer visual authoring and checkpoints for collaboration |
-| [5.4 Discovery and catalogue extensions](5-optional-extensions/04-discovery.md) | Replaceable search providers and signed catalogue updates | Milestone 2 (EVY mobile app) installation, sessions, permissions, lifecycle and navigation, plus the Atlas fixtures in 1.8 Reference apps and compatibility fixtures |
+| [5.2 Extended customer backup and recovery](5-optional-extensions/02-recovery.md) | Automated backups, selected destinations and cross-app recovery | App-specific recovery, offline sends, supported migrations, 2.2 Multi-application sessions and authority, and 2.4 Identity, permissions and device access |
+| [5.3 Device sync and authoring collaboration](5-optional-extensions/03-sync-and-collaboration.md) | Consumer device sync and opt-in authoring sessions, with separate gates | Identity, offline sends, 2.2 Multi-application sessions and authority, 2.4 Identity, permissions and device access, and verified Core sync support for consumer sync. Released 4.8 EVY Developer visual authoring and checkpoints for collaboration |
+| [5.4 Discovery and catalogue extensions](5-optional-extensions/04-discovery.md) | Replaceable search providers and signed catalogue updates | Milestone 2 (EVY mobile app) installation, sessions, permissions, lifecycle and navigation, plus the Atlas fixtures in 1.9 Testing and release |
 
 #### Upstream suggestions
 

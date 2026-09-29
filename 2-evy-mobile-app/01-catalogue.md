@@ -16,7 +16,7 @@ Own the EVY shell: home, the hardcoded River and Atlas catalogue entries, settin
 
 ## Prerequisites
 
-[1.9 Developer package and release acceptance](../1-freenet-mobile-appkit/09-release.md), with the [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md) and [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md) it accepts.
+[1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md), with the [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md) and [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md) it accepts.
 
 ## Catalogue and shell
 

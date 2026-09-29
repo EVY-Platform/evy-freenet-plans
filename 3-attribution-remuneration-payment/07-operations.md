@@ -20,7 +20,7 @@ Use the service records and invariants defined by:
 - [3.4 Payments and checkout adapters](04-payment.md)
 - [3.5 Usage evidence, remuneration and payouts](05-remuneration.md)
 
-[1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md) owns application operation IDs and producer journals. Service development can proceed against test environments while operators complete the launch decisions below.
+[3.4 Payments and checkout adapters](04-payment.md) owns paid-operation records and [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) owns producer journals. Service development can proceed against test environments while operators complete the launch decisions below.
 
 ## Launch decisions
 

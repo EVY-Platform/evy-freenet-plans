@@ -7,7 +7,7 @@ This plan adds optional application search to the [EVY home in 2.1 EVY shell and
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Search provider interface, provider settings, result presentation and signed catalogue updates in the iOS and Android apps |
-| [atlas](https://github.com/freenet/atlas) | Used | Search provider under the fixtures in 1.8 Reference apps and compatibility fixtures |
+| [atlas](https://github.com/freenet/atlas) | Used | Search provider under the fixtures in 1.9 Testing and release |
 | `freenet-appkit` | Used | Verified installation and reference inspection from 2.3 Installation and updates and 2.6 Navigation and application management |
 | `evy-marketplace` | Modified | Listing search through user-chosen regional and category index providers |
 
@@ -23,7 +23,7 @@ Prerequisites:
 - [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md).
 - [2.6 Navigation and application management](../2-evy-mobile-app/06-navigation.md).
 
-Atlas provider adoption also requires [1.8 Reference apps and compatibility fixtures](../1-freenet-mobile-appkit/08-reference-apps.md) for the selected provider revision.
+Atlas provider adoption also requires [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md) for the selected provider revision.
 
 ### Scope
 
@@ -52,7 +52,7 @@ Marketplace from [3.8 Paid application pilot and commercial acceptance](../3-att
 - Substituted references, malformed records, invalid catalogue signatures, replayed versions and same-version conflicts fail visibly before activation.
 - Marketplace listing results open only after the delegate verifies their signed listing state.
 - Opening a result preserves host authority, permission prompts and app/user/session isolation. Catalogue changes preserve pending work and installed app data.
-- Provider queries, catalogue fetches and retries stay within per-provider allocations and the shared [upload/download and total cellular limits in 1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md), including reconnect and serving-peer loss.
+- Provider queries, catalogue fetches and retries stay within per-provider allocations and the shared [upload/download and total cellular limits in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md), including reconnect and serving-peer loss.
 - Users can inspect the selected provider and understand which query data it receives. Cached results identify their source and observation time.
 
 Record provider and catalogue versions, trust configuration, workload limits and test results before enabling the extension.

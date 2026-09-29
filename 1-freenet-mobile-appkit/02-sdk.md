@@ -6,15 +6,10 @@
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts |
 | `freenet-appkit` | Modified | Swift package and Kotlin library that wrap the bindings, package the XCFramework and AAR builds |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API requests and replies, matched to each other by the SDK's per-contract queue |
 
 ## Purpose
 
 Manage embedded Core, transport, lifecycle and platform bindings. The app supplies storage paths. Core verifies contract state and executes delegates on the device.
-
-## Prerequisites
-
-Compatible versions and profiles from [1.1 Mobile feasibility and supported profiles](01-feasibility.md).
 
 ## Owned API
 
@@ -26,6 +21,7 @@ Compatible versions and profiles from [1.1 Mobile feasibility and supported prof
 | Subscribe and release | Return owned handles, count them per session and contract, and close the subscription when the last handle is released. |
 | Register, unregister and message delegates | Authenticate the app/user/session and call the [authority hook](#caller-hooks) before each delegate call. |
 | Delegate startup and prompts | Call the [policy hook](#caller-hooks) for installation and permission decisions, including approved foreground startup. |
+| Permission requests | Pass the app's request for a declared permission to the [policy hook](#caller-hooks) and return granted, denied or unavailable, under the [permission rules in 1.3 Single-application host](03-host.md#asking-for-a-permission). |
 | Events and cancellation | Include SDK request and session identity, typed errors and submission uncertainty. Deliver callbacks on the platform's expected executor and reject expired-session callbacks. |
 
 #### Build
@@ -66,24 +62,30 @@ Freenet stdlib plans a client Unsubscribe request ([stdlib wire-format pins #95]
 
 #### Caller hooks
 
-The code that embeds the SDK supplies three hooks. The SDK calls each one and acts on its answer.
+The code that embeds the SDK supplies two hooks. The SDK calls each one and acts on its answer.
 
 | Hook | When the SDK calls it | What the SDK does with the answer |
 | --- | --- | --- |
 | Authority | Before each delegate call | Sends the call only when the hook allows it |
-| Policy | Before delegate installation, startup and prompts | Applies the installation and permission decision the hook returns |
-| Flush | On stop | Waits until the hook reports that the caller's work is saved |
+| Policy | Before delegate installation, startup, prompts and permission requests | Applies the installation and permission decision the hook returns |
+
+```mermaid
+sequenceDiagram
+  participant App as River UI
+  participant SDK
+  participant Host as Host (hook owner)
+  App->>SDK: message chat delegate
+  SDK->>Host: authority hook
+  Host-->>SDK: allow or deny
+  SDK->>SDK: send to Core only if allowed
+```
 
 ## Runtime, packaging and lifecycle
 
 #### Packaging
 
-| Platform | Package | Builds |
-| --- | --- | --- |
-| iOS | XCFramework in the Swift package | Device and simulator |
-| Android | AAR in the Kotlin library | Device and emulator, for each selected processor type (ABI) |
-
-Build scripts produce identical bindings from the same source and publish a checksum for each package.
+- **iOS**: XCFramework in the Swift package
+- **Android**: AAR in the Kotlin library, for each selected processor type (ABI)
 
 #### Running Wasm
 
@@ -93,7 +95,10 @@ The node runs standard contract and delegate Wasm on the phone. iOS uses the [Pu
 | --- | --- | --- |
 | Memory per Wasm instance | 256 MiB | Set from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements |
 | State per contract | 50 MiB | Set from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements |
-| Compiled module cache | Sized from Linux cgroup limits | Explicit size, because iOS has no cgroups |
+| Compiled module cache | Sized from Linux cgroup limits | Explicit size, because iOS has no cgroups that could cap memory, CPU and disk access |
+| Wasm execution time | 5 seconds of wall-clock time | Set from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements |
+
+Set limits for concurrent requests, response size and delegate event frequency from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements. The host enforces them for each app.
 
 Keep compiled modules on the phone and key them by engine version, so an engine update recompiles them. Check that timeouts, memory limits, cancellation and shutdown return the same bytes and errors on phones as on desktop.
 
@@ -118,14 +123,14 @@ stateDiagram-v2
   Stopping --> Stopped
 ```
 
-On stop, the SDK waits for the [flush hook](#caller-hooks), then drops callbacks and releases the port, runtime and store locks. Test killing the app in every state.
+On stop, the SDK drops callbacks and releases the port, runtime and store locks. Test killing the app in every state.
 
 When Alice's phone moves from Wi-Fi to cellular, the SDK:
 
 1. Rejoins the network.
 2. Restores her subscription to "Skate club".
 3. Fetches the latest room state.
-4. Hands control back to River, which then retries her pending messages.
+4. Hands control back to River. Core sends the room's peers any messages Alice sent while offline.
 
 #### Keys
 
@@ -138,7 +143,7 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 ## Acceptance
 
 - Concurrent requests stay isolated: two screens reading the same contract each get their own result, and a late reply after a timeout never reaches a queued request. Real delegate calls succeed, cancellation is safe, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes on iOS and Android.
-- A test policy supplies the authority, policy and flush hooks. Delegate calls run only when the test policy allows them, and stop waits for the test flush hook.
+- A test policy supplies the authority and policy hooks. Delegate calls run only when the test policy allows them.
 - CI runs a two-peer contract exchange, leak checks with thresholds tuned to measured noise, the update key-learning fallback and binding generation.
 
-Regression sources: [response correlation #5048](https://github.com/freenet/freenet-core/issues/5048), [streaming PUT #5458](https://github.com/freenet/freenet-core/issues/5458), [UPDATE lookup #5475](https://github.com/freenet/freenet-core/pull/5475), [timeout uncertainty #3465](https://github.com/freenet/freenet-core/issues/3465), [wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951) and [missed updates #4681](https://github.com/freenet/freenet-core/issues/4681). Record the pinned revision and outcome when testing each behavior.
+Regression sources: [response correlation #5048](https://github.com/freenet/freenet-core/issues/5048), [streaming PUT #5458](https://github.com/freenet/freenet-core/issues/5458), [UPDATE lookup #5475](https://github.com/freenet/freenet-core/pull/5475), [timeout uncertainty #3465](https://github.com/freenet/freenet-core/issues/3465), [wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951), [missed updates #4681](https://github.com/freenet/freenet-core/issues/4681) and [delegate unsubscribe #5600](https://github.com/freenet/freenet-core/issues/5600). Record the pinned revision and outcome when testing each behavior.

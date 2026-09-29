@@ -8,7 +8,7 @@
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Catalogue entry and pilot wiring in the iOS and Android apps; the attribution, payment and remuneration services serve the pilot |
 | `freenet-appkit` | Used | Bundles and the checkout adapter from milestone 1 (Freenet mobile AppKit) and milestone 3 (Attribution, remuneration and payment) |
 | [harvest](https://github.com/freenet/harvest) | Used | Design references listed at the end of this plan |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Host authority and journals in `crates/mobile` from milestone 1 (Freenet mobile AppKit); hosting and eviction #4642 and local pin #5041 as retention references |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Host authority in `crates/mobile` from milestone 1 (Freenet mobile AppKit) and the paid-operation record from 3.4 Payments and checkout adapters; hosting and eviction [#4642](https://github.com/freenet/freenet-core/issues/4642) and local pin [#5041](https://github.com/freenet/freenet-core/issues/5041) as retention references |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Migration from 1.7 Upgrades and migration |
 
 ## Owned scope
@@ -27,7 +27,7 @@ Use the curated River and Atlas host from [2.1 EVY shell and curated catalogue](
 - [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md)
 - [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md)
 
-The mobile run requires [1.10 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/10-thin-peer.md).
+The mobile run requires [1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md).
 
 Commercial acceptance requires:
 
@@ -142,7 +142,7 @@ Use a reviewed, versioned cryptographic profile. Authenticate routing/context fi
 
 Apply limits before expensive parsing, key derivation or decryption. Encrypt allowed attachments separately and address them by ciphertext digest. Encrypt names, previews and sensitive metadata. Enforce count, byte, decode, CPU and download limits in the trusted host, including during malformed-record floods. Cache deterministic refusals to avoid repeated expensive work.
 
-A signed admission receipt means the recipient verified and persisted a record locally. It records delivery rather than agreement, payment, dispatch or handover. Commit the processed-operation marker and resulting local state atomically. Retrying a processed record returns its saved result. Each side effect uses a stable operation ID under [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
+A signed admission receipt means the recipient verified and persisted a record locally. It records delivery rather than agreement, payment, dispatch or handover. Commit the processed-operation marker and resulting local state atomically. Retrying a processed record returns its saved result. Each side effect uses a stable operation ID. Paid effects keep it in the paid-operation record from [3.4 Payments and checkout adapters](04-payment.md).
 
 Sender queues survive restart and uncertain submission. Re-fetch state, obtain delegate reconciliation and republish eligible pending records within budgets, including a bounded previous-generation window. A local deadline stops retries. Participant schedules describe agreed appointments. Contract expiry follows the evidence rules in [bounded transport](#public-first-contact-and-bounded-transport).
 
@@ -194,7 +194,7 @@ Application updates retain the payment's fixed content, contribution snapshot an
 
 ## Migration and evidence retention
 
-Contract code changes create new instance identities. Preserve predecessor code hashes, original parameter encodings and actual instance references under [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md). Select recovery per contract. Snapshot records select the newest compatible generation. Signed event histories require merge, deletion-marker and conflict tests.
+Contract code changes create new instance identities. Record each earlier contract version in the predecessor registry under [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#predecessor-registry). Select recovery per contract. Snapshot records select the newest compatible generation. Signed event histories require merge, deletion-marker and conflict tests.
 
 Validate recovered state, publish it and verify readback before changing indexes or pointers or recording success. Track local bundle installation, shared-contract migration and delegate-secret transfer separately. Check protocol compatibility before adopting domain artifacts. Tests include sellers offline across versions, mixed-version participants, full continuation pages and private-key migration.
 
@@ -230,7 +230,7 @@ This plan passes when one certified custom web release completes the [pilot sequ
 - Fixed-price listing, public first contact, manual pickup agreement and both participants' signed completion evidence. Requests for unapproved modes fail before commitment or checkout.
 - Forged callers, revoked permissions, terminated sessions, seller endpoint substitution, wrong buyers, counterparty substitution, incomplete signed terms, replayed claims and payment proofs for another order.
 - Duplicate Checkout, webhook, domain and usage events, racing workers, processor uncertainty and return without signed payment evidence.
-- App termination, backgrounded node, outages and update/publisher transfer between checkout and fulfillment.
+- App termination, backgrounded node, outages and an app update between checkout and fulfillment.
 - Altered terms, concurrent commitments, premature disputes, partial/full refunds, failed fulfillment, chargebacks and the [combined unclaimed-return/partial-refund/post-payout fixture in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#combined-return-and-refund-fixture).
 - Listing spam, blocked senders, peer-exposure disclosures, reports, manual moderation decisions and appeals under the pilot policy.
 - Protected evidence recovery, encrypted logistics and attachments, declared public links, reported deletion failures, exhausted storage and loss of every retained copy.

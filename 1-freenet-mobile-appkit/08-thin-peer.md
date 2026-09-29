@@ -1,4 +1,4 @@
-# 1.10 Thin-peer role and cellular data budgets
+# 1.8 Thin-peer role and cellular data budgets
 
 ## Repositories
 
@@ -6,22 +6,44 @@
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin role in the connect protocol, connection manager, ring and serving-peer selection, subscription delivery and lifecycle configuration; cellular budget accounting, cap enforcement and role and traffic diagnostics |
 | `freenet-appkit` | Modified | Workload test definitions for the iOS and Android device runs |
-| [paper-1](https://github.com/freenet/paper-1) | Used | Peers and ring section as the single-role baseline |
-| [river](https://github.com/freenet/river) | Used | Join, read and send flows from 1.8 Reference apps and compatibility fixtures as the active-use workload |
 
 ## Purpose
 
-Add thin-peer networking within cellular budgets to the developer release in [1.9 Developer package and release acceptance](09-release.md). The acceptance of this plan is the production mobile release gate. Milestone 1 (Freenet mobile AppKit) proves the thin role on real iOS and Android devices. Full-peer phone profiles are development-only.
+This plan makes the phone's node a thin peer on iOS and Android, and keeps its cellular data use inside set budgets. River is the first app. When Bob reads and posts in "Skate club" on his phone:
 
-## Prerequisites
+```mermaid
+flowchart LR
+  subgraph phone["Bob's phone (thin peer)"]
+    river["River"] --> core["Core checks the room, keeps its copy and runs the chat delegate"]
+  end
+  core <-->|"Bob's reads, writes and subscriptions"| serving["Serving full peer"]
+  serving <-->|"Routing and hosting"| peers["Other full peers"]
+```
 
-The developer release in [1.9 Developer package and release acceptance](09-release.md), the workloads and device matrix from [1.1 Mobile feasibility and supported profiles](01-feasibility.md), SDK integration from [1.2 Embedded node and mobile SDK](02-sdk.md), and upstream agreement on the Core role protocol. The production release gate in this plan needs upstream support and passing budgets.
+- The phone sends and receives Bob's own traffic only. Full peers route and host for the rest of the network.
+- The phone counts every byte it sends and receives on cellular. When a budget runs out, it pauses network work, keeps Bob's drafts and shows the cap and what lets it resume.
 
-Status: proposed Core work and a production release blocker. The evidence recorded on 2026-09-22 identifies [smartphone discussion #811](https://github.com/freenet/freenet-core/discussions/811) as the nearest upstream thread, with a dedicated thin-role issue pending filing. The [whitepaper's peers and ring section](https://github.com/freenet/paper-1/blob/main/sections/03-primitives.tex) describes a single peer role. These are recorded findings. Recheck them against the selected Core revision and record the proposal issue and accepted protocol before release.
+Phones run in the thin role for all testing and for the release of milestone 1 (Freenet mobile AppKit). Only development fixture profiles can run a phone as a full peer.
+
+| Part | Section |
+| --- | --- |
+| What the phone does, what the serving peer does and the Core changes | [Scope and trust boundary](#scope-and-trust-boundary) |
+| Byte limits per workload, how to count bytes and what happens at a cap | [Cellular budget contract](#cellular-budget-contract) |
+| The upstream proposal and carrier issues | [Upstream work and carrier evidence](#upstream-work-and-carrier-evidence) |
+
+This plan is proposed Core work. Its acceptance needs upstream agreement on the thin-role protocol, and device runs that pass the budgets.
+
+| Upstream source | State on 2026-09-22 |
+| --- | --- |
+| [Smartphone discussion #811](https://github.com/freenet/freenet-core/discussions/811) | Nearest upstream thread |
+| Thin-role proposal issue | To be filed |
+| [Whitepaper peers and ring section](https://github.com/freenet/paper-1/blob/main/sections/03-primitives.tex) | Describes one peer role |
+
+Before this plan's acceptance runs, recheck these against the pinned Core build, then link the proposal issue and the accepted protocol here.
 
 ## Scope and trust boundary
 
-A thin peer opens terminal connections to serving full peers for its own reads, writes and subscriptions. On-device Core retains contract verification, delegate execution, signing and protected secrets. Serving full peers handle onward routing, fallback routing, hosting and subscription roots. Treat returned state as input for local verification.
+A thin peer opens terminal connections to serving full peers for its own reads, writes and subscriptions. On-device Core retains contract verification, its copy of each subscribed contract, delegate execution, signing and protected secrets. Serving full peers handle onward routing, fallback routing, hosting and subscription roots. Treat returned state as input for local verification.
 
 | Core area | Required change |
 | --- | --- |
@@ -30,7 +52,7 @@ A thin peer opens terminal connections to serving full peers for its own reads, 
 | Ring and serving-peer selection | Assign network routing/hosting to full peers. Bound serving connections, selection attempts and retries, with capacity and reachability errors. |
 | Subscription delivery | Deliver only authorized active demand down terminal edges. Define unsubscribe, resubscribe and cleanup after disconnect. |
 | Lifecycle and configuration | Persist the selected role, release downstream state and preserve thin behavior across startup and Wi-Fi/cellular changes. |
-| SDK and diagnostics | Expose negotiated role, serving state, traffic counters, exhausted budgets and actionable failure reasons. Add budget failures to the diagnostic reports from 1.9 Developer package and release acceptance. |
+| SDK and diagnostics | Expose negotiated role, serving state, traffic counters, exhausted budgets and actionable failure reasons. Add budget failures to the [diagnostics in 1.3 Single-application host](03-host.md#diagnostics). |
 
 An unsupported protocol or role fails visibly and retries within the configured budget while preserving the thin role. Exhausted attempts leave a visible disconnected state and retain local work. Only explicit development-fixture profiles may request a full-peer role.
 
@@ -38,7 +60,7 @@ Specify how thin nodes reach gateways and select replacement serving peers, incl
 
 ## Cellular budget contract
 
-Numerical thresholds, supported carriers, device coverage and test durations remain to be established. 1.1 Mobile feasibility and supported profiles supplies repeatable workloads and measurements. This plan owns explicit upload/download ceilings and enforcement. Approve them before the production release gate in this plan.
+Numerical thresholds, supported carriers, device coverage and test durations remain to be established. 1.1 Mobile feasibility and supported profiles supplies repeatable workloads and measurements. This plan owns explicit upload/download ceilings and enforcement. Approve them before this plan's acceptance runs.
 
 | Workload | Fix in the test definition | Required limits and measurements |
 | --- | --- | --- |
@@ -55,7 +77,7 @@ Attribute app traffic where possible and charge shared overhead once to the tota
 
 Reserve bounded upload/download allowances inside the caps for counter delay, in-flight packets and teardown. Set byte and time limits from device measurements. Trigger cap enforcement when the remaining upload or download budget reaches its reserve, leaving that allowance to complete shutdown within the hard cap.
 
-1. Persist usage and the exhausted-budget state, pause queued network work and retain durable operations. Show the cap and the condition for resuming.
+1. Persist usage and the exhausted-budget state, pause queued network work and keep drafts and the phone's copy of each contract. Show the cap and the condition for resuming.
 2. Release affected downstream subscription demand and require serving peers to stop delivery. Close affected serving connections if release is unavailable, unconfirmed or traffic continues, within the reserved byte/time limits. Count teardown and late packets against the reserve.
 3. At a node-wide cap, release all downstream demand and close all cellular serving connections.
 4. Stop automatic reconnects, resubscriptions and retries for the exhausted scope. Preserve this state through restart, foreground resume and network changes. Resume only when the approved budget policy grants a new allowance, using the thin role and normal reconciliation rules.
@@ -68,15 +90,12 @@ Recorded carrier evidence includes [mobile network restrictions #5051](https://g
 
 ## Acceptance
 
-This acceptance is the production mobile release gate.
-
-- The [1.9 Developer package and release acceptance checklist](09-release.md#acceptance) passes again on iOS and Android in the thin role.
 - Upstream thin-role support is implemented in the pinned Core build.
-- Real iOS and Android devices complete River's [flows in 1.8 Reference apps and compatibility fixtures](08-reference-apps.md#river-acceptance-cases) through terminal connections while Core verifies state and runs signing delegates locally.
+- On real iOS and Android devices, Bob joins "Skate club", reads it and sends a message through terminal connections. Core verifies state and runs River's chat delegate on the phone.
 - Traces show application traffic and bounded protocol overhead on the phone. Serving full peers handle onward routing and network hosting.
 - Unsupported roles, incompatible versions and exhausted serving capacity produce visible failures. Retry, restart, resume and network-change tests preserve the thin role.
 - Malformed state, wrong contract identities and forged updates fail on-device validation. Serving peers receive only the application's authorized network payloads, while signing keys stay in the on-device protected boundary.
 - Idle, active, reconnect, serving-peer-loss and accounting-overhead tests pass their approved upload/download budgets and total cellular caps. Publish workload definitions, revisions, devices, carriers, durations and traces with the results.
-- Loss of a serving peer preserves pending operation identity, refreshes state and reconciles outcomes before safe retry. Repeated losses exhaust bounded attempts visibly.
+- Loss of a serving peer keeps sent messages in the phone's copy of the room, refreshes state and sends them through the replacement serving peer. Repeated losses exhaust bounded attempts visibly.
 - Keep remote publishers sending continuously as the upload and download stop thresholds are reached in separate runs. Test working, unavailable and unconfirmed subscription release. Network-layer traces must show terminal delivery ending within the teardown deadline and reserved bytes, with total use inside the hard caps. Continued publisher activity must leave the capped phone connection stopped.
-- Restart, foreground resume and Wi-Fi/cellular changes preserve the exhausted state and suppress automatic traffic until a new allowance permits it. Retain pending operation IDs and exact bytes throughout.
+- Restart, foreground resume and Wi-Fi/cellular changes preserve the exhausted state and suppress automatic traffic until a new allowance permits it. Keep drafts and the phone's copy of each room throughout.
