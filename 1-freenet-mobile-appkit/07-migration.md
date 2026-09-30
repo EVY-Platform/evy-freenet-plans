@@ -50,7 +50,7 @@ Two kinds of entry need their own handling:
 
 ### Delegate secret export and import
 
-Apps move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River and Delta do. It reads each old delegate through the app's own messages, writes through the new delegate's own handler, and marks each old key done. The old delegate's data stays in place. For River this moves the [chat delegate's](https://github.com/freenet/river/blob/main/delegates/chat-delegate/README.md) `rooms_data`, which holds Alice's room and signing keys, private room secrets and outbound DMs.
+Apps move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River and Delta do. It reads each old delegate through the app's own messages, writes through the new delegate's own handler, and marks each old key done. The old delegate's data stays in place. For River this moves the [chat delegate's](https://github.com/freenet/river/blob/main/delegates/chat-delegate/README.md) per-room `room:<owner key>` entries, which hold Alice's room and signing keys and private room secrets, `rooms_meta`, which holds her room order and notification settings, and `outbound_dms`, which holds her outbound DMs.
 
 Secrets pass through the app in plain text during the move, so the app's privacy notes say so. Same-key backup and restore belongs to [1.5 Identity, keys and local protection](05-identity.md).
 

@@ -14,15 +14,15 @@ A server-driven UI system ensures consistent design and allows contributors and 
 
 The launch product is a Marketplace for buying and selling locally. It arranges pickup as signed structured terms, and it shows the exact address only to the two people meeting.
 
-**Why Freenet fits EVY very well**: Freenet distributes applications through its peer network with verified authorship, this means the app is distributed by the community, not a single entity. Its delegate system keeps private data and signing keys on the device, exactly as EVY intended with its device-only privacy.
+Freenet fits EVY well. It distributes applications through its peer network with verified authorship, so the community distributes each app, not a single company. Its delegates keep private data and signing keys on the device, which is the device-only privacy EVY needs.
 
 ## Roadmap
 
-Start with River running on a reusable mobile AppKit, then extend it into a host that runs River and Atlas. The last piece before we can go live is to add contribution and payment services with a Marketplace pickup pilot. At this point we should be able to go live to real customers with an MVP! The next milestones are optional but build important pieces on the EVY ecosystem that we should build shortly after.
+Start with River running on a reusable mobile AppKit, then extend it into EVY, a host that runs River and Atlas. The last piece before going live is contribution and payment services with a Marketplace pickup pilot. At that point we can go live to real customers with an MVP. The next milestones are optional, but they build pieces of the EVY ecosystem that we should build shortly after.
 
 ### 1. Freenet mobile AppKit
 
-Package 2 defined application for iOS and Android, bundled into a single mobile app. As MVP we will use River and Atlas web UI run in an in-app WebView served by the embedded node but enable developers to build custom Swift/Kotlin screens against the SDK.
+Package River for iOS and Android as one mobile app. River's web UI runs in an in-app WebView served by the embedded node, and developers can build custom Swift and Kotlin screens against the SDK.
 
 ```mermaid
 flowchart LR
@@ -46,61 +46,103 @@ flowchart LR
 
 ### 2. EVY mobile app
 
-Build a curated multi-application host on the released AppKit. Ship hardcoded full application IDs for River and Atlas. Each resolves to a verified signed website with its own UI in a separate, isolated in-app WebView session. Both apps share one embedded thin node.
+Rebuild EVY's iOS app and build its Android app on the AppKit from milestone 1 (Freenet mobile AppKit). EVY lists River and Atlas and opens each in its own in-app WebView. Both apps run on one embedded thin-peer node inside EVY.
+
+```mermaid
+flowchart LR
+    EVY[EVY on iOS and Android] --> River[River WebView]
+    EVY --> Atlas[Atlas WebView]
+    River --> Node[One embedded thin-peer node]
+    Atlas --> Node
+    Node --> Full[Serving full peers]
+```
 
 - [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md)
-- [2.2 Multi-application sessions and authority](2-evy-mobile-app/02-sessions.md)
-- [2.3 Installation and updates](2-evy-mobile-app/03-installation-and-updates.md)
-- [2.4 Identity, permissions and device access](2-evy-mobile-app/04-permissions.md)
-- [2.5 Shared node, data and lifecycle](2-evy-mobile-app/05-lifecycle.md)
-- [2.6 Navigation and application management](2-evy-mobile-app/06-navigation.md)
-- [2.7 Multi-application acceptance](2-evy-mobile-app/07-acceptance.md)
+- [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md)
+- [2.3 Testing and release](2-evy-mobile-app/03-testing-and-release.md)
 
 ### 3. Attribution, remuneration and payment
 
-Connect repository work to certified application releases, paid usage and contributor payouts. EVY Developer supports code-based contribution and release workflows. Applications use custom web or native code and concrete domain protocols. Attribution can support publishing independently. The Marketplace pickup pilot requires the full commercial flow.
+Pay contributors when their code is used in a paid sale. Carol's pull request that reworks River's "Invite member" screen earns her attribution units. Marketplace then runs the first paid flow. Alice sells a skateboard to Bob for 70 dollars, and the 1% contributor fee of 0.70 dollars pays the contributors whose code the sale used.
 
-| Plan | Owned scope |
-| --- | --- |
-| [3.1 Product and contributor registration](3-attribution-remuneration-payment/01-registration.md) | Product authority, contributor identity, ownership evidence and roles |
-| [3.2 Attribution workflow and allocation weights](3-attribution-remuneration-payment/02-attribution.md) | Proposals, reviews, size decisions, challenges, acceptances and exact weights |
-| [3.3 Artifact certification and publication evidence](3-attribution-remuneration-payment/03-certification.md) | Source-to-artifact mappings, contribution records, snapshots and paid eligibility |
-| [3.4 Payments and checkout adapters](3-attribution-remuneration-payment/04-payment.md) | Trusted checkout, contributor-fee collection, cash adjustments and signed status |
-| [3.5 Usage evidence, remuneration and payouts](3-attribution-remuneration-payment/05-remuneration.md) | Usage claims, allocations, fee-return calculations, balances and payouts |
-| [3.6 Contribution and release workspace](3-attribution-remuneration-payment/06-developer.md) | EVY Developer, repository and CLI/CI workflows |
-| [3.7 Operating readiness](3-attribution-remuneration-payment/07-operations.md) | Financial service operations, backups, restore drills, queues and key recovery |
-| [3.8 Paid application pilot and commercial acceptance](3-attribution-remuneration-payment/08-marketplace.md) | Marketplace pickup pilot, bounded fulfillment protocol and expansion gates |
+```mermaid
+flowchart LR
+    PR[Pull request] --> Accepted[Accepted work and weights]
+    Accepted --> Release[Certified release]
+    Release --> Checkout[Bob pays in the native payment sheet]
+    Checkout --> Handover[Alice and Bob sign the handover]
+    Handover --> Allocation[Fee allocated to contributors]
+    Allocation --> Payout[Payout]
+```
+
+- [3.1 Contributor registration and attribution](3-attribution-remuneration-payment/01-attribution.md)
+- [3.2 Release certification](3-attribution-remuneration-payment/02-certification.md)
+- [3.3 Marketplace pickup protocol](3-attribution-remuneration-payment/03-marketplace-protocol.md)
+- [3.4 Payments and checkout](3-attribution-remuneration-payment/04-payment.md)
+- [3.5 Remuneration and payouts](3-attribution-remuneration-payment/05-remuneration.md)
+- [3.6 EVY Developer contribution workspace](3-attribution-remuneration-payment/06-developer.md)
+- [3.7 Operating readiness](3-attribution-remuneration-payment/07-operations.md)
+- [3.8 Marketplace pickup pilot](3-attribution-remuneration-payment/08-marketplace-pilot.md)
 
 ### 4. SDUI
 
-Add screen definitions, readers and visual authoring to the released platform. Applications choose SDUI for complete interfaces or selected pages, with readers for browsers, iOS and Android. Repository-authored SDUI uses CLI/CI publication independently of visual authoring.
+Describe screens as data. One screen then runs in the web reader that ships in the app's release bundle and in the native readers built into EVY on iOS and Android. Carol rebuilds River's "Invite member" screen as an SDUI screen in EVY Developer, River publishes it in its next release, and Alice opens it in a browser and in EVY on iOS and Android.
 
-| Plan | Scope |
-| --- | --- |
-| [4.1 SDUI format and compatibility](4-sdui/01-format.md) | Screens, components, navigation and accessibility |
-| [4.2 SDUI bundles and publication](4-sdui/02-bundles.md) | SDUI artifacts, schema packaging and publication |
-| [4.3 SDUI hosts and readers](4-sdui/03-readers.md) | Browser, SwiftUI and Compose readers, web reader packaging and SDK adapters |
-| [4.4 SDUI identity and permissions](4-sdui/04-identity.md) | Reader bindings to host sessions, grants and protected operations |
-| [4.5 SDUI actions and delegate protocols](4-sdui/05-actions.md) | Declared-action executor and typed domain convention |
-| [4.6 SDUI data and operation presentation](4-sdui/06-data.md) | Views, forms, local state and operation-status presentation |
-| [4.7 SDUI commerce and attribution](4-sdui/07-commerce.md) | Optional checkout, domain evidence and artifact integration |
-| [4.8 EVY Developer visual authoring](4-sdui/08-developer.md) | Canvas, schema editors, preview, import and durable checkpoints |
-| [4.9 SDUI migration and conformance](4-sdui/09-migration-and-conformance.md) | Form upgrades, reader compatibility and cross-target tests |
+```mermaid
+flowchart LR
+    Dev[EVY Developer or the repository] --> Files[ui/sdui/ in the release bundle]
+    Files --> Web[Web reader in ui/sdui/web/]
+    Files --> iOS[SwiftUI reader in EVY iOS]
+    Files --> Android[Compose reader in EVY Android]
+    Web --> Host[Host session, delegates and contracts]
+    iOS --> Host
+    Android --> Host
+```
+
+- [4.1 SDUI format](4-sdui/01-format.md)
+- [4.2 SDUI readers](4-sdui/02-readers.md)
+- [4.3 SDUI actions and data](4-sdui/03-actions-and-data.md)
+- [4.4 SDUI bundles and publication](4-sdui/04-bundles.md)
+- [4.5 EVY Developer visual authoring](4-sdui/05-developer.md)
+- [4.6 SDUI testing and release](4-sdui/06-testing-and-release.md)
 
 ### 5. Optional extensions
 
-| Plan | Scope | Prerequisites |
-| --- | --- | --- |
-| [5.1 Peer reputation](5-optional-extensions/01-reputation.md) | Private evidence, purpose-bound proofs and disclosure policy | Protected identity in 1.5 Identity, keys and local protection, authenticated host access in 1.3 Single-application host and application-defined evidence |
-| [5.2 Extended customer backup and recovery](5-optional-extensions/02-recovery.md) | Automated backups, selected destinations and cross-app recovery | App-specific recovery, offline sends, supported migrations, 2.2 Multi-application sessions and authority, and 2.4 Identity, permissions and device access |
-| [5.3 Device sync and authoring collaboration](5-optional-extensions/03-sync-and-collaboration.md) | Consumer device sync and opt-in authoring sessions, with separate gates | Identity, offline sends, 2.2 Multi-application sessions and authority, 2.4 Identity, permissions and device access, and verified Core sync support for consumer sync. Released 4.8 EVY Developer visual authoring and checkpoints for collaboration |
-| [5.4 Discovery and catalogue extensions](5-optional-extensions/04-discovery.md) | Replaceable search providers and signed catalogue updates | Milestone 2 (EVY mobile app) installation, sessions, permissions, lifecycle and navigation, plus the Atlas fixtures in 1.9 Testing and release |
+Short plans cover work with a clear next user. Idea notes record research and wait until an app shows the need.
 
-#### Upstream suggestions
+- [5.1 Automated backup](5-optional-extensions/01-backup.md)
+- [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md)
+- [5.3 Device sync](5-optional-extensions/03-sync.md)
+- [5.4 Peer reputation](5-optional-extensions/04-reputation.md) (idea note)
+- [5.5 Live authoring collaboration](5-optional-extensions/05-collaboration.md) (idea note)
+- [5.6 Shared identity and payment](5-optional-extensions/06-identity-and-payment.md) (idea note)
 
-| Suggestion | Repository | What it enables |
+## Upstream suggestions
+
+The plans need these changes in projects EVY does not own. New code in Core's `crates/mobile` is listed in each plan's Repositories table instead.
+
+| Change | Repository | Needed by |
 | --- | --- | --- |
-| Request IDs on client API replies: the client sets an ID on each contract request, and the node copies it into the reply | [freenet-stdlib](https://github.com/freenet/freenet-stdlib), with node support in [freenet-core](https://github.com/freenet/freenet-core) | The SDK in [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests) sends parallel requests of the same type for one contract, where today it queues them |
+| Request IDs on client API replies. The client sets an ID on each contract request, and the node copies it into the reply | [freenet-stdlib](https://github.com/freenet/freenet-stdlib), with node support in [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests), to send parallel requests of the same type for one contract |
+| Resolve gateway hostnames in the join loop, so the node starts offline | [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md) |
+| Look up each Wasm instance's memory address again after every call, so each instance reserves only the memory it uses | [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md) |
+| Keychain and Keystore backends for the node encryption key | [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md) |
+| App permission codes and a public API on the grant table | [freenet-core](https://github.com/freenet/freenet-core) | [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md) |
+| Lock and unlock on `SecretsStore` | [freenet-core](https://github.com/freenet/freenet-core) | [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md) |
+| Thin-peer role and cellular budget enforcement | [freenet-core](https://github.com/freenet/freenet-core) | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md) |
+| `SecretScope::User` usable from `crates/mobile`, without hosted mode's 30-day cleanup and 4 MiB cap | [freenet-core](https://github.com/freenet/freenet-core) | [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md) |
+| Core moves delegate secrets to a new delegate key ([RFC #5255](https://github.com/freenet/freenet-core/issues/5255)) | [freenet-core](https://github.com/freenet/freenet-core) | [4.4 SDUI bundles and publication](4-sdui/04-bundles.md#publication) |
+| Sync delegate ([RFC #5587](https://github.com/freenet/freenet-core/issues/5587)) | [freenet-core](https://github.com/freenet/freenet-core) | [5.3 Device sync](5-optional-extensions/03-sync.md) |
+| Release build ships `app_definition.json` and publishes through the packaging CLI | [river](https://github.com/freenet/river) | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md) |
+| Chat delegate subscribes to rooms the user owns, River PUTs a lost room back, and River saves drafts and signed messages waiting to be sent in the chat delegate | [river](https://github.com/freenet/river) | [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md) |
+| Moderation in River's UI, a support URL and child-safety standards | [river](https://github.com/freenet/river) | [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md) |
+| Invite links built from a link base the host supplies | [river](https://github.com/freenet/river) | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md) |
+| `app_definition.json` declares `river.member.invite`, and the release build rebuilds to the same file digests | [river](https://github.com/freenet/river) | [3.2 Release certification](3-attribution-remuneration-payment/02-certification.md) |
+| Chat delegate messages `CreateInvitation` and `PrepareMessage` | [river](https://github.com/freenet/river) | [4.3 SDUI actions and data](4-sdui/03-actions-and-data.md) |
+| Unhides saved in `outbound_dms`, merging of concurrent record copies and a "Link a device" page | [river](https://github.com/freenet/river) | [5.3 Device sync](5-optional-extensions/03-sync.md) |
+| Separate test index for compatibility fixtures | [atlas](https://github.com/freenet/atlas) | [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md) |
+| `app_definition.json`, publication through the packaging CLI, a Report button on each entry and a support page | [atlas](https://github.com/freenet/atlas) | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md) |
+| A starting search query read from `#q=` in the URL | [atlas](https://github.com/freenet/atlas) | [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md) |
 
 ## Sources
 
@@ -109,4 +151,7 @@ Add screen definitions, readers and visual authoring to the released platform. A
 - [River](https://github.com/freenet/river)
 - [Atlas](https://github.com/freenet/atlas)
 - [Harvest](https://github.com/freenet/harvest)
-- And every associated discussions, issues, PRs and RFCs
+- [Delta](https://github.com/freenet/delta)
+- [Ghostkeys](https://github.com/freenet/ghostkeys)
+- [freenet-migrate](https://github.com/freenet/freenet-migrate)
+- The related discussions, issues, pull requests and RFCs

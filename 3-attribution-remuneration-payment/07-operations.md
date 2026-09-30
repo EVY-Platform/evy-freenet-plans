@@ -4,125 +4,88 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Backups, inbox and outbox reconciliation, restore drill tooling with a fixture historical transaction, key rotation and runbooks across `services/attribution`, `services/payment` and `services/remuneration` |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `docker-compose.prod.yml` gets a named Postgres volume and pgBackRest archiving, plus a restore drill script, key runbooks and backup alerts for `services/attribution`, `services/payment` and `services/remuneration` |
+| `evy-marketplace` | Used | The drill checks Alice's and Bob's order contract after it republishes the signed payment record |
 
-## Owned scope
+## Purpose
 
-Financial service backups, restore drills, durable queues, reconciliation, audit retention and signing-key operations are mandatory for milestone 3 (Attribution, remuneration and payment). Optional customer backup extensions belong to [5.2 Extended customer backup and recovery](../5-optional-extensions/02-recovery.md).
+This plan makes the three EVY services from [3.1 Contributor registration and attribution](01-attribution.md), [3.2 Release certification](02-certification.md), [3.4 Payments and checkout](04-payment.md) and [3.5 Remuneration and payouts](05-remuneration.md) ready to hold real money. It owns the one list of launch approvals, the recovery targets, the backups, the restore drill and custody of the service keys.
 
-## Prerequisites
+In the first real sale, Alice sells her skateboard for 70 dollars, Bob pays through Stripe and the 0.70-dollar contributor fee reaches the contributors. After a database loss, the operator restores that sale with no second charge and no second payout.
 
-Use the service records and invariants defined by:
+## Launch approvals
 
-- [3.1 Product and contributor registration](01-registration.md)
-- [3.2 Attribution workflow and allocation weights](02-attribution.md)
-- [3.3 Artifact certification and publication evidence](03-certification.md)
-- [3.4 Payments and checkout adapters](04-payment.md)
-- [3.5 Usage evidence, remuneration and payouts](05-remuneration.md)
+The operator records each approval in the evy repository with the approver, the date and a link to the evidence. Live payments start only when every row is approved.
 
-[3.4 Payments and checkout adapters](04-payment.md) owns paid-operation records and [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) owns producer journals. Service development can proceed against test environments while operators complete the launch decisions below.
+| Approval | Approver | Evidence |
+| --- | --- | --- |
+| Operators | Service operator | A named primary and backup operator for each service |
+| Stripe account and country | Financial operations lead | Stripe Connect approval for one country and currency, and a test onboarding of a seller like Alice and a contributor like Carol |
+| App store payment rules | Financial operations lead | A physical-goods sale paid outside in-app purchase on iOS and Android, under the Apple and Google rules cited in 3.4 Payments and checkout |
+| Money rules | Financial operations lead | The signed product policy from 3.1 Contributor registration and attribution, who pays Stripe's fee from 3.4 Payments and checkout, and the negative balance after a refund after payout from 3.5 Remuneration and payouts |
+| Retention | Financial operations lead | How long each record kind in [What each service backs up](#what-each-service-backs-up) is kept |
+| Recovery | Service operator | A passing [restore drill](#restore-drills) that meets the targets below |
+| Keys | Service operator | A named holder for each key in [Service keys](#service-keys) |
 
-## Launch decisions
+## Recovery targets
 
-| Responsibility | Required owner and launch evidence |
-| --- | --- |
-| Service operations | Named primary and backup operators, access controls, incident contact and escalation path |
-| Processor and region support | Verified seller and contributor onboarding, supported countries/currencies/methods, account capabilities and processor approval |
-| Mobile distribution | Review of payment handoff and supported product categories against applicable platform and regional policy |
-| Financial policy | Approved settlement values, processor-cost budget, reserves, payout schedule and refund/recovery responsibilities |
-| Recovery | Numeric recovery point and recovery time targets for each service, backup cadence and a passing restore drill |
-| Privacy and retention | Data inventory, access roles, retention periods, deletion handling and audit access |
-| Service capacity | Queue, storage and contract bounds with measured alert thresholds and an overload response |
+The recovery point is the most recent work a restore may lose. The recovery time runs from the loss to the service taking requests again.
 
-Record each decision's approver, date, environment and evidence. Set numerical targets before launch and measure drills against them. Supported-region and processor checks are release gates, with approval recorded for the actual operating model.
+| Service | Recovery point | Recovery time | Why |
+| --- | --- | --- | --- |
+| Payment | 1 minute | 2 hours | Bob cannot pay while it is down |
+| Remuneration | 1 minute | 24 hours | Payouts run on the product policy's schedule and can wait a day |
+| Attribution | 1 minute | 24 hours | Reviews and certification can wait a day |
 
-## Durable queues and reconciliation
+Work lost inside the recovery point comes back from Stripe, which [lists events for up to 30 days](https://docs.stripe.com/api/events/list), and from the saved signed bytes.
 
-Each service commits its authoritative state and outbound work in one local transaction. Use inbox/outbox delivery with stable event IDs, durable cursors and acknowledgements after commit. Delivery is at least once, so consumers enforce their own uniqueness constraints.
+## What each service backs up
 
-| Path | Recovery evidence |
-| --- | --- |
-| Repository to attribution | Verified source revision, original signed requests, ownership evidence and authoritative decision |
-| Payment webhook inbox | Original raw payload, signature-verification result, processor account/event ID and processing state |
-| Payment to order contract | Target order, original signed status bytes, payment ID and revision |
-| Remuneration to payment | Authenticated fee-return instruction, original receipt, calculation basis, beneficiary and reserved amount |
-| Payment to processor | Purchase/application-fee refund and destination-transfer references, stable request IDs and reconciled cash effects |
-| Payment to remuneration | Immutable fee receipt/cash-adjustment IDs, kinds, revisions and acknowledgement |
-| Usage contract or producer journal to remuneration | Original contract/epoch and event bytes, bridge cursor or authenticated recovery receipt, and committed decision |
-| Remuneration to processor | Contributor payout references, reservations and reconciled outcomes |
+Today the evy [`docker-compose.prod.yml`](https://github.com/EVY-Platform/evy/blob/main/docker-compose.prod.yml) runs `postgres:16` with no named volume and no backup, so all data lives on one host. This plan gives each service its own database on a named volume. [pgBackRest](https://pgbackrest.org/) archives the write-ahead log with `archive_timeout = 60`, takes a daily full backup and writes both, encrypted, to an S3-compatible bucket in a second region. The bucket keeps 30 days of point-in-time restore and one monthly full backup for the approved retention period.
 
-After a timeout, reconcile the existing operation before creating a replacement. Bound retry rates and queue growth, quarantine invalid messages with reasons and retain the exact evidence for review. Alert on oldest pending work, repeated rejection, revision conflicts, unreconciled processor balances and low reserve coverage.
+| Service | Records | Defined in |
+| --- | --- | --- |
+| Attribution | Products, contributor keys, Carol's "Invite member" proposal with its review and size, product policy versions, contribution records, snapshots, and the saved archive bytes of each certified version | 3.1 Contributor registration and attribution, 3.2 Release certification |
+| Payment | Stripe object IDs for Bob's payment, the webhook inbox, every signed payment record revision and the outbox to the order contract | 3.4 Payments and checkout |
+| Remuneration | Allocations of the 0.70-dollar fee, balances, payouts and reversals | 3.5 Remuneration and payouts |
 
-Run scheduled reconciliation across processor objects, fee receipts, signed payment revisions, usage decisions and payout reservations. Follow the [refund flow in 3.4 Payments and checkout adapters](04-payment.md#refunds-and-fee-returns) for purchase/application-fee cash execution and [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) for calculations, allocation effects and contributor payouts. Operational recovery uses those same service authorities. Freenet delivery can resume separately from processor accounting. Status screens distinguish a service-confirmed result from pending network publication.
-
-## Backups and exact evidence
-
-Back up transactional databases with the uniqueness constraints and reservation state needed to replay safely. Keep encrypted, access-controlled copies in an independent failure domain. Verify backup integrity and restore compatibility after schema changes.
-
-Retain:
-
-- Product mappings, contributor key lineage, role decisions, proposal evidence and signed resolutions.
-- Exact reviewed source archives, source-to-build mappings, build inputs, certified artifact bytes, snapshots and contribution records.
-- Signed publication envelopes, publication observations, native distribution evidence and historical verification policies.
-- Payment terms, original checkout bindings, signed status revisions, key succession chains and processor inbox/outbox records.
-- Usage events, authenticated producer-recovery receipts and receipt times, completion evidence, allocation decisions, fee-return instructions, immutable cash adjustments, balances, reservations and payout lineage.
-- Queue cursors, acknowledged boundaries, schema/codec versions and the configuration required to reproduce validation.
-
-Apply each record's legal, support and transaction-evidence retention period. A hash verifies bytes that are available. Restore coverage includes the bytes and verification context needed for historical transactions, even after the live container advances or a repository/archive disappears.
-
-Back up signing and encryption material under a separate controlled recovery procedure. Test who can decrypt the backups and how access is revoked. Protect processor credentials and legal identity records separately from public audit exports. A backup containing encrypted data needs the corresponding key recovery path.
+The website container keeps only its latest version, so the saved archive bytes are the only copy of the version Bob bought from.
 
 ## Restore drills
 
-Run a drill before live money, after material storage/key changes and on the operator's published schedule.
+The operator runs a drill before the first live payment, after each schema or key change and every 3 months. The first drill uses a Stripe test-mode sale of the skateboard. Later drills use the real sale.
 
-1. Restore into an isolated environment with outbound payments and publication paused.
-2. Verify backup integrity, schema versions, actor lineage, signing chains, constraints and ledger totals by currency.
-3. Verify a fixture historical transaction from exact source/artifact bytes through certification, payment terms, completion evidence and allocation. The fixture uses the fixture order contract from [3.4 Payments and checkout adapters](04-payment.md) and the fixture completion-evidence producer from [3.5 Usage evidence, remuneration and payouts](05-remuneration.md). Its live publication has advanced and its primary archive is unavailable.
-4. Reconcile restored processor references against current processor objects before enabling any financial side effect. Recover events committed after the backup from durable evidence and processor history.
-5. Replay inboxes and outboxes from retained cursors. Duplicate events, competing workers and restored reservations must produce the same financial result.
-6. Republish retained Freenet records with their original IDs, revisions and signed bytes. Verify order and usage synchronization separately.
-7. Record achieved recovery point/time, evidence gaps, operator decisions and approvals to resume.
+| Step | Action | Check |
+| --- | --- | --- |
+| 1. Restore | Restore all three databases to a chosen time in an isolated environment. The services use a Stripe [restricted key](https://docs.stripe.com/keys) with read access only, and Freenet publishing is off | pgBackRest `verify` passes and schema versions match |
+| 2. Totals | Sum the ledgers | Totals per currency match the totals recorded at the restore point |
+| 3. Sale | Recompute the sale from saved bytes after the website container has moved to a newer version | The contribution record, the 0.70-dollar fee and each contributor's allocation match the originals |
+| 4. Stripe | Apply Stripe events newer than the restore point through the webhook inbox | Every payment, application fee, transfer and payout in Stripe matches one service record |
+| 5. Replay | Run every outbox twice | No second charge, allocation or payout |
+| 6. Freenet | Republish the latest signed payment record for Bob's order with the same bytes | The order contract accepts it or already holds it |
+| 7. Record | Write down the achieved recovery point and time | Both meet the targets above |
 
-A missing receipt, uncertain payout or conflicting signed revision remains held for reconciliation. Restore completion requires a recorded decision for every unresolved financial item and a safe operating state.
+Any record without a match stays on hold. Stripe write access stays off until the operator has decided each held record.
 
-## Signing keys and access
+## Service keys
 
-Separate publisher, attribution, payment bridge and remuneration statement keys. Scope production access by service and role. Record key IDs, algorithms, custody, rotation authority and recovery coverage.
+Each service signing key lives in a cloud key service that signs on request, so no host sees the private key. The publisher key belongs to the product publisher and has its tested backup under [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#saved-copies-and-recovery). Carol's contributor key stays on her laptop, as 3.1 Contributor registration and attribution sets.
 
-Payment order parameters keep the fixed bridge root key. Normal rotation appends predecessor-signed succession records, and new status records carry the chain required by [3.4 Payments and checkout adapters](04-payment.md#signed-payment-status). Retain verification keys and historical signatures for the evidence period. Test rotations against order and usage record size bounds before deployment.
+| Key | Service | Signs | Rotation | If it leaks |
+| --- | --- | --- | --- | --- |
+| Certification key | Attribution | Contribution records and snapshots | Yearly and after each leak | Pause certification, rotate, re-check records signed since the leak |
+| Payment root key | Payment | Certificates for payment signing keys | Kept for the life of each order, because its accepted terms name it | Pause checkout, name a new root key in new terms, review payment records in open orders |
+| Payment signing key | Payment | Signed payment records in the order contract | Yearly and after each leak, by a new certificate from the root key | Pause checkout and record signing, certify a new signing key, review records signed since the leak |
+| Backup key | All | pgBackRest encryption | After each operator change | Start a new pgBackRest repository under a new key, take a full backup, then remove the old repository |
+| Stripe secret key and webhook secret | Payment | Stripe API calls and webhook checks | [Roll in Stripe](https://docs.stripe.com/webhooks), which keeps the old webhook secret valid for up to 24 hours | Roll at once with no overlap |
 
-A compromise or loss of the active signer needs a separate incident decision. Pause affected signing and new operations, preserve evidence, identify which attestations require review and use only the recovery authority the protocol can verify. A normal successor signature alone supplies no independent proof that a compromised predecessor was trustworthy. Publish the supported compromise response before launch, including any new-contract or customer action it requires.
-
-Rotate processor credentials and webhook secrets with a tested overlap and verification procedure. Audit administrative access, payout-destination changes, recovery decisions and policy approvals. Use protected secrets storage and redacted diagnostics.
-
-## Audit and failure runbooks
-
-Keep append-only audit events for policy changes, role changes, certifications, funding adjustments, reconciliation and manual resolutions. Each event identifies its actor, reason, related immutable IDs and signed evidence. Preserve service statements and export enough evidence to reproduce a decision without exposing customer payloads or processor secrets.
-
-| Incident | Required response |
-| --- | --- |
-| Processor timeout or outage | Preserve attempt/reservation, show uncertainty and reconcile before retrying |
-| Freenet outage or cold-state loss | Queue status delivery, retain service accounting and republish verified evidence within budgets |
-| Duplicate or reordered input | Replay through the canonical idempotent processing path |
-| Capacity or admission saturation | Preserve producer journals and use remuneration's bounded authenticated recovery path within the original epoch and claim cutoff |
-| Signed revision conflict | Hold affected automated actions, retain witnesses and require authorized resolution |
-| Refund or chargeback after payout | Reconcile payment's cash adjustments, then apply remuneration's allocation and reserve/recovery rules once per adjustment |
-| Database or queue loss | Restore in isolation, reconcile external effects and resume after approval |
-| Signing-key incident | Pause affected operations and execute the supported rotation/compromise procedure |
-| Identity or payout recovery | Verify lineage and financial authority before changing destinations or releasing held funds |
+For any leak the operator records the decision before resuming the service.
 
 ## Acceptance
 
-This plan passes when:
-
-- Operators approve the region, processor, distribution and financial policy checklist for the first launch.
-- Every financial store, queue and required evidence archive has a tested backup and named owner.
-- Restore drills meet the approved recovery targets and reproduce historical certification and allocation from exact bytes.
-- Replay after restoration, outage or worker races preserves one checkout attempt, allocation and payout result.
-- Key rotation preserves historical verification within wire limits, and the compromise runbook has an exercised response.
-- The [combined return and refund fixture in 3.5 Usage evidence, remuneration and payouts](05-remuneration.md#combined-return-and-refund-fixture) survives queue replay and restore, preserving seller returns, buyer refunds and contributor recovery separately.
-- A claim never retained in its usage contract reaches remuneration through the authenticated recovery path. Restore preserves its timely receipt and deduplicates later contract delivery.
-- Audit exports preserve lineage while excluding protected customer data and secrets.
-
-Acceptance records include drill and processor evidence. Financial recovery readiness is part of the commercial release.
+- Every service database restores within its recovery point and recovery time in a drill.
+- The drill reproduces the skateboard sale's contribution record, 0.70-dollar fee and allocation from saved bytes after the website container has moved to a newer version.
+- Replaying outboxes after a restore creates no second Stripe charge, allocation or payout.
+- A refund after contributor payout, as 3.5 Remuneration and payouts sets it, survives a restore and a replay with the same result.
+- A leaked-key drill pauses payment record signing and resumes under a new signing key that the order contract accepts through the root key.
+- Every launch approval has an approver, a date and evidence before the first live payment.

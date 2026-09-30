@@ -1,83 +1,62 @@
-# 3.6 Contribution and release workspace
+# 3.6 EVY Developer contribution workspace
 
 ## Repositories
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `web/` Developer workspace, repository integration and merge checks, CLI and CI clients with scoped credentials |
-| `freenet-appkit` | Used | Bundle tooling that CLI and CI drive for artifacts and publication |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `web/` gains the EVY Developer workspace screens for proposals, release history, earnings and payouts, beside the existing builder. New `evy login` and `evy earnings` commands in the EVY Developer CLI. Both call `services/attribution`, `services/payment` and `services/remuneration` unchanged |
+| `freenet-appkit` | Used | The packaging CLI's publication and certification request |
+| [river](https://github.com/freenet/river) | Used | Carol's "Invite member" pull request and River version 1790640000 as the worked example |
 
-## Owned scope
+## Purpose
 
-EVY Developer connects repository work to contribution review, certified releases and earnings. Developers write custom web or native application code in their chosen tools and use concrete application protocols.
+This plan builds the screens and CLI commands where a contributor follows her work from pull request to certified release and earnings. Carol opens a pull request to River that reworks the "Invite member" screen. She tracks its review in the workspace, sees River version 1790640000 certified with her work in it, and sees the 6.8 units she earned. River has no paid operations, so Carol's River credit stays in units.
 
-Optional visual authoring belongs to [4.8 EVY Developer visual authoring](../4-sdui/08-developer.md).
+The workspace shows records from the services built in [3.1 Contributor registration and attribution](01-attribution.md), [3.2 Release certification](02-certification.md), [3.4 Payments and checkout](04-payment.md) and [3.5 Remuneration and payouts](05-remuneration.md). Releases come from the [packaging CLI in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence). The screens use TypeScript and React, built and tested with Bun like the existing [`web/` app](https://github.com/EVY-Platform/evy/blob/main/web/package.json).
 
-## Prerequisites
+## From pull request to release
 
-Use release tooling from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md), identity and protected signing from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md), and the service interfaces owned by:
+```mermaid
+flowchart LR
+    A[Carol signs a proposal] --> B[PIN in the pull request]
+    B --> C[Review and size]
+    C --> D[Merge into River]
+    D --> E[Publisher publishes version 1790640000]
+    E --> F[Certification]
+    F --> G[Release history and earnings]
+```
 
-- [3.1 Product and contributor registration](01-registration.md)
-- [3.2 Attribution workflow and allocation weights](02-attribution.md)
-- [3.3 Artifact certification and publication evidence](03-certification.md)
-- [3.4 Payments and checkout adapters](04-payment.md)
-- [3.5 Usage evidence, remuneration and payouts](05-remuneration.md)
+| Step | Who | Rules from | What the workspace shows |
+| --- | --- | --- | --- |
+| 1. Propose | Carol | 3.1 Contributor registration and attribution | The new proposal and its one-time PIN, which Carol pastes into the pull request description. |
+| 2. Review | Reviewer and validator | 3.1 Contributor registration and attribution | The PIN check, review, size and any open challenge, each linked to the pull request revision it applies to. |
+| 3. Accept | Attribution service | 3.1 Contributor registration and attribution | Capability `river.member.invite`, size 8 and Carol's 6.8 units. |
+| 4. Publish | River publisher | 1.4 Application bundles | Nothing yet. The packaging CLI publishes version 1790640000 and reads it back. |
+| 5. Certify | Attribution service | 3.2 Release certification | Version 1790640000 as certified in release history, with Carol's acceptance in it. |
 
-Use TypeScript, React and Vite for the Developer web application, with Bun for development and tests. Connect the workspace, repository integration and CLI/CI clients through versioned service interfaces.
+## Signing and access
 
-| Surface | Required work |
-| --- | --- |
-| Product setup | Register repository ownership, authorized publishers and application identities |
-| Contribution review | Submit exact source evidence, show review assignments, estimates, contributor signatures and challenges |
-| Release history | Show source revision, build evidence, artifact digest, publication reference and certification status as separate records |
-| Commercial eligibility | Show the service decision, missing evidence and the last confirmed observation |
-| Earnings | Show accepted weights, pending evidence, funded credits, payable balances, reversals and payout history |
-| Financial onboarding | Use protected remuneration interfaces for identity and payout details |
+- Carol signs in with `evy login`. The CLI signs a one-time challenge with her key file and opens the workspace in her browser.
+- The key file never leaves her laptop. Every signed action runs in the CLI, and the workspace only reads and links.
+- The CLI keeps each request's bytes until the service answers. After a timeout it resends the same bytes, and the service returns the existing record.
 
-## Repository and CLI/CI workflow
+## Screens
 
-1. Register the product, repository and publisher through [3.1 Product and contributor registration](01-registration.md).
-2. Submit signed proposals from the workspace or repository integration. Bind every review and size decision to the exact evidence revision.
-3. Show the service's merge checks in the repository. A changed revision reruns the required checks.
-4. Build application code in the project's own toolchain. CLI/CI submits source provenance and exact artifacts through the [bundle tooling in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md).
-5. Request certification and publication verification through attribution's release sequence. Display pending, verified, conflicted and failed results with the evidence needed to resolve them.
-6. Use the services' confirmed records to show commercial eligibility and earnings.
+| Screen | What it shows | Carol's example |
+| --- | --- | --- |
+| Proposals | Each proposal with its pull request, PIN check, review, size, challenges and accepted units | "Invite member", accepted, 6.8 units |
+| Release history | For each version, the website container key, version, archive digest, release commit, included acceptances, declared capabilities and certification status | River version 1790640000, certified, includes "Invite member", `["river.member.invite"]` |
+| Earnings | Units per product in one column, money per currency in another, each with the time of the last service update. `evy earnings` prints the same | 6.8 River units |
+| Payouts | Balance, `payout_minimum_cents` and `payout_schedule` from the product policy, payout history, reversals, and a link to Stripe's hosted [Connect onboarding](https://docs.stripe.com/connect/express-accounts) | Opens once Carol earns money from a paid product |
 
-The workspace keeps request IDs and submitted bytes through interrupted requests. Reconcile an uncertain service or publication result before retrying. CLI/CI credentials have separate scopes for repository access, certification requests and publisher signing. Keep publisher keys and service secrets in their protected stores.
-
-## Release and earnings screens
-
-Show a build artifact, contribution record and observed publication as distinct records. Link each to its owning service and retained evidence. Show whether a publication observation came from the publishing node or an independent node. The release screen consumes the eligibility decision defined by attribution.
-
-Display contribution units separately from money. Each financial amount includes its currency, state and last confirmed service update. Show pending payout onboarding, unresolved recovery, held funds and reversals explicitly. Allocation previews use attribution's resolved weights and remuneration's policy, with a preview label until the owning service confirms the result.
-
-Repository drafts and pending workspace requests survive service outages. A queued request stays pending until the service confirms it. A user can continue editing application code while financial services recover.
-
-## Authority and owned interfaces
-
-| Authority | Owns |
-| --- | --- |
-| Publisher signer | Container publication authorization |
-| Attribution service | [3.1 Product and contributor registration](01-registration.md), [3.2 Attribution workflow and allocation weights](02-attribution.md), [3.3 Artifact certification and publication evidence](03-certification.md) |
-| [3.4 Payments and checkout adapters](04-payment.md) | Checkout, contributor-fee rules, processor reconciliation and signed payment status |
-| [3.5 Usage evidence, remuneration and payouts](05-remuneration.md) | Usage records, allocations, reservations, balances and payouts |
-| EVY Developer | Workflow screens, repository/CLI/CI integration and requests to those authorities |
-
-Version requests and responses. Authenticate each actor and product scope, retain idempotency IDs, and show service validation errors next to the relevant evidence. The workspace displays canonical service results. UI caches and repository check summaries remain derived views.
+Money appears only after a paid sale completes. For Carol's Marketplace work, the skateboard sale from [3.3 Marketplace pickup protocol](03-marketplace-protocol.md) shows her 24-cent share as pending until Alice and Bob sign the handover, then as payable, then as paid. An allocation the service has not confirmed carries a "preview" label. A refund after payout shows as its own reversal line, linked to the payout it reverses.
 
 ## Acceptance
 
-This plan is complete when a developer can:
-
-- Register a repository-backed product and submit a signed contribution through the workspace and CLI/CI.
-- Complete review, size validation and challenge resolution against exact source evidence.
-- Build a custom application in its own tools, certify its exact artifact and verify publication.
-- Open release history and trace its artifact to accepted work and publisher evidence.
-- Run a fixture paid operation in the test environments of [3.4 Payments and checkout adapters](04-payment.md) and [3.5 Usage evidence, remuneration and payouts](05-remuneration.md), with the fixture order contract and the fixture completion-evidence producer from those plans. See it become a funded allocation, then a payout and a reconciled refund.
-- Recover interrupted requests with the same IDs and source bytes.
-
-Run browser tests for review, release and earnings screens, plus service integration tests for CLI/CI. Cover stale status, invalid authority, changed source, failed publication, missing payout details, pending identity recovery, service outages and reversals. Test accessibility and redact logs and diagnostics. A custom native fixture exercises the same service interfaces under its own certified-build policy.
-
-## Governance
-
-Adoption under Freenet Developer remains a proposal requiring agreement on governance, operations and stored-data responsibility. Keep the versioned interfaces compatible through any ownership transfer.
+- Carol signs in with `evy login`, and the workspace accepts only a challenge signed with her key file. Her proposal for the "Invite member" pull request to River shows the PIN check, review, size 8 and acceptance with 6.8 units.
+- After the River publisher publishes version 1790640000, release history shows it certified, with Carol's acceptance and `river.member.invite`.
+- A timed-out CLI request resent with the same bytes creates one record.
+- Carol's earnings screen and `evy earnings` show 6.8 River units in the units column and an empty money column.
+- Carol's Marketplace share of the 70-dollar skateboard sale moves from pending to paid on her screens. A refund after payout shows as a reversal linked to that payout.
+- The payouts screen opens Stripe's hosted onboarding, and the first payout appears in payout history.
+- Browser tests with Playwright cover every screen, including keyboard use and screen reader labels.

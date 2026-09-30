@@ -6,14 +6,14 @@
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains arrival times on contract responses. Built on the delegate secret store in `native_api.rs`, [#5730](https://github.com/freenet/freenet-core/pull/5730) startup behavior, Core's offline update handling and [#5493](https://github.com/freenet/freenet-core/pull/5493) delegate subscription demand |
 | `freenet-appkit` | Modified | River signing fixture |
-| [river](https://github.com/freenet/river) | Modified | The chat delegate subscribes to each room the user owns, and River PUTs a lost room back. Chat delegate `SignMessage` and `SignResponse`, `AuthorizedMessageV1` and room state merge rules serve as fixtures |
+| [river](https://github.com/freenet/river) | Modified | The chat delegate subscribes to each room the user owns, and River PUTs a lost room back. River saves drafts and signed messages waiting to be sent in the chat delegate's store. Chat delegate `SignMessage` and `SignResponse`, `AuthorizedMessageV1` and room state merge rules serve as fixtures |
 
 ## Purpose
 
 This plan lets an app call its delegates. It also keeps the user's work safe when the phone goes offline, the app restarts or a new release installs. River is the first app. When Bob sends "Skate session Saturday?" to the "Skate club" room:
 
 1. River saves the text as a draft in the chat delegate's store.
-2. River reads the room, asks the chat delegate to sign the message and saves the signed message with the draft.
+2. River reads the room, signs the message in its own code with Bob's room signing key and saves the signed message with the draft.
 3. River sends the signed message to the room as an update. Core adds it to the phone's copy of the room, saves that copy on disk and answers River.
 4. River marks the message sent and clears the draft.
 5. Bob's phone loses signal, or River restarts. The message stays in the phone's copy of the room.
@@ -50,9 +50,8 @@ sequenceDiagram
     participant Room as Room contract
     River->>Room: Get room state
     Room-->>River: Room state
-    River->>Delegate: SignMessage
-    Delegate-->>River: SignResponse with signature
-    River->>River: Build AuthorizedMessageV1, save it with the draft
+    River->>River: Sign MessageV1 with Bob's room signing key
+    River->>Delegate: Save AuthorizedMessageV1 with the draft
     River->>Host: Submit message
     Host->>Host: Check target
     Host->>Room: Update
@@ -169,7 +168,7 @@ Freenet keeps contract state only while peers host it. If every peer drops a roo
 
 ## Acceptance
 
-- On iOS and Android, River's read, draft, send and reconnect flows pass with its own code and chat delegate. The send uses a real `SignMessage`, checks the 64-byte signature, builds the `AuthorizedMessageV1` and sees it in room state.
+- On iOS and Android, River's read, draft, send and reconnect flows pass with its own code and chat delegate. The send signs with Bob's room signing key, checks the 64-byte signature, builds the `AuthorizedMessageV1` and sees it in room state.
 - Byte-level fixtures keep River's request and response encoding, including request IDs and error strings. They cover malformed bytes, unsupported protocols, wrong signing inputs, missing keys, conflicting request IDs, oversized results, expired sessions and unauthorized targets.
 - A small Swift and Kotlin fixture calls a delegate protocol at the support level set in 1.1 Mobile feasibility and supported profiles.
 - Forged payload identities fail caller-policy tests. Delegate-to-delegate calls and origin-free events get only the authority their attested context supplies, and their private results reach only authorized sessions.

@@ -1,153 +1,133 @@
-# 3.4 Payments and checkout adapters
+# 3.4 Payments and checkout
 
 ## Repositories
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/payment`: Stripe Connect Checkout, webhook inbox, refunds, fee-return instruction endpoint, signed status record with its verifier crate, a fixture order contract that links the verifier, Freenet bridge peer and outbox |
-| `freenet-appkit` | Modified | Host checkout adapter: authenticated request binding, native trusted confirmation, browser handoff and return reconciliation |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the paid-operation record: request, operation, payment and attempt IDs, order, terms digest, return correlation, and the funded `application_content_ref` and contribution bindings |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | New `services/payment` with seller accounts, Stripe destination charges, webhooks, refunds, signed payment records and the service's own Freenet node |
+| `evy-marketplace` | Modified | The `propose` record gains `payment_root_key` and `policy_version`. The order contract verifies and keeps signed payment records. Marketplace's delegate signs checkout requests, and its UI shows payment status |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` binds each checkout request to the calling app and release, and keeps the paid-operation record |
+| `freenet-appkit` | Modified | The host bridge's `checkout` call, the native confirmation screen and Stripe's payment sheet in the iOS and Android host packages |
 
-## Owned scope
+## Purpose
 
-Payment is the canonical authority for Checkout, purchase and application-fee refunds, reconciled cash adjustments and signed payment status. [3.3 Artifact certification and publication evidence](03-certification.md) owns certified-content eligibility.
+This plan lets Bob pay Alice 70 dollars for her skateboard and records the payment in their order. On iOS and Android, Bob pays in native screens with Stripe's payment sheet. In a browser, he pays on Stripe Checkout. Stripe sends Alice the price minus a 1% contributor fee of 0.70 dollars, which EVY holds for contributors.
 
-## Prerequisites
+Bob pays after he and Alice accept the terms in the order contract from [3.3 Marketplace pickup protocol](03-marketplace-protocol.md). The payment service takes the fee rate from Marketplace's product policy in [3.1 Contributor registration and attribution](01-attribution.md), and checks that Bob's release has paid eligibility in [3.2 Release certification](02-certification.md). On phones, EVY binds the request to Marketplace's session through the [trusted calls in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#trusted-calls) and [2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md).
 
-Use:
+## Terms and checkout request
 
-- Certification and publication evidence from [3.3 Artifact certification and publication evidence](03-certification.md).
-- The trusted host from [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md).
-- Protected keys from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md).
-- Update handling from [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md).
-- Authenticated multi-app sessions from [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md).
+This plan adds `payment_root_key` and `policy_version` to the terms of 3.3 Marketplace pickup protocol's `propose` record, so the terms digest covers both. The root key certifies the payment service's signing keys. The policy version names Marketplace's product policy, so Alice agrees to the fee before Bob pays.
 
-Custom web and native application code requests Checkout through an authorized service adapter. Optional SDUI invocation belongs to [4.7 SDUI commerce and attribution](../4-sdui/07-commerce.md).
+Marketplace's delegate holds Bob's order key. It signs a checkout request naming the order and the terms digest that Alice and Bob both signed.
 
-## Trusted checkout handoff
+## Checking out on a phone
 
-1. Application code submits the product, order, product-scoped economic operation ID, agreed terms digest, authorized payer, seller beneficiary, currency and stable checkout request ID.
-2. The host authenticates the caller from the installed application and active session. It checks the user's grant and binds the request to that app, user, session and exact content reference. Application-supplied identity fields remain claims until verified.
-3. Native trusted UI shows the verified seller, amount, currency and fee terms for confirmation. The WebView can request this prompt through its scoped bridge. The host owns the confirmation and approved external-browser handoff.
-4. The payment service independently verifies the signed terms, payer authority, seller account, target contract and commercial eligibility. It reserves one payment attempt and fixes the amount, fee and evidence bindings before creating Checkout.
-5. The adapter opens only the service-returned, validated Stripe HTTPS Checkout URL in the system browser or approved browser session. A browser-only integration uses an authorized host path and popup or redirect compatible with Core's sandbox policy.
-6. The return handler validates its correlation state and routes to the original application and order. It obtains signed status from the payment service, verifies it, and reconciles the order update.
-
-The adapter saves the request ID, operation ID, payment/attempt IDs, order, terms digest and return correlation in the paid-operation record before leaving the app. It handles the embedded node being suspended or the app being terminated. On return, restore the authenticated session and resume the node under the host's lifecycle policy. Fetch signed service status even when Freenet synchronization is pending. A redirect or a success-looking URL supplies navigation evidence only.
-
-The payment service's Freenet peer publishes signed order updates while the phone is backgrounded. The client can also submit the same signed status after reconnecting. Both paths merge as one payment revision. [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md), [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md) and [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) remain the security boundary. Payment credentials stay in the service's secrets store.
-
-## Fixed checkout evidence
-
-Record these bindings against the operation and agreed terms:
-
-- The exact `application_content_ref` defined by [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md), naming a publication or certified native build.
-- The signed contribution record, immutable attribution snapshot and retained source/publication or distribution evidence from [3.3 Artifact certification and publication evidence](03-certification.md#certification-records).
-- Opaque identifiers for the capability-allocation policy, the settlement policy and the usage epoch that apply to this checkout: `allocation_policy_id`, `settlement_policy_id` and `usage_epoch_id`. Payment records them unchanged.
-
-Verify product authority, content eligibility, included capabilities and required completion evidence before accepting a digest or contribution record. Persist the verified signed evidence alongside its IDs. These bindings remain fixed through application updates, different clients and delayed fulfillment.
-
-The paid-operation record in `crates/mobile` also holds the funded `application_content_ref` and contribution bindings. A newer release that completes an older operation uses the original bindings.
-
-Commercial suspension governs new Checkout requests under the product policy. Record the authority and latest verified observation used for that decision. Existing attempts, refunds and settlement keep their recorded bindings.
-
-Bind each attempt to one order and immutable terms digest. Keep the purchase's economic operation ID through payment attempts, fulfillment claims and refunds. Reserve requests durably and use stable Stripe idempotency keys. Serialize attempts for the same order so concurrent clients reuse its active attempt. Reconcile an uncertain attempt against both service and processor records before authorizing a replacement.
-
-## Contributor fee
-
-The contributor fee is 100 basis points of the agreed checkout amount, taken from the seller's proceeds. Show it in the signed terms before checkout. Compute it in currency minor units with round-half-up. Store the fee base, computed fee and policy version. A 70-dollar sale contributes 0.70 dollars.
-
-Use Stripe Connect Checkout with a connected seller destination and `payment_intent_data.application_fee_amount`. Reconcile successful application-fee collection into a fee receipt. Stripe holds the money in its account balances. The destination-charge model charges processor costs to the payment service balance. Budget those costs separately so the contributor fund receives its promised amount.
-
-[Stripe's destination-charge guide](https://docs.stripe.com/connect/destination-charges) describes the processor mechanism. The selected integration remains subject to processor and platform approval.
-
-Publish fee receipts and reconciled cash adjustments through a durable outbox under the refund flow below. Each service commits and recovers its own transaction.
-
-## Payment states
-
-Preserve processor state and expose a versioned mapping based on the [PaymentIntent lifecycle](https://docs.stripe.com/payments/paymentintents/lifecycle).
-
-| Payment status | Meaning |
-| --- | --- |
-| Pending | Checkout is open or the PaymentIntent requires a method or confirmation |
-| Action required | Customer action such as `requires_action` authentication |
-| Authorized | `requires_capture` when manual capture is enabled |
-| Processing | Processor result remains pending |
-| Accepted | `succeeded` for the bound terms |
-| Failed | Failed attempt, retained for retry history |
-| Canceled or expired | Canceled PaymentIntent or expired unpaid Checkout Session |
-
-Payments can skip states. Track captured and refunded amounts, partial/full refunds, disputes and chargeback outcomes separately. Accepted payment and subsequent reversals remain in history. Manual-capture authorization permits only the order actions allowed by the agreed policy.
-
-## Webhooks and reconciliation
-
-Receive the Checkout, PaymentIntent, charge, refund, dispute and application-fee events used by supported payment methods. Follow [Stripe's webhook guidance](https://docs.stripe.com/webhooks).
-
-1. Verify the raw-body signature and endpoint secret, durably store the event, then acknowledge it.
-2. Deduplicate by Stripe account and event ID. Serialize processing per payment.
-3. Retrieve relevant current processor objects to reconcile duplicate, delayed or reordered notifications.
-4. Commit reconciled state, financial entries and outbound bridge messages in one transaction. Assign an increasing per-payment revision there.
-5. Periodically reconcile open payments and missing events through the same update path.
-
-## Refunds and fee returns
-
-1. Payment authorizes and executes purchase refunds under the agreed order policy. It reconciles buyer refunds, chargebacks and destination-transfer recovery with the processor.
-2. Payment accepts authenticated fee-return instructions through its fee-return instruction endpoint. Each instruction names a stable return ID, the original payment/fee receipt, amount, beneficiary, policy and source adjustment revision. Payment verifies it against the original fee receipt, beneficiary and remaining returnable fee. It serializes execution per receipt and uses the processor's purchase/application-fee refund APIs with stable idempotency keys. Reconcile an uncertain operation before retrying or accepting a replacement instruction.
-3. Payment publishes immutable reconciled cash adjustments through its durable outbox. Each names the adjustment ID, kind, original receipt, related return/refund ID, currency, amount, beneficiary and revision. Distinguish buyer purchase refunds, seller application-fee returns and destination-transfer recovery. Corrections append linked adjustments.
-
-The v1 fee-return beneficiary is the original seller whose proceeds bore the fee. Purchase refunds go to the buyer. Payment validates the seller's original account binding before returning an application fee. Use the explicit amount in each fee-return instruction so earlier fee returns and later purchase refunds reconcile against the same receipt. Total application-fee cash returns stay within the amount collected.
-
-## Signed payment status
-
-The payment service signs a versioned record containing:
-
-```text
-schema_version
-product_id, order_id, operation_id
-payment_id, attempt_id, terms_digest
-currency, amount_minor, contributor_fee_minor
-payment_status, processor_status
-captured_minor, refunded_minor, dispute_status
-application_content_ref, contribution_record_id, attribution_snapshot_id
-allocation_policy_id, settlement_policy_id, usage_epoch_id
-revision, previous_record_digest
-bridge_key_id, key_succession_chain, signature
+```mermaid
+sequenceDiagram
+    participant Page as Marketplace page (Bob)
+    participant Host as EVY host
+    participant Pay as Payment service
+    participant Stripe
+    participant Order as Order contract
+    Page->>Host: checkout(signed request)
+    Host->>Host: Add app and release from the session<br/>Save the paid-operation record
+    Host->>Pay: Checkout request
+    Pay->>Order: Read the accepted terms
+    Pay->>Stripe: PaymentIntent for 7,000 cents, 70-cent fee, to Alice
+    Pay-->>Host: Client secret, seller and item from the order
+    Host->>Host: Native screen "Pay Alice 70.00 dollars for Skateboard"<br/>Stripe payment sheet
+    Stripe-->>Pay: payment_intent.succeeded
+    Pay->>Order: Update with the signed payment record
+    Host->>Pay: Fetch the record for this attempt
+    Host->>Order: Send the same bytes if the order lacks them
 ```
 
-Retain raw processor payloads, customer details and processor object IDs in private service records. Public Freenet records use opaque payment IDs. The public record still reveals its order, amount and content links.
+- Stripe's payment sheet ([iOS](https://github.com/stripe/stripe-ios) and [Android](https://github.com/stripe/stripe-android) SDKs) runs card entry and 3-D Secure in native screens. A switch to a bank app returns to EVY through Stripe's return URL.
+- Phones run their node in the foreground only, so the service's node sends the order update even when Bob closes EVY. Bob's phone sends the same bytes, so the order keeps one copy ([Sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates)).
+- Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) 3.1.3(e) and Google Play's [payments policy](https://support.google.com/googleplay/android-developer/answer/9858738) send physical-goods payments outside in-app purchase.
 
-Embed the signed record in the order update. The order contract verifies its schema, signature, amount, currency and terms digest deterministically from that evidence. It uses the fixed bridge root key in its parameters. Every verification input needed by the contract travels in the update or its existing state.
+`crates/mobile` saves the paid-operation record before it calls the payment service. The record holds Bob's request ID, reused on every retry, the order's contract key, the attempt ID the service returned and the `application_content_ref` the host set from the session. After a crash or restart, the host reads it, fetches the signed payment record and sends it to the order. The [backup file in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#the-backup-file) carries it as a host record.
 
-| Location | Evidence |
+## Checking out in a browser
+
+Core's app frame can reach only the node's origin ([client_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/client_api.rs)), but it opens popups as normal tabs ([#5100](https://github.com/freenet/freenet-core/pull/5100)). Marketplace opens a tab on the payment service's checkout page with Bob's signed request. The service runs the same checks and redirects the tab to a Stripe Checkout Session. It binds the container version its own node reads. The Marketplace tab shows paid when the order update arrives.
+
+## Seller account and fee
+
+Alice links a Stripe connected account once, through [Stripe-hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding) in the system browser. She signs the account ID with her store key, and the service stores the pair.
+
+Each sale is a [destination charge](https://docs.stripe.com/connect/destination-charges) with `application_fee_amount` and `transfer_data.destination` set, on the PaymentIntent or under `payment_intent_data` on a Checkout Session. The fee is 100 basis points of the price in cents, rounded half up.
+
+| Party | Skateboard sale |
 | --- | --- |
-| Order parameters | Fixed bridge root key, alongside the order's own parameters |
-| Signed status record | Append-only key succession from the root to the signer, each successor authorized by its predecessor |
-| Order state | Bounded records by payment ID and revision |
+| Bob pays | 70.00 dollars |
+| Alice receives | 69.30 dollars |
+| EVY holds for contributors | 0.70 dollars |
+| Stripe's fee | About 1.49 dollars at Stripe's [Australian domestic card price](https://stripe.com/au/pricing) on 2026-09-30. Stripe takes it from EVY's balance, and EVY pays it from its own budget so the contributors get the full 0.70 dollars |
 
-Parameters hash into contract identity, so rotating keys appear in the signed succession chain. Earlier records remain verifiable under their original signer.
+## One attempt per order
 
-Merge identical revisions once. Retain different signed payloads at one revision as a conflict, keeping the two lowest digests. An order retains at most 32 revision slots per payment, keeping the highest revision numbers. Use the highest unconflicted verified revision for display. Automated order actions require predecessor recovery across gaps and an authorized signed resolution naming conflicting digests and the replacement chain. Pause those actions for the affected payment while preserving the evidence.
+Before it calls Stripe, the payment service checks Bob's signature against his order key, that Alice and Bob both signed terms with that digest, that Alice's store key has a linked account and that the release has paid eligibility. It then creates one attempt, which fixes the amount, fee, release and policy version. A second request for the same order, from Bob's phone or his browser, gets the open attempt. Each Stripe call uses the attempt ID as its idempotency key. After a timeout, the service reads the PaymentIntent before it retries.
 
-An optional audit contract can mirror the records. The order validates against its embedded evidence.
+## Payment status
 
-## Bridge delivery and recovery
+The service follows [Stripe's webhook guide](https://docs.stripe.com/webhooks) and reuses the signature check in evy's [stripeWebhookHttp.ts](https://github.com/EVY-Platform/evy/blob/dev/api/src/shared/stripeWebhookHttp.ts). For each event, one database transaction commits the new status, the fee entry and the outgoing order update, with the payment's next revision number.
 
-The payment service runs a Freenet peer and a durable outbound queue. Retry an order update with the same payment ID, revision and signed bytes. Retain target order bindings and all signed revisions for reconciliation and republication.
+| Stripe event | Record status | Marketplace shows |
+| --- | --- | --- |
+| PaymentIntent created, awaiting card or 3-D Secure | `pending` | "Payment pending" |
+| `payment_intent.succeeded` | `paid` | "Paid, pickup Saturday" |
+| `payment_intent.canceled`, or Checkout Session expired | `canceled` | "Payment canceled", and Bob can pay again |
+| `charge.refunded` | `refunded` | "Refunded 70.00 dollars" |
+| `charge.dispute.created`, then `charge.dispute.closed` | `disputed`, then `paid` or `refunded` | "Payment disputed", then the result |
 
-During a Freenet outage, processor collection and webhook accounting continue. The queue retains pending order updates. The app distinguishes service-confirmed payment from order synchronization. A client can fetch and verify the signed record, then submit the same order update when its node resumes.
+## Refunds and chargebacks
 
-## Acceptance and evidence
+The service's node follows each paid order. When the order holds a cancel record and no handover, the service refunds in full with `reverse_transfer` and `refund_application_fee` set. An operator refund in the Stripe Dashboard reaches the service through the same `charge.refunded` event. The `refunded` record carries the amount returned to Bob in `refunded_minor` and the fee returned in `fee_returned_minor`.
 
-This plan passes when:
+| Case | Bob | Alice | EVY |
+| --- | --- | --- | --- |
+| Cancellation before handover | Gets 70.00 dollars back | Returns 69.30 dollars | Returns the 0.70-dollar fee. Stripe keeps its 1.49 dollars |
+| Chargeback that Bob wins | Gets 70.00 dollars back | The service reverses her transfer, as for a refund | Pays Stripe's dispute fee |
 
-- Custom web code completes Checkout through the authenticated native adapter on iOS and Android. A custom native fixture uses the same service interface.
-- Forged callers, revoked grants, stale sessions, wrong orders and substituted return links fail. Trusted native UI confirms the exact terms.
-- Concurrent clients receive one active attempt with the same fixed amount and evidence bindings.
-- Backgrounding, termination and node suspension preserve request IDs. Return reconciliation uses signed status and resumes order delivery.
-- Duplicate and reordered webhooks, refund retries and racing workers produce one reconciled financial result.
-- Changed application content, publisher authority or allocation policy during checkout preserves the original attempt's bindings.
-- Release activation and app-specific export/import keep paid-operation bindings.
-- The fixture order contract links the verifier crate. Wrong-order payment proofs fail, order state stays within 32 revision slots per payment, bridge-key rotation verifies through the root, and revision conflicts pause automated transitions.
-- Refunds and disputes update the order record and publish one cash adjustment per processor effect, separating seller fee returns from buyer refunds.
+## Signed payment record
 
-Retain processor test evidence, tested host/Core revisions and real-device results. Stripe documentation describes API behavior, while the service, adapter and signed-status protocol here are planned work.
+The payment service signs one record per payment revision and embeds it in the order update, as Harvest does with its [embedded payment proof](https://github.com/freenet/harvest/blob/main/common/src/payment.rs).
+
+```jsonc
+{
+  "schema": 1,                                    // record format version
+  "order": "7Hq...",                              // contract key of the skateboard order
+  "terms_digest": "41ab...",                      // digest Alice and Bob signed in the order
+  "attempt_id": "att_91c2",                       // opaque ID. Stripe IDs stay in the service
+  "application_content_ref": { "...": "..." },    // Marketplace's release that took the payment
+  "policy_version": 1,                            // Marketplace's product policy version from the terms
+  "currency": "AUD",                              // the one currency evy's Stripe code supports today
+  "amount_minor": 7000,                           // 70.00 dollars
+  "fee_minor": 70,                                // 0.70-dollar contributor fee
+  "status": "paid",                               // pending, paid, canceled, refunded or disputed
+  "refunded_minor": 0,                            // total refunded to Bob
+  "fee_returned_minor": 0,                        // fee returned with those refunds
+  "revision": 2,                                  // rises with each change to this payment
+  "signer": { "key": "...", "root_sig": "..." },  // signing key, certified by payment_root_key
+  "signature": "..."                              // signer's signature over every field above
+}
+```
+
+- The order contract checks the signer's certificate against `payment_root_key` in the terms, then the signature, order, terms digest, amount and currency. It uses only the update and its own state.
+- The service rotates its signing key by certifying a new one with the root key. Older records still verify under their own certificate.
+- The order keeps up to 32 revisions per payment, dropping the lowest first, and Marketplace shows the highest.
+- If two different records share a revision number, the order keeps both. Marketplace shows "Payment under review" and refuses a handover until the service signs a higher revision.
+- Stripe IDs, card details and Bob's email stay in the service's database.
+
+## Acceptance
+
+- On iOS and Android in Stripe test mode, Bob pays 70.00 dollars in the payment sheet. The order shows paid, Alice's connected account receives 69.30 dollars and EVY's balance holds the 0.70-dollar fee.
+- In a browser, Bob pays on Stripe Checkout in a new tab, and the Marketplace tab shows paid.
+- On iOS and Android, a 3-D Secure test card completes inside the payment sheet. Closing EVY mid-payment and reopening it shows the order as paid.
+- A request with a wrong signature, another order, changed terms or a release without paid eligibility fails before any Stripe call.
+- Requests for one order from a phone and a browser get the same attempt. Duplicate and reordered webhooks produce one revision each.
+- A cancellation before handover refunds 70.00 dollars to Bob, takes 69.30 dollars back from Alice and returns the 0.70-dollar fee, and the `refunded` record shows 7,000 and 70. A dispute test card moves the order to disputed, then to the result.
+- The order contract rejects a record for another order, with a bad signature or with a wrong amount. It keeps at most 32 revisions per payment, accepts a rotated signing key through the root key and shows a same-revision conflict as under review.
+- On iOS and Android, the paid-operation record round-trips through the backup file from 1.5 Identity, keys and local protection.

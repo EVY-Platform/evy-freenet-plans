@@ -78,9 +78,9 @@ River's [chat delegate protocol](https://github.com/freenet/river/blob/main/dele
 
 River's definition leaves out 3 fields:
 
-- `native_links` is added by [3.3 Artifact certification and publication evidence](../3-attribution-remuneration-payment/03-certification.md).
-- `sdui` is added by [4.2 SDUI bundles and publication](../4-sdui/02-bundles.md).
-- `predecessors` on each component is added by [4.2 SDUI bundles and publication](../4-sdui/02-bundles.md#publication).
+- `capabilities` is added by [3.2 Release certification](../3-attribution-remuneration-payment/02-certification.md).
+- `sdui` is added by [4.4 SDUI bundles and publication](../4-sdui/04-bundles.md).
+- `predecessors` on each component is added by [4.4 SDUI bundles and publication](../4-sdui/04-bundles.md#publication).
 
 Two values outside this file identify a release. The container identity is the full container `ContractKey`, and every River release keeps the same one. The container version is the Unix time that `fdev website publish` stamps and signs on each publication, for example `1790640000`. The host uses it to tell which publication is the newest.
 

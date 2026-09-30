@@ -1,108 +1,103 @@
-# 4.1 SDUI format and compatibility
-
-Milestone 4 (SDUI) adds screens described as data. A browser, iOS or Android reader turns those descriptions into controls. Applications choose SDUI for complete interfaces or selected pages.
-
-Prerequisites:
-
-- [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md)
-- [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md)
-- [2.2 Multi-application sessions and authority](../2-evy-mobile-app/02-sessions.md)
-- [2.3 Installation and updates](../2-evy-mobile-app/03-installation-and-updates.md)
-- [2.4 Identity, permissions and device access](../2-evy-mobile-app/04-permissions.md)
-- [1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md)
-
-This plan owns the screen format, component catalogue, navigation, accessibility and compatibility rules. The [milestone 4 (SDUI) scope and release gates](../README.md#4-sdui) cover delivery boundaries and the required mobile foundation.
+# 4.1 SDUI format
 
 ## Repositories
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Created | Versioned JSON Schema, generated TypeScript, Rust, Swift and Kotlin models, value model and display expressions, component catalogue, navigation, accessibility, value and formatting fixtures and schema comparison |
-| [evy](https://github.com/EVY-Platform/evy) | Used | The 21 row-type schemas as source material for the catalogue |
+| `freenet-sdui` | Created | JSON Schema for `ui/sdui/ui.json`<br>Generated TypeScript, Rust, Swift and Kotlin models<br>Validator, expression evaluator, schema comparison and shared fixtures |
+| [evy](https://github.com/EVY-Platform/evy) | Used | [Flow, page and row schemas](https://github.com/EVY-Platform/evy/tree/dev/types/schema/sdui) as the source for 8 components |
+| [river](https://github.com/freenet/river) | Used | Room list, conversation, members and "Invite member" screens as the fixtures |
 
-## Format and compatibility
+## Purpose
 
-Publish versioned JSON Schema and generated TypeScript, Rust, Swift and Kotlin models. A screen document describes flows, pages, stable component IDs, relationships, routes, themes and language resources. It names required component versions and host capabilities.
+This plan defines the screen document `ui/sdui/ui.json`, which describes an app's screens as data. It owns the schema, values and bindings, the components River's screens use, navigation, accessibility, language, limits and compatibility rules. Carol describes River's "Invite member" sheet in this format. Alice opens the sheet from the member list of "Skate club" to invite Bob. The document sits under `ui/sdui/` in a release bundle from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). Copying an invite link uses the `clipboard` permission that River declares in its app definition. [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission) asks Alice for it.
 
-Define these rules in the schema and shared fixtures:
+## Screen documents
 
-- Values explicitly select a literal, typed reference or bounded expression, as [Values and expressions](#values-and-expressions) defines. Braces inside a literal remain text.
-- Each component declares property types, binding slots, events, accessible meaning, and loading, empty, error and disabled states.
-- Required unknown components or incompatible versions block the affected page before activation. Optional components carry a validated safe fallback with compatible bindings and events.
-- Unknown executable behavior fails validation. Optional extension fields use declared namespaces and versions.
-- Publish a schema comparison that classifies additions, removals and type changes. Required features and exact supported versions determine compatibility.
-- Validate at authoring, publication and load time. Errors identify a component or schema path while private values stay redacted.
+The format adapts EVY's [flow, page and row schema](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/evy.schema.json), which already has rows with triggers, sheets and `visible` conditions. This plan changes 4 parts of it.
 
-## Values and expressions
+| Part | EVY today | This plan |
+| --- | --- | --- |
+| IDs | UUIDs for flows, pages and rows | Stable string IDs, such as `invite-member` |
+| Values | Brace strings, such as `{formatCurrency($datum.price)}` | Typed value objects, see [Values and expressions](#values-and-expressions) |
+| Navigation | `{navigate(<flow UUID>,<page UUID>,{id: ...})}` and `{show(<row UUID>)}` | Routes with typed parameters, see [Navigation](#navigation) |
+| Writes | Inline `{create(evy.messages, ...)}` | A declared action ID, such as `copy-invite-link` |
 
-Define a common value model for null, missing, booleans, integers, decimals, strings, bytes, timestamps, durations, lists and objects. Shared fixtures fix numeric ranges, decimal encoding, overflow, comparisons, conversions and missing-value behavior. Host-supplied time, randomness, locale and time zone have deterministic substitutes in tests.
+Carol's sheet carries River's [invite modal](https://github.com/freenet/river/blob/main/ui/src/components/members/invite_member_modal.rs) into this format. The rows for the invite code and the invitation message repeat the pattern of the link rows.
 
-Every binding explicitly selects a literal, reference or expression. References address a declared view, immutable route parameters, a form value or temporary display state. Display expressions provide presence checks, fallbacks, boolean and string comparisons, and locale-aware formatting. Evaluation is side-effect-free. Bound input size, nesting and evaluation steps.
-
-Proposed binding example:
-
-```json
+```jsonc
 {
-  "id": "send-button",
-  "type": "appkit.button",
-  "title": { "literal": "Send" },
-  "actions": {
-    "tap": {
-      "action": "river.sendMessage",
-      "args": {
-        "room": { "ref": "param:roomOwner" },
-        "text": { "ref": "local:draft.text" }
-      }
-    }
-  }
+  "format_version": "1.0",                                         // major and minor, see Compatibility
+  "routes": [{
+    "id": "invite-member",                                         // route ID, stable across releases
+    "presentation": "sheet",                                       // opens over the members page, as River's modal does
+    "params": { "room": "string" },                                // base58 owner key of "Skate club"
+    "title": { "literal": "Invite Member" },                       // literal, shown as written, braces stay text
+    "actions": { "open": { "action": "new-invitation",             // declared action, runs when the sheet opens
+                           "args": { "room": { "ref": "param:room" } } } },
+    "rows": [
+      { "id": "invite-link", "type": "input",                      // EVY's input row, read-only without a destination
+        "source": { "ref": "view:invitation.url" } },              // reference to an output of a declared view
+      { "id": "copy-link", "type": "button",                       // label is an expression, "Copied!" after a copy
+        "label": { "expr": ["if", { "ref": "local:copied" }, "Copied!", "Copy Link"] },
+        "actions": { "tap": { "action": "copy-invite-link" } } },  // declared action that uses clipboard
+      { "id": "close", "type": "button", "label": { "literal": "Close" },
+        "actions": { "tap": { "close": true } } }                  // navigation that closes the sheet
+    ]
+  }]
 }
 ```
 
-The final schema release fixes the serialized component names and reference syntax.
+freenet-sdui generates the TypeScript, Rust, Swift and Kotlin models from the schema. It ships one validator that every tool and reader runs. An error names the component ID and schema path and never includes field values. The validator limits a document to 256 KiB, a route to 500 components, nesting to 16 levels and an expression to 1,000 steps. Readers render 50 list rows at a time, so a long "Skate club" history scrolls in windows. These are starting values, set from River's four screens.
 
-## Components and source catalogue
+## Values and expressions
 
-Use the 21 EVY row types as the v1 component catalogue. The linked schemas are source material for adaptation. The Freenet schemas, readers and adapters are proposed milestone 4 (SDUI) work. Pin source revisions when generating the release catalogue.
+Every bound property holds one of three value objects. A `literal` is shown as written. A `ref` reads one value, and its prefix names the source. An `expr` is an operator followed by its arguments, where a JSON string is a literal and a `ref` object reads a value. Values are strings, booleans, integers within 2^53, lists, objects and null. A timestamp is integer milliseconds since the Unix epoch in UTC. A missing field reads as null.
 
-| Group | Source schemas |
+| Prefix | Reads | Example |
+| --- | --- | --- |
+| `param:` | A route parameter, fixed for one route entry | `param:room` |
+| `view:` | An output of a declared view | `view:invitation.url` |
+| `form:` | A form field value | `form:message.text`, Bob's unsent "Skate session Saturday?" |
+| `local:` | Display state for the open page | `local:copied` |
+
+Expressions use `or`, `if`, `eq`, `not`, `concat`, `count` and `time`. They read references and change nothing. River's fallback room name is `["or", { "ref": "view:room.name" }, "this chat room"]`.
+
+## Components
+
+freenet-sdui adapts 8 of EVY's 21 [row schemas](https://github.com/EVY-Platform/evy/tree/dev/types/schema/sdui/definitions), pinned to one EVY commit.
+
+| Component | River use |
 | --- | --- |
-| Content | [Text](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/text.schema.json), [Heading](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/heading.schema.json), [Button](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/button.schema.json), [TextAction](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/text_action.schema.json), [TextExpand](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/text_expand.schema.json) |
-| Input | [Input](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/input.schema.json), [TextArea](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/text_area.schema.json), [Dropdown](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/dropdown.schema.json), [InlinePicker](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/inline_picker.schema.json), [TextSelect](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/text_select.schema.json), [Calendar](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/calendar.schema.json), [TimeslotPicker](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/timeslot_picker.schema.json) |
-| Collections | [InputList](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/input_list.schema.json), [ListItem](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/list_item.schema.json), [Search](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/search.schema.json), [PhotoGallery](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/photo_gallery.schema.json) |
-| Layout | [VerticalContainer](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/vertical_container.schema.json), [HorizontalContainer](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/horizontal_container.schema.json), [TabContainer](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/tab_container.schema.json) |
-| Device | [Map](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/map.schema.json), [SelectPhoto](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/definitions/select_photo.schema.json) |
-
-Browser media, including map tiles, uses bundled bytes or content served by the node under Core's sandbox policy. External asset storage needs its own supported service and permission profile.
+| `heading`, `text` | "Rooms" above the [room list](https://github.com/freenet/river/blob/main/ui/src/components/room_list.rs), and its empty state "Create a room or join one with an invite code." |
+| `button` | "Invite Member", "Copy Link", "New Invitation", "Close". It gains an `icon` for the close button at the top of the invite modal |
+| `input`, `text_area` | The read-only "Invitation link:", the message box "Type your message..." |
+| `list_item` | One room, one member such as "Invited by You", one message. It gains a `detail` text for the message time |
+| `vertical_container`, `horizontal_container` | Page layout, "Copy Link" beside the link |
 
 ## Navigation
 
-Routes have stable IDs and typed parameters. Readers support opening or replacing a page, sheets, full-screen views and tab selection. Native navigation emits the same semantic events used by browser tests. The host controls external URL operations and deep-link admission.
-
-Validate restored routes and parameters against the active release. Unknown routes return a defined navigation error. Deep links supply navigation arguments. [4.6 SDUI data and operation presentation](06-data.md) owns form snapshots, draft saving and recovery.
+A route has a stable ID, typed parameters and a presentation, `page` or `sheet`. A route's `open` trigger runs an action when the route opens. A tap runs an action, opens a route or closes one. Alice taps "Invite Member" in the member list, which runs `{ "open": "invite-member", "args": { "room": { "ref": "param:room" } } }`. "Close" runs `{ "close": true }`. An unknown route ID or a parameter of the wrong type returns the `route_not_found` error, and the reader stays on the current page.
 
 ## Accessibility and language
 
-| Document supplies | Reader supplies |
-| --- | --- |
-| Stack direction, alignment and size categories | Platform layout and spacing |
-| Named window size classes | Resizing behavior |
-| Safe-area and keyboard intent | Platform insets and input handling |
-| Named theme tokens | Colors, fonts, radii and shadows |
-| Control purpose, label and reading order | Accessible HTML, SwiftUI accessibility or Compose semantics |
+- The document names stack direction, alignment, size categories, theme tokens and each control's purpose and label. Each reader maps these to its platform's layout, colors and fonts. It applies the OS or browser settings for text size, contrast, reduced motion and right-to-left layout.
+- Labels reach ARIA in the browser, SwiftUI accessibility on iOS and Compose semantics on Android. Reading order is row order, and a `heading` row reads as a heading. A button with an `icon` and no label needs an `a11y_label`, such as "Close" on the invite modal's icon button.
+- Strings are literals, and River ships English only. The `time` operator formats with the locale and time zone of the phone or browser, as River's [`format_time_local`](https://github.com/freenet/river/blob/main/ui/src/util.rs) does.
 
-Require accessible labels for non-text controls. Specify headings, lists, inputs, errors and live updates. Preserve keyboard focus through updates and navigation. Support large text, high contrast, reduced motion and right-to-left layout. Compare control meaning and behavior across platforms while allowing platform layout differences.
+## Compatibility
 
-Strings use literals or keys in verified language files. The host supplies locale and time zone. Resolve a key through the requested locale, its language fallback, then the declared default locale. Development shows a missing-key diagnostic. Production uses declared fallback text. Machine translation follows an explicit user or application policy.
+`format_version` is major and minor. A reader loads any document with its major version. It ignores properties from a newer minor version. It renders an unknown component type through that component's `fallback`, a component the reader knows. A component with no usable fallback stops its route, and the reader shows the minimum reader version it needs. Each bundle carries its own web reader, so these rules matter most for the native readers built into EVY on iOS and Android. freenet-sdui's schema comparison classifies each change between two schema versions as minor or major.
 
-## Limits and failure handling
-
-Set versioned limits for document bytes, component count, nesting, text and media sizes, expression work, list windows and update frequency. Window long lists. Stop an excessive update before applying it and report the limit reached. Required malformed components block the page. Optional malformed components use their validated fallback. Schema and action errors block publication or page activation.
-
-[4.9 SDUI migration and conformance](09-migration-and-conformance.md) owns activation and upgrade tests.
+| Change in a new schema version | Class | Example |
+| --- | --- | --- |
+| Add an optional property, or a component type with a fallback | Minor | `search`, with `input` as its fallback |
+| Add a required property, remove a property or component, or change a property's type | Major | `detail` on `list_item` becomes an object |
 
 ## Acceptance
 
-- Each catalogue component has published schema, event, fallback and accessibility fixtures that validate against the schema.
-- Shared value fixtures cover null, missing, numeric ranges, decimal encoding, overflow, comparisons and conversions, and validate against the schema.
-- Shared formatting fixtures fix locale, time zone and current time.
-- Schema validation rejects unknown fields, unknown component types, invalid required components and incompatible schemas.
+- The fixtures for the 8 components, River's four screens and the "Invite member" sheet validate against the schema.
+- The generated Swift models on iOS and Kotlin models on Android decode and re-encode every fixture to the same JSON, as do the TypeScript and Rust models.
+- Validation rejects unknown fields, unknown component types without a fallback, an icon button without a label or `a11y_label`, and documents over any limit. Each error names the component ID and schema path without field values.
+- Value fixtures cover null, missing fields, the integer range, timestamps and each operator. With a fixed locale, time zone and current time, the evaluator gives the same result in TypeScript, in Swift on iOS and in Kotlin on Android.
+- The schema comparison classifies each fixture change pair as the compatibility table says. A reader fixture for format version 1.0 renders a format version 1.1 document through its fallbacks.

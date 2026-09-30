@@ -87,7 +87,7 @@ Specify how thin nodes reach gateways and select replacement serving peers, incl
 
 Core's transport counters, which `crates/mobile` exposes as `node_traffic`, report upload and download bytes. The freenet-appkit harness's `watch` scenario records them for each workload. Count bytes at the network layer as well as application payloads. Include bootstrap traffic, framing, encryption, retransmission, failed requests, repair and shared overhead. Record each counter's measurement layer and reconcile SDK counters with platform counters or controlled packet traces on each supported OS. Account for other device traffic in the test setup and state the uncertainty in estimating carrier-billed usage.
 
-Attribute app traffic where possible and charge shared overhead once to the total node budget. Product scheduling in [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) divides this budget among apps.
+Attribute app traffic where possible and charge shared overhead once to the total node budget.
 
 Reserve bounded upload/download allowances inside the caps for counter delay, in-flight packets and teardown. Set byte and time limits from device measurements. Trigger cap enforcement when the remaining upload or download budget reaches its reserve, leaving that allowance to complete shutdown within the hard cap.
 

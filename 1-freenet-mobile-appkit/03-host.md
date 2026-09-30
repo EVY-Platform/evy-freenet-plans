@@ -122,7 +122,7 @@ The bundle's `permissions` field in [1.4 Application bundles](04-bundles.md#the-
 | Moment | Who starts it | River example |
 | --- | --- | --- |
 | When the UI needs it | App code, through the host bridge from web code or the SDK from Swift/Kotlin code | River calls `Notification.requestPermission()` when Bob sends his first message |
-| First use | The host, when an action needs a permission without a grant | River copies an invite link for Carol, and the host asks for `clipboard` |
+| First use | The host, when an action needs a permission without a grant | Alice copies an invite link for Bob, and the host asks for `clipboard` |
 
 - Requests for undeclared permissions fail.
 - A stored denial answers later requests until its cool-off ends, so app code gets one prompt per cool-off. The user can change the answer in the host's permission screen.
