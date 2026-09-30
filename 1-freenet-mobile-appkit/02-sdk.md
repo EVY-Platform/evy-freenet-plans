@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts. Core resolves gateway hostnames in its join loop, so the node starts offline. Core looks up each Wasm instance's memory address again after every contract and delegate call, so each instance reserves only the memory it uses |
-| `freenet-appkit` | Modified | Swift package and Kotlin library that wrap the bindings, package the XCFramework and AAR builds |
+| `freenet-appkit` | Modified | Swift package and Kotlin library that wrap the bindings, package the XCFramework and AAR builds. The Kotlin library's manifest declares `ACCESS_LOCAL_NETWORK` |
 
 ## Purpose
 
@@ -136,6 +136,25 @@ When Alice's phone moves from Wi-Fi to cellular, the SDK:
 
 When Alice opens River with no signal, the node starts and River shows her stored "Skate club" messages. Core resolves each gateway hostname in its join loop, just before it tries that gateway ([offline start finding in 1.1 Mobile feasibility and supported profiles](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode)), and the loop's backoff retries until the network returns. Core builds its fallback DNS resolver (hickory-resolver) only after an online lookup fails, and Android builds leave out its `system-config` feature.
 
+#### Local network access
+
+The node connects to gateways and peers on the phone's Wi-Fi, at private addresses such as `192.168.1.20`. iOS and Android ask the user first.
+
+```mermaid
+flowchart LR
+  A[Node tries a gateway at 192.168.1.20] --> B{User answers the local-network prompt}
+  B -- Allow --> C[Node joins through the Wi-Fi gateway]
+  B -- Deny --> D[Node joins through public gateways]
+```
+
+| | iOS | Android |
+| --- | --- | --- |
+| Declaration | The app's Info.plist has `NSLocalNetworkUsageDescription`, for example "River connects to Freenet peers on your Wi-Fi." The SDK setup steps tell developers to add it | The Kotlin library's manifest declares `ACCESS_LOCAL_NETWORK`. Android merges it into the app's manifest |
+| Prompt | iOS shows it once, at the node's first connection to a private address | The host asks for `ACCESS_LOCAL_NETWORK` before the node first starts, in apps that target API 37 or later |
+| First connection | iOS drops it while the prompt is open. The join loop's backoff sends it again after the user answers | The node starts after the user answers, then connects |
+
+Sources: [TN3179 Understanding local network privacy](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy) and [Android local network permission](https://developer.android.com/privacy-and-security/local-network-permission).
+
 #### Keys
 
 The SDK packages the iOS Keychain and Android Keystore backends, plus any signing adapter. [1.5 Identity, keys and local protection](05-identity.md) owns what they protect and when keys may leave the device. Test these cases on real iOS and Android devices against [Apple key protection](https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave) and [Android Keystore](https://developer.android.com/privacy-and-security/keystore):
@@ -148,6 +167,7 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 
 - The node starts in Airplane Mode on iOS and Android, River shows stored rooms, and the node joins the network once the phone is back online.
 - Concurrent requests stay isolated: two screens reading the same contract each get their own result, and a late reply after a timeout never reaches a queued request. Real delegate calls succeed, cancellation is safe, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes on iOS and Android.
+- An iPhone and an Android phone share a Wi-Fi network with a gateway at a private address. If the user allows the local-network prompt, the node joins through that gateway. If the user denies it, the node joins through public gateways. Run this on real devices, where iOS shows the prompt.
 - On an iPhone and an Android phone, 300 stored contracts and 200 updates to one contract pass with Core's default Store replacement.
 - A test policy supplies the authority and policy hooks. Delegate calls run only when the test policy allows them.
 - CI runs a two-peer contract exchange, leak checks with thresholds tuned to measured noise, the update key-learning fallback and binding generation.

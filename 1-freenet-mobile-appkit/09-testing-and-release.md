@@ -108,6 +108,7 @@ Every test runs on iOS and Android, with the phone in the thin-peer role.
 | Atlas | The [Atlas fixtures](#atlas-fixture-scope-and-acceptance) pass. |
 | Thin role and budgets | The [acceptance in 1.8 Thin-peer role and cellular data budgets](08-thin-peer.md#acceptance) passes on the pinned Core build. |
 | Safety and durability | Host authority, protected keys, offline sends, app-specific encrypted export/import and supported migrations pass their owning plans. |
+| Local network | The local-network case in the [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) passes with River. |
 | Device limits and accessibility | Startup, memory, battery, storage exhaustion, keyboard, focus, large text and screen-reader tests pass on the declared devices. |
 | Distribution | Reproducible iOS and Android packages and platform-review evidence cover the complete runtime and downloaded-content behavior on both platforms. Custom native examples record their own distribution evidence. |
 | Diagnostics | Reports identify versions, node role, lifecycle state, observation provenance and pending-operation status. Apply [host redaction in 1.3 Single-application host](03-host.md#diagnostics) to keys, tokens, message content and private references. |
