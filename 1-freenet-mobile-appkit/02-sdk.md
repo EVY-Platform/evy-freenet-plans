@@ -4,7 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts. Core resolves gateway hostnames in its join loop, so the node starts offline |
 | `freenet-appkit` | Modified | Swift package and Kotlin library that wrap the bindings, package the XCFramework and AAR builds |
 
 ## Purpose
@@ -132,6 +132,8 @@ When Alice's phone moves from Wi-Fi to cellular, the SDK:
 3. Fetches the latest room state.
 4. Hands control back to River. Core sends the room's peers any messages Alice sent while offline.
 
+When Alice opens River with no signal, the node starts and River shows her stored "Skate club" messages. Core resolves each gateway hostname in its join loop, just before it tries that gateway, and the loop's backoff retries until the network returns. Core builds its fallback DNS resolver (hickory-resolver) only after an online lookup fails, and Android builds leave out its `system-config` feature.
+
 #### Keys
 
 The SDK packages the iOS Keychain and Android Keystore backends, plus any signing adapter. [1.5 Identity, keys and local protection](05-identity.md) owns what they protect and when keys may leave the device. Test these cases on real iOS and Android devices against [Apple key protection](https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave) and [Android Keystore](https://developer.android.com/privacy-and-security/keystore):
@@ -142,6 +144,7 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 
 ## Acceptance
 
+- The node starts in Airplane Mode on iOS and Android, River shows stored rooms, and the node joins the network once the phone is back online.
 - Concurrent requests stay isolated: two screens reading the same contract each get their own result, and a late reply after a timeout never reaches a queued request. Real delegate calls succeed, cancellation is safe, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes on iOS and Android.
 - A test policy supplies the authority and policy hooks. Delegate calls run only when the test policy allows them.
 - CI runs a two-peer contract exchange, leak checks with thresholds tuned to measured noise, the update key-learning fallback and binding generation.
