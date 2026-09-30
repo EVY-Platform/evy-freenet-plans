@@ -22,9 +22,7 @@ Start with River running on a reusable mobile AppKit, then extend it into a host
 
 ### 1. Freenet mobile AppKit
 
-Package a single defined application for iOS and Android. As MVP we will use river's signed web UI run in an in-app WebView served by the embedded node but enable developers to build custom Swift/Kotlin screens against the SDK.
-
-1.8 Thin-peer role and cellular data budgets makes the phone a thin peer. 1.9 Testing and release then tests River and Atlas on it and releases the developer package.
+Package 2 defined application for iOS and Android, bundled into a single mobile app. As MVP we will use River and Atlas web UI run in an in-app WebView served by the embedded node but enable developers to build custom Swift/Kotlin screens against the SDK.
 
 ```mermaid
 flowchart LR
