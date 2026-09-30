@@ -93,7 +93,7 @@ The node runs standard contract and delegate Wasm on the phone. Release builds f
 
 | Limit | Core default | Mobile |
 | --- | --- | --- |
-| Memory per Wasm instance | 256 MiB | 256 MiB. The contracts measured in 1.1 Mobile feasibility and supported profiles use about 1 MiB. Contracts that need more run on desktop nodes |
+| Memory per Wasm instance | 256 MiB | 256 MiB. The contracts measured in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) use about 1 MiB. Contracts that need more run on desktop nodes |
 | State per contract | 50 MiB | 50 MiB |
 | Compiled module cache | Sized from Linux cgroup limits | Explicit size, because iOS has no cgroups that could cap memory, CPU and disk access |
 | Wasm execution time | 5 seconds of wall-clock time | 5 seconds of wall-clock time |

@@ -170,7 +170,7 @@ Freenet keeps contract state only while peers host it. If every peer drops a roo
 
 - On iOS and Android, River's read, draft, send and reconnect flows pass with its own code and chat delegate. The send signs with Bob's room signing key, checks the 64-byte signature, builds the `AuthorizedMessageV1` and sees it in room state.
 - Byte-level fixtures keep River's request and response encoding, including request IDs and error strings. They cover malformed bytes, unsupported protocols, wrong signing inputs, missing keys, conflicting request IDs, oversized results, expired sessions and unauthorized targets.
-- A small Swift and Kotlin fixture calls a delegate protocol at the support level set in 1.1 Mobile feasibility and supported profiles.
+- A small Swift and Kotlin fixture calls a delegate protocol through the delegate calls that [1.2 Embedded node and mobile SDK](02-sdk.md) adds to the native API.
 - Forged payload identities fail caller-policy tests. Delegate-to-delegate calls and origin-free events get only the authority their attested context supplies, and their private results reach only authorized sessions.
 - Killing the app at each step (drafting, signing, sending) keeps the draft and signed message until Core answers, and keeps the message in the phone's copy of the room after. A resend after a restart leaves one copy of the message in room state.
 - A message Bob sends with no signal, and one he sends on Wi-Fi with no internet, reach an independent peer after his phone reconnects.

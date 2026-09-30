@@ -74,7 +74,7 @@ Specify how thin nodes reach gateways and select replacement serving peers, incl
 
 ## Cellular budget contract
 
-1.1 Mobile feasibility and supported profiles measured the full-peer numbers in [Purpose](#purpose) and built the tools that measure each workload. This plan sets the thin role's upload and download ceilings from those numbers, picks the supported carriers, devices and test durations, and enforces the ceilings. Approve them before this plan's acceptance runs.
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md#startup-and-network) measured the full-peer numbers in [Purpose](#purpose): about 60 KiB/s each way on Wi-Fi and under 1.3 KiB/s idle. Its [harness](https://github.com/glesage/freenet-appkit/tree/main/harness) `watch` scenario and Core's `node_traffic` counters measure each workload. This plan sets the thin role's upload and download ceilings from those numbers, picks the supported carriers, devices and test durations, and enforces the ceilings. Approve them before this plan's acceptance runs.
 
 | Workload | Fix in the test definition | Required limits and measurements |
 | --- | --- | --- |

@@ -55,7 +55,7 @@ The trusted path covers calls over the node's local WebSocket port. If another a
 | Custom native | Installed Swift/Kotlin UI calling the SDK | Trusted in-process calls with session authority |
 | Browser | Publisher web code inside Core's sandboxed frame | Core shell admission, storage and capability enforcement |
 
-River's [UI package](https://github.com/freenet/river/blob/main/ui/Cargo.toml) and [bundle configuration](https://github.com/freenet/river/blob/main/ui/freenet.toml) are evidence for the WebView route. Pin and test the actual artifacts under 1.1 Mobile feasibility and supported profiles.
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md) confirmed that River's and Atlas's web UIs run in WKWebView and Android WebView, served by the embedded node from their pinned website containers ([device results](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#river-and-atlas-in-the-webview)).
 
 The host must:
 
@@ -135,7 +135,7 @@ The bundle's `permissions` field in [1.4 Application bundles](04-bundles.md#the-
 - Require explicit authorization when sharing identity or private records between WebViews and native contexts.
 - Return typed results: granted, denied, unavailable, locked device or expired handle. Bind selected files or photos to the requesting operation and session.
 
-Camera, photos, files, notifications, clipboard, location, maps, contacts and outside services use only the adapters in the selected release profile. River's [notification integration](https://github.com/freenet/river/blob/main/ui/src/components/app/notifications.rs) is an application fixture. Notification taps validate the target and refresh application state before showing it. The foreground/background delivery promise belongs to [1.1 Mobile feasibility and supported profiles](01-feasibility.md#message-alerts).
+Camera, photos, files, notifications, clipboard, location, maps, contacts and outside services use only the adapters in the selected release profile. River's [notification integration](https://github.com/freenet/river/blob/main/ui/src/components/app/notifications.rs) is an application fixture. Notification taps validate the target and refresh application state before showing it. Alerts arrive only while the host is in the foreground. [1.1 Mobile feasibility and supported profiles](01-feasibility.md#message-alerts) confirmed this on both platforms: the alert tap reached the page on every device, and the banner showed 25 ms after the page raised it on the iPhone 13 mini ([device results](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#message-alerts-and-the-bridge)).
 
 Each delegate's Wasm manifest declares `Background`. The mobile host writes that grant when the user approves the installation. It also supplies Core's `UserInputPrompter`, so delegate prompts use trusted native screens. Browser hosts use Core's own prompt. Background work runs only while the SDK lifecycle keeps the node running.
 

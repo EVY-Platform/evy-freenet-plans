@@ -21,7 +21,7 @@ This plan starts when an app needs a claim that a ghost key signature cannot giv
 | Bob completed 5 pickups in the last 90 days, without showing which sellers, orders or dates | The evidence is past handovers that both buyer and seller signed in order contracts. A signature proves only that Bob holds a key. Harvest publishes each order commitment so buyers can count it, and names [zero-knowledge proofs](https://github.com/freenet/harvest/blob/main/docs/design/incentive-mechanism.md#part-8--what-this-publishes-to-the-world) as the way to hide them |
 | Bob holds a ghost key, without showing which one | Every signature carries the same certificate, so two apps can link Bob's requests |
 
-The plan then picks a proof system and measures it on the iPhone and Android phone from [1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#device-measurements). Bob's delegate builds each proof within the 5-second Wasm limit and 256 MiB per instance under Pulley ([Running Wasm in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#running-wasm)). The delegate limits how often one app can ask, so repeated threshold requests cannot narrow down Bob's count.
+The plan then picks a proof system and measures it on the iPhone 13 mini that [1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#device-limits) measured, and on an Android phone. Bob's delegate builds each proof within the 5-second Wasm limit and 256 MiB per instance under Pulley ([Running Wasm in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#running-wasm)). The delegate limits how often one app can ask, so repeated threshold requests cannot narrow down Bob's count.
 
 ## Sources
 

@@ -135,11 +135,11 @@ The installation interface is the part of the host that checks, tracks, hands ov
 | Container identity, signature and version | Match the selected application and verify the signed snapshot |
 | Paths | Reject absolute paths, parent traversal, symlinks, hardlinks and duplicate paths |
 | Executable content | Match the supported application profile and declared artifacts |
-| Resource use | Enforce measured download, decompression, file-count and memory caps |
+| Resource use | Enforce download, decompression, file-count and memory caps |
 | Metadata and components | Verify artifact hashes, supported formats, parameter encodings and application protocols |
 | Setup and permissions | Match approved setup and declared permissions |
 
-Core today has a 50 MiB contract-state limit. Release tooling checks the pinned node and container limits together. [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-measurements) sets measured host caps. Each publication sends the whole archive, including assets. A separate blob-store proposal can use the [hash-keyed contract discussion #3985](https://github.com/freenet/freenet-core/issues/3985) as evidence.
+Core today has a 50 MiB contract-state limit. Release tooling checks the pinned node and container limits together. [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) confirmed that phones copy 32 MiB records intact (a 292 ms put on the iPhone 13 mini) and that River's 1.06 MB archive downloads as 1.2 MiB from the public network. This plan sets the download and memory caps from those numbers, and sets the decompression and file-count caps from River's and Atlas's archives. Each publication sends the whole archive, including assets. A separate blob-store proposal can use the [hash-keyed contract discussion #3985](https://github.com/freenet/freenet-core/issues/3985) as evidence.
 
 The installation interface then takes each candidate release through these steps:
 
