@@ -4,7 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts. Core resolves gateway hostnames in its join loop, so the node starts offline |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts. Core resolves gateway hostnames in its join loop, so the node starts offline. Core looks up each Wasm instance's memory address again after every contract and delegate call, so each instance reserves only the memory it uses |
 | `freenet-appkit` | Modified | Swift package and Kotlin library that wrap the bindings, package the XCFramework and AAR builds |
 
 ## Purpose
@@ -98,6 +98,8 @@ The node runs standard contract and delegate Wasm on the phone. iOS uses the [Pu
 | Compiled module cache | Sized from Linux cgroup limits | Explicit size, because iOS has no cgroups that could cap memory, CPU and disk access |
 | Wasm execution time | 5 seconds of wall-clock time | Set from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements |
 
+Each Wasm instance reserves address space for the memory it uses and grows up to its memory limit, so iOS and Android replace Stores on Core's default schedule ([memory reservation findings](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call) from 1.1 Mobile feasibility and supported profiles).
+
 Set limits for concurrent requests, response size and delegate event frequency from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements. The host enforces them for each app.
 
 Keep compiled modules on the phone and key them by engine version, so an engine update recompiles them. Check that timeouts, memory limits, cancellation and shutdown return the same bytes and errors on phones as on desktop.
@@ -146,6 +148,7 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 
 - The node starts in Airplane Mode on iOS and Android, River shows stored rooms, and the node joins the network once the phone is back online.
 - Concurrent requests stay isolated: two screens reading the same contract each get their own result, and a late reply after a timeout never reaches a queued request. Real delegate calls succeed, cancellation is safe, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes on iOS and Android.
+- On an iPhone and an Android phone, 300 stored contracts and 200 updates to one contract pass with Core's default Store replacement.
 - A test policy supplies the authority and policy hooks. Delegate calls run only when the test policy allows them.
 - CI runs a two-peer contract exchange, leak checks with thresholds tuned to measured noise, the update key-learning fallback and binding generation.
 
