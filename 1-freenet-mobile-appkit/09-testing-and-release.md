@@ -4,7 +4,8 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | River scenario suite, Atlas compatibility fixtures, destructive-migration test contract and published results. Developer package: River WebView starter, Swift and Kotlin examples, version matrix, setup, diagnostics export and release checklist |
+| `freenet-appkit` | Modified | River scenario suite, Atlas compatibility fixtures, destructive-migration test contract and published results. Developer package: River WebView starter, Swift and Kotlin examples, version matrix, setup, diagnostics export and release checklist. Store release: first-download size prompt, App Review notes and the [store build checks](#store-build-checks) |
+| [river](https://github.com/freenet/river) | Modified | Moderation in River's UI: reporting, blocking, a default content filter and terms before the first post. A published support URL and child-safety standards |
 | [atlas](https://github.com/freenet/atlas) | Modified | Separate test index for the compatibility fixtures |
 
 ## Purpose
@@ -97,6 +98,39 @@ The package lets a developer build River, or their own app, for iOS and Android.
 - iOS and Android setup, build and distribution instructions, covering artifact verification, fixture setup and lifecycle integration
 - Diagnostic export and the release checklist
 
+## Store requirements
+
+The release sends River to TestFlight on iOS and to Play internal testing on Android. River is a chat app, so both stores' rules for user-generated content apply. River's own UI handles moderation. The policy sources are the versions published on 2026-09-30.
+
+| Requirement | What the release does | App Store | Google Play |
+| --- | --- | --- | --- |
+| Reporting | River's UI lets a user report a message or a member. Reports go to an inbox the River team monitors. The team answers each report within the time stated on the support page. | [Guidelines](https://developer.apple.com/app-store/review/guidelines/) 1.2 | [User-generated content](https://support.google.com/googleplay/android-developer/answer/9876937) |
+| Blocking | Blocking a member hides their messages on the blocker's phone. The room owner can also ban the member from the room. | Guidelines 1.2 | User-generated content |
+| Content filter | River's UI filters objectionable messages by default. | Guidelines 1.2 | User-generated content |
+| Support URL | River publishes a support page with contact details. Both store listings link to it. | Guidelines 1.2 | User-generated content |
+| Terms | River shows its terms before a user's first post. The user accepts them to post. | – | User-generated content |
+| Child safety | River publishes child-safety standards for its chat rooms and declares them in Play Console. | – | [Child safety standards](https://support.google.com/googleplay/android-developer/answer/14747720) |
+| Downloaded code | The app is a River app with River's website key and contract keys pinned. The node runs only contracts and delegates whose code hashes are on the pinned list. The WebView bridge carries only node calls. | Guidelines 2.5.2 and 4.7; [DPLA](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/) 3.3.1(B) | [Device and network abuse](https://support.google.com/googleplay/android-developer/answer/9888379) |
+| Large downloads | Before the first large download, the host asks the user and states the download size. | Guidelines 4.2.3 | – |
+| Interpreter | wasmtime's Pulley interpreter runs all Wasm on iOS and on every Android ABI, so no build maps executable memory. | DPLA 3.3.1(B); [alternative browser engines](https://developer.apple.com/support/alternative-browser-engines/) | Device and network abuse |
+| Review notes | App Review notes explain the embedded node and the Pulley interpreter. | Guidelines 2.5.2 | – |
+| Encryption export | Declare the standard algorithms in App Store Connect: X25519, AES-GCM, ChaCha20, Ed25519 and BLAKE3. Record in the release checklist whether River ships in France, and file the French encryption declaration if it does. File the US year-end self-classification report when the export rules require it. | [Encryption export regulations](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations) | – |
+| Data safety | Declare the messages, user IDs and IP addresses River sends to peers, except data that is end-to-end encrypted. Declare encryption in transit. | – | [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469) |
+
+### Store build checks
+
+The iOS and Android packaging scripts run these checks on every store build. Any failed check fails the build.
+
+| Check | iOS | Android |
+| --- | --- | --- |
+| Pulley only | No Cranelift native backend and no JIT entitlement | No Cranelift native backend for any ABI |
+| No file sharing | `Info.plist` has no `UIFileSharingEnabled` | – |
+| [16 KB pages](https://developer.android.com/guide/practices/page-sizes) | – | `zipalign -c -P 16` passes on the APK |
+| [Target API](https://support.google.com/googleplay/android-developer/answer/11926878) | – | `targetSdk` is 36 or later |
+| Release signing | Distribution certificate | Upload key, with Play App Signing |
+| Privacy and encryption | `PrivacyInfo.xcprivacy` is in the `.app`, and `Info.plist` sets `ITSAppUsesNonExemptEncryption` | – |
+| No test harness | The binary has no `appkit.scenario` or `APPKIT_RESULT` | `classes*.dex` and native libraries have no `appkit.scenario` or `APPKIT_RESULT` |
+
 ## Release tests
 
 Every test runs on iOS and Android, with the phone in the thin-peer role.
@@ -110,7 +144,7 @@ Every test runs on iOS and Android, with the phone in the thin-peer role.
 | Safety and durability | Host authority, protected keys, offline sends, app-specific encrypted export/import and supported migrations pass their owning plans. |
 | Local network | The local-network case in the [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) passes with River. |
 | Device limits and accessibility | Startup, memory, battery, storage exhaustion, keyboard, focus, large text and screen-reader tests pass on the declared devices. |
-| Distribution | Reproducible iOS and Android packages and platform-review evidence cover the complete runtime and downloaded-content behavior on both platforms. Custom native examples record their own distribution evidence. |
+| Distribution | The TestFlight and Play internal-testing builds of River pass review, and every [store requirement](#store-requirements) holds. |
 | Diagnostics | Reports identify versions, node role, lifecycle state, observation provenance and pending-operation status. Apply [host redaction in 1.3 Single-application host](03-host.md#diagnostics) to keys, tokens, message content and private references. |
 
 ## Acceptance evidence

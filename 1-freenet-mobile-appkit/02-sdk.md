@@ -22,11 +22,11 @@ Manage embedded Core, transport, lifecycle and platform bindings. The app suppli
 | Register, unregister and message delegates | Authenticate the app/user/session and call the [authority hook](#caller-hooks) before each delegate call. |
 | Delegate startup and prompts | Call the [policy hook](#caller-hooks) for installation and permission decisions, including approved foreground startup. |
 | Permission requests | Pass the app's request for a declared permission to the [policy hook](#caller-hooks) and return granted, denied or unavailable, under the [permission rules in 1.3 Single-application host](03-host.md#asking-for-a-permission). |
-| Events and cancellation | Include SDK request and session identity, typed errors and submission uncertainty. Deliver callbacks on the platform's expected executor and reject expired-session callbacks. |
+| Events and cancellation | Include SDK request and session identity, typed errors and submission uncertainty. Hand every callback from the node runtime's threads to the platform's expected executor ([callback threads finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#callbacks-run-on-the-nodes-own-threads)), and reject expired-session callbacks. |
 
 #### Build
 
-Build the mobile crate fresh from Core main. [UniFFI](https://mozilla.github.io/uniffi-rs/latest/) generates the Swift and Kotlin bindings from it. Deliver every operation in the table above, plus build scripts for iOS and Android. Apply the [prototype learnings in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#prototype-learnings).
+Build the mobile crate fresh from Core main. [UniFFI](https://mozilla.github.io/uniffi-rs/latest/) generates the Swift and Kotlin bindings from it. Deliver every operation in the table above, plus build scripts for iOS and Android. Turn off Core's telemetry, which Core sends by default. Apply the [prototype learnings in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#prototype-learnings).
 
 #### Matching replies to requests
 
@@ -89,18 +89,18 @@ sequenceDiagram
 
 #### Running Wasm
 
-The node runs standard contract and delegate Wasm on the phone. iOS uses the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html) because iOS blocks just-in-time compilation. [1.1 Mobile feasibility and supported profiles](01-feasibility.md) picks the Android backend for each ABI. Both platforms run the same test fixtures.
+The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). No release build maps executable memory, so iOS builds fit the App Store rules and Android builds fit Google Play's interpreter exception ([distribution review](https://github.com/glesage/freenet-appkit/blob/main/docs/distribution-review.md)). Both platforms run one backend and the same test fixtures.
 
 | Limit | Core default | Mobile |
 | --- | --- | --- |
-| Memory per Wasm instance | 256 MiB | Set from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements |
-| State per contract | 50 MiB | Set from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements |
+| Memory per Wasm instance | 256 MiB | 256 MiB. The contracts measured in 1.1 Mobile feasibility and supported profiles use about 1 MiB. Contracts that need more run on desktop nodes |
+| State per contract | 50 MiB | 50 MiB |
 | Compiled module cache | Sized from Linux cgroup limits | Explicit size, because iOS has no cgroups that could cap memory, CPU and disk access |
-| Wasm execution time | 5 seconds of wall-clock time | Set from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements |
+| Wasm execution time | 5 seconds of wall-clock time | 5 seconds of wall-clock time |
 
 Each Wasm instance reserves address space for the memory it uses and grows up to its memory limit, so iOS and Android replace Stores on Core's default schedule ([memory reservation findings](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call) from 1.1 Mobile feasibility and supported profiles).
 
-Set limits for concurrent requests, response size and delegate event frequency from [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measurements. The host enforces them for each app.
+The host enforces per-app limits for concurrent requests, response size and delegate event frequency. The limits leave room for one writer's full rate: about 21 local updates per second, 45 ms each, on every device that 1.1 Mobile feasibility and supported profiles measured ([local update finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#a-local-update-takes-about-45-ms)).
 
 Keep compiled modules on the phone and key them by engine version, so an engine update recompiles them. Check that timeouts, memory limits, cancellation and shutdown return the same bytes and errors on phones as on desktop.
 
@@ -118,7 +118,7 @@ stateDiagram-v2
   [*] --> Stopped
   Stopped --> Starting
   Starting --> Running
-  Running --> Reconnecting: network change
+  Running --> Reconnecting: network path change
   Reconnecting --> Running
   Running --> Stopping
   Reconnecting --> Stopping
@@ -127,12 +127,15 @@ stateDiagram-v2
 
 On stop, the SDK drops callbacks and releases the port, runtime and store locks. Test killing the app in every state.
 
+The SDK watches the phone's network path with `NWPathMonitor` on iOS and `ConnectivityManager` network callbacks on Android. It tells the app whether the phone is online from that path, because Core keeps reporting its peers during an outage ([peer count finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-peer-count-stays-up-during-an-outage)).
+
 When Alice's phone moves from Wi-Fi to cellular, the SDK:
 
-1. Rejoins the network.
-2. Restores her subscription to "Skate club".
-3. Fetches the latest room state.
-4. Hands control back to River. Core sends the room's peers any messages Alice sent while offline.
+1. Restarts the node's transport, because Core keeps its connections on the Wi-Fi addresses ([cellular finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-does-not-move-to-cellular-on-its-own)).
+2. Rejoins the network.
+3. Restores her subscription to "Skate club".
+4. Fetches the latest room state.
+5. Hands control back to River. Core sends the room's peers any messages Alice sent while offline.
 
 When Alice opens River with no signal, the node starts and River shows her stored "Skate club" messages. Core resolves each gateway hostname in its join loop, just before it tries that gateway ([offline start finding in 1.1 Mobile feasibility and supported profiles](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode)), and the loop's backoff retries until the network returns. Core builds its fallback DNS resolver (hickory-resolver) only after an online lookup fails, and Android builds leave out its `system-config` feature.
 
@@ -166,9 +169,12 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 ## Acceptance
 
 - The node starts in Airplane Mode on iOS and Android, River shows stored rooms, and the node joins the network once the phone is back online.
+- On a real iPhone and a real Android phone, Alice turns off Wi-Fi while "Skate club" is open. The node rejoins on cellular, and Bob's next message reaches her within 30 seconds.
 - Concurrent requests stay isolated: two screens reading the same contract each get their own result, and a late reply after a timeout never reaches a queued request. Real delegate calls succeed, cancellation is safe, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes on iOS and Android.
 - An iPhone and an Android phone share a Wi-Fi network with a gateway at a private address. If the user allows the local-network prompt, the node joins through that gateway. If the user denies it, the node joins through public gateways. Run this on real devices, where iOS shows the prompt.
 - On an iPhone and an Android phone, 300 stored contracts and 200 updates to one contract pass with Core's default Store replacement.
+- A slow Swift listener on iOS and a slow Kotlin listener on Android delay neither other notifications nor request replies.
+- On an iPhone and an Android phone, measure River's contract and delegate run times under Pulley, because the emulator's compute case ran 3 to 16 times slower under Pulley than under Cranelift. River's largest room state stays under 50 MiB, and its slowest delegate call finishes within 5 seconds.
 - A test policy supplies the authority and policy hooks. Delegate calls run only when the test policy allows them.
 - CI runs a two-peer contract exchange, leak checks with thresholds tuned to measured noise, the update key-learning fallback and binding generation.
 

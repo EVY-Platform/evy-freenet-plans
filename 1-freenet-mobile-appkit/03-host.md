@@ -62,6 +62,7 @@ The host must:
 - Keep node credentials and privileged bridge methods in trusted code, and authenticate each caller, including loopback and alternate API paths.
 - Bind frames, WebView messages and native calls to the verified session, and validate message source, navigation and target before forwarding requests.
 - Scope cookies, web storage, caches, file access and native handles by application and user, and preserve the declared storage lifetime across reloads and restarts.
+  - The WebView keys web storage by origin, and the origin includes the node's loopback port. The host asks the node for the port from the last run and takes a new free port only when that one is taken. After a stop, the host waits until the port is free before it starts the node again. River then keeps its web storage, such as Bob's alert consent, across restarts.
 - Apply the node-only web sandbox policy to app code and loaded media, and route outside services, embedded pages and external links through approved adapters.
 - Validate deep-link application identities, destinations and parameters before routing, and ensure external/native handoffs obtain explicit authority for keys or private data.
 
@@ -87,9 +88,19 @@ The host runs a release only after installation has verified it and supplied its
 
 Subscriptions keep refreshing application data within a session.
 
-## Suspending and reopening an app
+## Opening, suspending and reopening an app
 
-[1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) owns node start/stop but the host has to invalidate the session on app suspension, and establish fresh authority on re-open with a new session.
+[1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) owns node start and stop, including an offline start. The host owns the app's session.
+
+When Alice opens River on the subway with no signal:
+
+1. The host loads River's website container from the node's store, without waiting for a peer.
+2. River shows "Skate club" from her phone's copy.
+3. Once the node has a peer, the host fetches any update to River's container. A new release activates at the next session boundary.
+
+Online, loading the stored container first saves about 0.5 s on the public network ([cached-app finding in 1.1 Mobile feasibility and supported profiles](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#smaller-items)).
+
+When the user leaves the app, the host ends the session. When the user reopens it, the host creates a new session with fresh authority.
 
 ## Base authorization and device access
 
@@ -139,6 +150,8 @@ Expose per-app connection state, subscription demand, last observation time, pen
 - Targeted delegate replies and autonomous private results reach only authorized sessions.
 - Activation happens only at a session boundary, creates a fresh session generation and rejects old-generation callbacks. Interrupted activation keeps the previous release active.
 - Suspension invalidates the session, and reopening obtains fresh authority.
+- On iOS and Android in Airplane Mode, River opens from its stored container and shows "Skate club".
+- On iOS and Android, River keeps its web storage across a restart because the node reuses the last loopback port.
 - Trusted prompts, expanded permissions, immediate revocation, locked devices and web/native handoffs enforce base authorization. Queued work rechecks authority.
 - On iOS and Android, River's first-message notification request and first clipboard use both reach the trusted prompt and store a grant in Core's table. Undeclared requests fail, a stored denial answers without a new prompt, and removing River deletes its grants.
 - Resource-exhaustion and malicious-input tests contain failure to the affected request or session.

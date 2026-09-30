@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin role in the connect protocol, connection manager, ring and serving-peer selection, subscription delivery and lifecycle configuration; cellular budget accounting, cap enforcement and role and traffic diagnostics |
-| `freenet-appkit` | Modified | Workload test definitions for the iOS and Android device runs |
+| `freenet-appkit` | Modified | Workload test definitions for the iOS and Android device runs, built on the harness's `watch` scenario |
 
 ## Purpose
 
@@ -22,6 +22,20 @@ flowchart LR
 
 - The phone sends and receives Bob's own traffic only. Full peers route and host for the rest of the network.
 - The phone counts every byte it sends and receives on cellular. When a budget runs out, it pauses network work, keeps Bob's drafts and shows the cap and what lets it resume.
+
+In 1.1 Mobile feasibility and supported profiles, phones on Wi-Fi ran as full peers and routed for the network ([finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#phones-are-full-peers-on-the-public-network)):
+
+| Run | Upload | Download |
+| --- | --- | --- |
+| iPhone 13 mini, full peer, first two minutes, 27 peers | 7.2 MB, about 60 KiB/s | 6.4 MB, about 60 KiB/s |
+| Android emulator, full peer, first two minutes, 22 peers | About 22 KiB/s | About 22 KiB/s |
+| Idle node with one or two peers | Under 1.3 KiB/s | Under 1.3 KiB/s |
+| Loading River's 1.06 MB archive on the public network | 9 KiB | 1.2 MiB |
+
+The thin role fixes two problems:
+
+- At 60 KiB/s, one hour as a full peer uses about 210 MiB of Bob's data each way, plus the battery to move it.
+- Google Play allows an app to relay traffic for others only when relaying is the app's main purpose ([Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/9888379)). River is a chat app, so a phone that routes as a full peer puts River's Play listing at risk. A thin peer sends only its user's own traffic.
 
 Phones run in the thin role for all testing and for the release of milestone 1 (Freenet mobile AppKit). Only development fixture profiles can run a phone as a full peer.
 
@@ -52,7 +66,7 @@ A thin peer opens terminal connections to serving full peers for its own reads, 
 | Ring and serving-peer selection | Assign network routing/hosting to full peers. Bound serving connections, selection attempts and retries, with capacity and reachability errors. |
 | Subscription delivery | Deliver only authorized active demand down terminal edges. Define unsubscribe, resubscribe and cleanup after disconnect. |
 | Lifecycle and configuration | Persist the selected role, release downstream state and preserve thin behavior across startup and Wi-Fi/cellular changes. |
-| SDK and diagnostics | Expose negotiated role, serving state, traffic counters, exhausted budgets and actionable failure reasons. Add budget failures to the [diagnostics in 1.3 Single-application host](03-host.md#diagnostics). |
+| SDK and diagnostics | Expose negotiated role, serving state, traffic counters, exhausted budgets and actionable failure reasons. Add budget failures to the [diagnostics in 1.3 Single-application host](03-host.md#diagnostics). Detect offline and serving-peer loss from the OS network path that 1.2 Embedded node and mobile SDK watches and from the serving connection's own state, because Core's peer count stays up during an outage ([finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-peer-count-stays-up-during-an-outage)). |
 
 An unsupported protocol or role fails visibly and retries within the configured budget while preserving the thin role. Exhausted attempts leave a visible disconnected state and retain local work. Only explicit development-fixture profiles may request a full-peer role.
 
@@ -60,7 +74,7 @@ Specify how thin nodes reach gateways and select replacement serving peers, incl
 
 ## Cellular budget contract
 
-Numerical thresholds, supported carriers, device coverage and test durations remain to be established. 1.1 Mobile feasibility and supported profiles supplies repeatable workloads and measurements. This plan owns explicit upload/download ceilings and enforcement. Approve them before this plan's acceptance runs.
+1.1 Mobile feasibility and supported profiles measured the full-peer numbers in [Purpose](#purpose) and built the tools that measure each workload. This plan sets the thin role's upload and download ceilings from those numbers, picks the supported carriers, devices and test durations, and enforces the ceilings. Approve them before this plan's acceptance runs.
 
 | Workload | Fix in the test definition | Required limits and measurements |
 | --- | --- | --- |
@@ -71,7 +85,7 @@ Numerical thresholds, supported carriers, device coverage and test durations rem
 | Traffic-accounting overhead | Counter collection, persistence, diagnostic/report export and instrumented comparison runs | Upload/download bytes added by accounting or reporting, plus CPU, memory and battery cost. |
 | Total cellular use | The app and host work, plus shared protocol overhead, over an approved period | Node-wide upload/download caps. Include retries, archive downloads and background-transition traffic. |
 
-Count bytes at the network layer as well as application payloads. Include bootstrap traffic, framing, encryption, retransmission, failed requests, repair and shared overhead. Record each counter's measurement layer and reconcile SDK counters with platform counters or controlled packet traces on each supported OS. Account for other device traffic in the test setup and state the uncertainty in estimating carrier-billed usage.
+Core's transport counters, which `crates/mobile` exposes as `node_traffic`, report upload and download bytes. The freenet-appkit harness's `watch` scenario records them for each workload. Count bytes at the network layer as well as application payloads. Include bootstrap traffic, framing, encryption, retransmission, failed requests, repair and shared overhead. Record each counter's measurement layer and reconcile SDK counters with platform counters or controlled packet traces on each supported OS. Account for other device traffic in the test setup and state the uncertainty in estimating carrier-billed usage.
 
 Attribute app traffic where possible and charge shared overhead once to the total node budget. Product scheduling in [2.5 Shared node, data and lifecycle](../2-evy-mobile-app/05-lifecycle.md) divides this budget among apps.
 

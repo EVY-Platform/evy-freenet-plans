@@ -1,6 +1,6 @@
 # 1.1 Mobile feasibility and supported profiles
 
-This has been done, documented in https://github.com/glesage/freenet-appkit/tree/main/docs
+This plan is done. Results are in https://github.com/glesage/freenet-appkit/tree/main/docs
 
 ## Repositories
 
@@ -31,9 +31,9 @@ The earlier local iOS prototype proved the behaviors below. The fresh build star
 
 | Learning | Apply in |
 | --- | --- |
-| Run Wasm through the Pulley interpreter on JIT-less targets. Run the conformance suite (contract round trips, out-of-bounds traps, backend refusal) on every backend. | [runtime in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
+| Run Wasm through the Pulley interpreter on iOS and every Android ABI. Run the conformance suite (contract round trips, out-of-bounds traps, backend refusal) on every backend. | [runtime in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
 | Own one process-wide async runtime in the mobile crate and build the node inside it. Install no process-global signal or abort handlers. Stop is an explicit call. | [1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
-| Use the node's loopback WebSocket as the client API. Let the node pick a free loopback port at start, report it to the host and pass the resolved port explicitly so a persisted config never replaces it. | [owned API in 1.2 Embedded node and mobile SDK](02-sdk.md#owned-api), [1.3 Single-application host](03-host.md#browser-and-native-hosts) |
+| Use the node's loopback WebSocket as the client API. At start the node tries the port from its last run, so the web origin and its web storage stay the same, and picks a free loopback port only when that port is taken. The node reports the port it got to the host, and the host passes that port explicitly so a persisted config never replaces it. Stop waits until the port is free again. | [owned API in 1.2 Embedded node and mobile SDK](02-sdk.md#owned-api), [1.3 Single-application host](03-host.md#browser-and-native-hosts) |
 | Take data, config and log directories from the host. Keep local-mode and network-mode stores apart and discard a persisted config whose data directory, mode or gateway source differs. | [storage paths in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
 | Pass each gateway override to Core's `--gateway` option as `ip:port,hex-public-key`, with an IP address so the override needs no DNS lookup. Fetch the public gateway index when network mode has no overrides. | [1.2 Embedded node and mobile SDK](02-sdk.md) |
 | Wait for at least one connected peer before the first network request, then retry reads for a bounded window. | [events in 1.2 Embedded node and mobile SDK](02-sdk.md#owned-api) |
