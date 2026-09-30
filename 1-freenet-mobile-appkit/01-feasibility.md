@@ -1,5 +1,7 @@
 # 1.1 Mobile feasibility and supported profiles
 
+This has been done, documented in https://github.com/glesage/freenet-appkit/tree/main/docs
+
 ## Repositories
 
 | Repository | Role | Work in this plan |
