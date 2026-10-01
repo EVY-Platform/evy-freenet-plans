@@ -189,7 +189,7 @@ When an app registers a delegate whose manifest lists startup runs or wake-ups, 
 
 Manifests can also declare wake-ups ([#5747](https://github.com/freenet/freenet-core/pull/5747)). Core fires a wake-up only while the app holds the `Background` grant. On iOS and Android, wake-ups and other background work run only while the SDK lifecycle keeps the node running.
 
-Core always builds its own `DashboardPrompter` (`p2p_impl.rs`), and its `user_input` module is `pub(crate)`. With no dashboard tab open, that prompter spawns `xdg-open` on iOS and Android. This plan needs Core to let an embedder supply the `UserInputPrompter` and never spawn a browser on iOS or Android. The mobile host's prompter shows delegate prompts in trusted native screens. Browser hosts use Core's own prompt. Runs that nobody started, such as lifecycle runs and wake-ups, can also raise prompts ([#5749](https://github.com/freenet/freenet-core/issues/5749)).
+Core always builds its own `DashboardPrompter` (`p2p_impl.rs`), and its `user_input` module is `pub(crate)`. With no dashboard tab open, that prompter spawns `xdg-open` on iOS and Android. This plan needs Core to let an embedder supply the `UserInputPrompter` and never spawn a browser on iOS or Android. The mobile host's prompter shows delegate prompts in trusted native screens. Browser hosts use Core's own prompt. Runs that nobody started, such as contract notification runs, lifecycle runs and wake-ups, can also raise prompts ([#5749](https://github.com/freenet/freenet-core/issues/5749)). The mobile prompter shows these at once in the same trusted screen. The run carries no caller, so the prompt names the app that Core binds to the delegate. On iOS and Android these runs happen only while the node runs, so the app is open when the prompt appears.
 
 ## Diagnostics
 
@@ -209,7 +209,8 @@ Expose per-app connection state, subscription demand, last observation time, pen
 - Trusted prompts, expanded permissions, immediate revocation, locked devices and web/native handoffs enforce base authorization. Queued work rechecks authority.
 - On iOS and Android, the host asks for `notifications` once, when Bob first runs River, and stores his answer as a grant in Core's table. River's `notification_enable_prompt` from the notification modal's Enable button and from Bob's first message, and River's `notification` posts, get the stored answer with no new prompt. After a denial, River's alerts stay in-app. Running Atlas raises no prompt. Undeclared requests fail, and removing River deletes its grants.
 - On iOS and Android, a `clipboard` message writes with no prompt and no grant. The host refuses a write without a user tap or within one second of the last write, and writes at most 2,048 characters.
-- On iOS and Android, Core's `Background` consent for River's chat delegate takes its answer from the installation approval, and no delegate prompt opens a browser.
+- On iOS and Android, Core's `Background` consent for a fixture delegate whose manifest lists startup runs takes its answer from the installation approval, and no delegate prompt opens a browser.
+- On iOS and Android, a fixture delegate that calls `RequestUserInput` from a contract notification run shows the trusted prompt at once, and the prompt names the delegate's app.
 - Resource-exhaustion and malicious-input tests contain failure to the affected request or session.
 - Each required browser or native admission path passes on the pinned Core build before that profile ships.
 

@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` counts sync traffic against the cellular budgets |
-| [river](https://github.com/freenet/river) | Modified | River adds a sync library that follows the design proposed in [#5587](https://github.com/freenet/freenet-core/issues/5587) and compiles it into the chat delegate. River saves unhides in `outbound_dms`, merges two concurrent copies of each record and gets a "Link a device" page in its web UI |
+| [river](https://github.com/freenet/river) | Modified | River adds a sync library that follows the design proposed in [#5587](https://github.com/freenet/freenet-core/issues/5587) and compiles it into the chat delegate. The chat delegate gains a Wasm manifest that declares lifecycle runs, a wake-up and `Background`, which gives it a new key, so River moves its secrets as [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#component-identity-and-re-keying) describes. River saves unhides in `outbound_dms`, merges two concurrent copies of each record and gets a "Link a device" page in its web UI |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Device list, link and remove screens, and the per-app sync switch, in the iOS and Android apps |
 | `freenet-appkit` | Modified | The Swift and Kotlin packages expose linking, removal and sync status to the EVY iOS and Android apps |
 
@@ -70,6 +70,7 @@ We track these River issues:
 | Delegates update contracts they do not yet hold. GET and SUBSCRIBE reach the network ([#5615](https://github.com/freenet/freenet-core/pull/5615)). Before its first UPDATE to a sync contract, the sync code reads it, as [Sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates) describes | [#5542](https://github.com/freenet/freenet-core/issues/5542) |
 | Delegate subscriptions keep the sync contracts hosted, within the limits in [Lost network state in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#lost-network-state) | [#4669](https://github.com/freenet/freenet-core/issues/4669) |
 | A delegate GET tells a missing sync contract from a failed lookup | [stdlib #131](https://github.com/freenet/freenet-stdlib/issues/131) |
+| freenet-migrate released on freenet-stdlib 0.12. River runs freenet-migrate, which builds on stdlib 0.8, and manifests need stdlib 0.12 ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)). Harvest writes its manifest section by hand ([node_glue.rs](https://github.com/freenet/harvest/blob/main/delegates/harvest-delegate/src/node_glue.rs)) | To file |
 | River's per-app scope in notification, lifecycle and wake-up runs on the phone, as [Core needs in 2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#core-needs) lists | [#5736](https://github.com/freenet/freenet-core/issues/5736) |
 
 ## Acceptance
