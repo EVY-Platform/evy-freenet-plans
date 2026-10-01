@@ -22,7 +22,7 @@ The operator records each approval in the evy repository with the approver, the 
 | Operators | Service operator | A named primary and backup operator for each service |
 | Stripe account and country | Financial operations lead | Stripe Connect approval for one country and currency, and a test onboarding of a seller like Alice and a contributor like Carol |
 | App store payment rules | Financial operations lead | A physical-goods sale paid outside in-app purchase on iOS and Android, under the Apple and Google rules cited in 3.4 Payments and checkout |
-| Money rules | Financial operations lead | The signed product policy from 3.1 Contributor registration and attribution, who pays Stripe's fee from 3.4 Payments and checkout, and the negative balance after a refund after payout from 3.5 Remuneration and payouts |
+| Money rules | Financial operations lead | The signed product policy from 3.1 Contributor registration and attribution, who pays Stripe's fees from 3.4 Payments and checkout, and the negative balance after a refund after payout from 3.5 Remuneration and payouts |
 | Retention | Financial operations lead | How long each record kind in [What each service backs up](#what-each-service-backs-up) is kept |
 | Recovery | Service operator | A passing [restore drill](#restore-drills) that meets the targets below |
 | Keys | Service operator | A named holder for each key in [Service keys](#service-keys) |
@@ -41,7 +41,7 @@ Work lost inside the recovery point comes back from Stripe, which [lists events 
 
 ## What each service backs up
 
-Today the evy [`docker-compose.prod.yml`](https://github.com/EVY-Platform/evy/blob/main/docker-compose.prod.yml) runs `postgres:16` with no named volume and no backup, so all data lives on one host. This plan gives each service its own database on a named volume. [pgBackRest](https://pgbackrest.org/) archives the write-ahead log with `archive_timeout = 60`, takes a daily full backup and writes both, encrypted, to an S3-compatible bucket in a second region. The bucket keeps 30 days of point-in-time restore and one monthly full backup for the approved retention period.
+Today the evy [`docker-compose.prod.yml`](https://github.com/EVY-Platform/evy/blob/dev/docker-compose.prod.yml) runs `postgres:16` with no named volume and no backup, so all data lives on one host. This plan gives each service its own database on a named volume. [pgBackRest](https://pgbackrest.org/) archives the write-ahead log, with PostgreSQL `archive_timeout = 60`, takes a daily full backup and writes both, encrypted, to an S3-compatible bucket in a second region. The bucket keeps 30 days of point-in-time restore and one monthly full backup for the approved retention period.
 
 | Service | Records | Defined in |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ Any record without a match stays on hold. Stripe write access stays off until th
 
 ## Service keys
 
-Each service signing key lives in a cloud key service that signs on request, so no host sees the private key. The publisher key belongs to the product publisher and has its tested backup under [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#saved-copies-and-recovery). Carol's contributor key stays on her laptop, as 3.1 Contributor registration and attribution sets.
+Each service signing key lives in a cloud key service that signs on request, so no host sees the private key. The payment service calls Stripe with a [restricted key](https://docs.stripe.com/keys) that holds only the permissions it uses, as Stripe recommends for new integrations. The publisher key belongs to the product publisher and has its tested backup under [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#saved-copies-and-recovery). Carol's contributor key stays on her laptop, as 3.1 Contributor registration and attribution sets.
 
 | Key | Service | Signs | Rotation | If it leaks |
 | --- | --- | --- | --- | --- |
@@ -77,7 +77,7 @@ Each service signing key lives in a cloud key service that signs on request, so 
 | Payment root key | Payment | Certificates for payment signing keys | Kept for the life of each order, because its accepted terms name it | Pause checkout, name a new root key in new terms, review payment records in open orders |
 | Payment signing key | Payment | Signed payment records in the order contract | Yearly and after each leak, by a new certificate from the root key | Pause checkout and record signing, certify a new signing key, review records signed since the leak |
 | Backup key | All | pgBackRest encryption | After each operator change | Start a new pgBackRest repository under a new key, take a full backup, then remove the old repository |
-| Stripe secret key and webhook secret | Payment | Stripe API calls and webhook checks | [Roll in Stripe](https://docs.stripe.com/webhooks), which keeps the old webhook secret valid for up to 24 hours | Roll at once with no overlap |
+| Stripe restricted key and webhook secret | Payment | Stripe API calls and webhook checks | [Roll the restricted key in Stripe](https://docs.stripe.com/keys#rolling-keys), which keeps the old key working for up to 7 days. [Roll the webhook secret](https://docs.stripe.com/webhooks), which keeps the old secret valid for up to 24 hours | Roll at once with no overlap |
 
 For any leak the operator records the decision before resuming the service.
 

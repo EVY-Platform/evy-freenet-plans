@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Creates `services/attribution` for products, contributor keys, PINs, proposals, reviews, size decisions, challenges, units, product policies and key recovery. Creates the EVY GitHub App, which checks PINs and posts the required merge check. Creates the EVY Developer CLI in `cli/` with its key, registration and proposal commands |
-| [river](https://github.com/freenet/river) | Used | Fixture product: its repository, the website container files in [`published-contract/`](https://github.com/freenet/river/tree/main/published-contract) and Carol's "Invite member" pull request |
+| [river](https://github.com/freenet/river) | Used | Fixture product, with its repository, the website container files in [`published-contract/`](https://github.com/freenet/river/tree/main/published-contract) and Carol's "Invite member" pull request |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev get-contract-id` shows how the service recomputes a website container's contract key |
 
 ## Purpose
@@ -37,7 +37,7 @@ Carol runs `evy key create` on her laptop. The CLI writes an Ed25519 key file en
 
 ## Product policy
 
-The product owner signs each policy version with the product owner key. A new version applies to proposals accepted after it is signed, and each acceptance records the version it used.
+The product owner signs each policy version with the product owner key. A new version applies to proposals accepted after it is signed, and each acceptance records the version it used. The product owner sets `payout_minimum_cents` and `payout_schedule` before launch, with Stripe's Connect fees from [Seller account and fee in 3.4 Payments and checkout](04-payment.md#seller-account-and-fee) in mind.
 
 ```jsonc
 {
@@ -52,8 +52,8 @@ The product owner signs each policy version with the product owner key. A new ve
   "role_split_bp": [8500, 1000, 500],                       // contributors, reviewer and validators
   "challenge_days": 30,                                     // days after acceptance to open a challenge
   "payout_hold_days": 30,                                   // days after completion before a share is payable
-  "payout_minimum_cents": 1000,                             // 10 dollars
-  "payout_schedule": "monthly",
+  "payout_minimum_cents": "...",                            // set by the product owner before launch
+  "payout_schedule": "...",                                 // set by the product owner before launch
   "signature": "ed25519:..."                                // by the product owner key
 }
 ```

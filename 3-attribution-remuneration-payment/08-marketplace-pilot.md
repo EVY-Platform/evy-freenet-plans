@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | `evy-marketplace` | Modified | Participant terms, privacy notices, reporting and blocking in Marketplace's UI, the curated seller list, the nonce hash in Bob's request, and `claim` and `dispute` records in the order contract |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | Marketplace's catalogue entry moves from the internal test configuration to EVY's release configuration for `ios/` and `android/`. `services/payment` gains the dispute queue |
-| [harvest](https://github.com/freenet/harvest) | Used | Pre-signed claim design ([#8](https://github.com/freenet/harvest/issues/8)) and mailbox privacy analysis ([messaging-privacy.md](https://github.com/freenet/harvest/blob/main/docs/messaging-privacy.md)) as references |
+| [harvest](https://github.com/freenet/harvest) | Used | Receipted complaints ([#143](https://github.com/freenet/harvest/pull/143)) and the pre-signed claim design ([#8](https://github.com/freenet/harvest/issues/8)) as references |
 
 ## Purpose
 
@@ -72,7 +72,9 @@ The forget warning from 3.3 Marketplace pickup protocol also names Bob's claim n
 
 ## Disputes
 
-Disputes follow Harvest's pre-signed claims ([#8](https://github.com/freenet/harvest/issues/8)). Bob's delegate makes a random nonce and puts only its hash in his request. Alice's delegate adds her claim statement with her proposal.
+Harvest ships receipted complaints ([#143](https://github.com/freenet/harvest/pull/143), [threat model](https://github.com/freenet/harvest/blob/main/docs/complaint-threat-model.md)). The buyer signs a complaint over the paid order with one fixed category and no free text, and a reputation contract keyed by the store key keeps a capped number of them.
+
+Marketplace's `claim` record follows the pre-signed claim design that Harvest plans for Phase 2 in [#8](https://github.com/freenet/harvest/issues/8). Bob's delegate makes a random nonce and puts only its hash in his request. Alice's delegate adds her claim statement with her proposal.
 
 ```jsonc
 {
@@ -99,7 +101,7 @@ Disputes follow Harvest's pre-signed claims ([#8](https://github.com/freenet/har
 | Decide | The named reviewer | 7 days after the filing |
 | Refund | The reviewer, in the Stripe Dashboard | When the reviewer decides to refund |
 
-A refund reaches the order through 3.4 Payments and checkout's `charge.refunded` handling, and the payment record shows `refunded`. A decision against Bob leaves the record at `paid`. Card chargebacks follow Stripe's [dispute flow](https://docs.stripe.com/disputes) in 3.4 Payments and checkout.
+A refund reaches the order through 3.4 Payments and checkout's `charge.refunded` handling, and the payment record shows `refunded`. A decision against Bob leaves the record at `paid`. Card chargebacks follow Stripe's [dispute flow](https://docs.stripe.com/disputes), with the fees in [Refunds and chargebacks in 3.4 Payments and checkout](04-payment.md#refunds-and-chargebacks).
 
 ## Moderation
 

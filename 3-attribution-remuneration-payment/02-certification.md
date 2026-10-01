@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution` gains the second-node read, the source check, contribution records, snapshots, saved evidence, paid eligibility and record lookup |
 | `freenet-appkit` | Modified | Packaging CLI validates the `capabilities` field in `app_definition.json` and sends the certification request after readback |
-| [river](https://github.com/freenet/river) | Modified | `app_definition.json` declares `river.member.invite`. The release build rebuilds to the same file digests |
+| [river](https://github.com/freenet/river) | Modified | `app_definition.json` declares `river.member.invite`. The release build uses the pinned toolchain, `--locked` and path remapping, and rebuilds to the same file digests |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev --node-url <url> execute get <key>` and the website container's signature check |
 
 ## Purpose
@@ -17,21 +17,25 @@ For example, the River publisher publishes River version 1790640000 with Carol's
 
 ## Declaring capabilities
 
-A release lists its credited capabilities in a `capabilities` field in [`app_definition.json`](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition), for example `["river.member.invite"]`. The packaging CLI checks the field's format in its validate step. The service refuses a release that lists an ID missing from the product policy.
+A release lists its credited capabilities in a `capabilities` field in [`app_definition.json`](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition), for example `["river.member.invite"]`. River defines no capability names, so this plan assigns `river.member.invite`. The packaging CLI checks the field's format in its validate step. The service refuses a release that lists an ID missing from the product policy.
 
 ## Certifying a version
 
 | Step | Who | What happens |
 | --- | --- | --- |
 | 1. Request | Packaging CLI | After readback closes the attempt, sends the container key, the version and the release commit to the service. |
-| 2. Read from a second node | Service | Reads the container from a node the service runs, the same call as `fdev --node-url <url> execute get <key>` ([fdev config](https://github.com/freenet/freenet-core/blob/main/crates/fdev/src/config.rs)). Checks the publisher's signature over version and archive, as the [website container's `validate_state`](https://github.com/freenet/freenet-core/blob/main/crates/website-contract/src/lib.rs) does. |
-| 3. Check source | Service | Rebuilds the release folder from the release commit in an isolated runner, using the toolchain pinned at that commit. Compares every file's digest with the files in the archive it read. |
+| 2. Read from a second node | Service | Reads the container from a node the service runs, with the same call as the readback in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence). Checks the publisher's signature over version and archive, as the [website container's `validate_state`](https://github.com/freenet/freenet-core/blob/main/crates/website-contract/src/lib.rs) does. |
+| 3. Check source | Service | Rebuilds the release folder from the release commit in an isolated runner. The runner uses the toolchain pinned at that commit, builds with `--locked`, and maps the workspace, `$CARGO_HOME` and `$RUSTUP_HOME` paths to fixed names with `--remap-path-prefix`. Delta, Ghostkeys and freenet-delegates build their Wasm this way ([delta#4](https://github.com/freenet/delta/pull/4), [ghostkeys#9](https://github.com/freenet/ghostkeys/issues/9), [freenet-delegates#4](https://github.com/freenet/freenet-delegates/pull/4)). Compares every file's digest with the files in the archive it read. |
 | 4. Collect work | Service | Includes each acceptance from 3.1 Contributor registration and attribution whose merge commit is in the release commit's history and whose capability the release lists. Refuses while an included acceptance has an open challenge. |
 | 5. Sign | Service | Signs the record and snapshot and saves the archive bytes, the signed version, the node URL and the read time.<br>--> Produces the contribution record below. |
 
 The website container keeps only its latest version. The service saves the archive bytes it read, because it can't read version 1790640000 again after River publishes a newer one. If a newer version is already current at step 2, the publisher certifies that one instead.
 
-[River's publish rules](https://github.com/freenet/river/blob/main/.claude/rules/river-publish.md) record a rebuild that was not byte-reproducible, so River's first certification checks that its build now rebuilds to the same file digests.
+River publishes with its pinned container Wasm through `--contract-wasm`, as set in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). Every River version therefore keeps the container key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`, and all its records name the same registered product.
+
+River commits its `Cargo.lock` so that its contract and delegate Wasm can be rebuilt ([river#393](https://github.com/freenet/river/pull/393)). No River CI job rebuilds the Wasm, so a committed Wasm that differs from the build of its source passes every check ([river#678](https://github.com/freenet/river/issues/678)). A comment-only edit changes the room contract key, because panic `Location` records carry file and line. Step 3 closes this gap for each release.
+
+[River's publish rules](https://github.com/freenet/river/blob/main/.claude/rules/river-publish.md) record a rebuild that differed byte for byte. River's first certification therefore checks that its build rebuilds to the same file digests.
 
 Code that no acceptance covers, such as River code from before River registered, earns no units. A change to any file makes a new version with its own record. A repeated request for the same version returns the existing record.
 

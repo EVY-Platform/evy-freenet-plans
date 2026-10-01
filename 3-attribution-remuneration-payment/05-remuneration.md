@@ -80,21 +80,26 @@ stateDiagram-v2
 
 ## Paying contributors
 
-- Carol onboards once through [Stripe Connect Express](https://docs.stripe.com/connect/express-accounts) before her first payout. Stripe holds her legal identity, bank details and tax forms.
-- Carol signs each new payout account with her contributor key from 3.1 Contributor registration and attribution, and completes Stripe's onboarding for it.
+- Carol links a Stripe connected account once, before her first payout, the same way Alice does in [Seller account and fee in 3.4 Payments and checkout](04-payment.md#seller-account-and-fee). Stripe holds her legal identity, bank details and tax forms.
+- Carol signs each new payout account with her contributor key from [3.1 Contributor registration and attribution](01-attribution.md#contributor-keys).
 - A credited share becomes payable `payout_hold_days` after the handover. The service pays a balance once it reaches `payout_minimum_cents`, on the policy's `payout_schedule`.
-- The service reserves the payable cents and then sends a [transfer](https://docs.stripe.com/api/transfers/create) from EVY's platform balance to Carol's connected account. The payout ID is the [idempotency key](https://docs.stripe.com/api/idempotent_requests). After a timeout, the service looks up the transfer by that key before it retries, so Carol is paid once.
-- Stripe then [pays out](https://docs.stripe.com/payouts) from her connected account to her bank on that account's schedule.
+- The service reserves the payable cents and then sends a [transfer](https://docs.stripe.com/api/transfers/create) from EVY's platform balance to Carol's connected account. The payout ID is the [idempotency key](https://docs.stripe.com/api/idempotent_requests), and the service also sets `transfer_group` and `metadata[payout_id]` to it.
+- After a timeout, the service retries with the same key within 24 hours, and Stripe returns the first result. Stripe can prune a key after 24 hours and then treats a reused key as a new request. After 24 hours the service [lists the transfers](https://docs.stripe.com/api/transfers/list) to Carol's connected account and matches `metadata[payout_id]`. It sends a new transfer only when none matches, so Carol is paid once.
+- Stripe then [pays out](https://docs.stripe.com/connect/payouts-connected-accounts) from her connected account to her bank on that account's schedule.
+
+EVY pays Stripe's Connect fees on each payout from its own budget, at the rates in [Seller account and fee in 3.4 Payments and checkout](04-payment.md#seller-account-and-fee). A 10-dollar payout to Carol costs EVY about 0.28 dollars, plus 2.00 dollars for her active account that month. The product owner sets `payout_minimum_cents` and `payout_schedule` with these fees in mind, in [Product policy in 3.1 Contributor registration and attribution](01-attribution.md#product-policy).
 
 ## Refunds
 
-A cancellation refunds Bob through Stripe with `refund_application_fee`, as 3.4 Payments and checkout defines, and the 0.70-dollar fee leaves EVY's platform balance. The service reads the returned fee from `fee_returned_minor` in the `refunded` payment record.
+A cancellation refunds Bob through Stripe with `refund_application_fee`, as [Refunds and chargebacks in 3.4 Payments and checkout](04-payment.md#refunds-and-chargebacks) defines, and the 0.70-dollar fee leaves EVY's platform balance. The service reads the returned fee from `fee_returned_minor` in the `refunded` payment record.
 
 | When Bob is refunded | What the remuneration service does |
 | --- | --- |
 | Before the handover | Cancels the pending shares. Nothing was credited. |
 | After the handover, before payout | Reduces each recipient's credited cents by their share of the returned fee. |
-| After payout | Reverses each recipient's paid cents with a [transfer reversal](https://docs.stripe.com/api/transfer_reversals/create). If Carol's Stripe balance cannot cover it, the service records the rest as a negative balance that her next credits pay off. |
+| After payout | Reverses each recipient's paid cents with a [transfer reversal](https://docs.stripe.com/api/transfer_reversals/create). The service caps the reversal at Carol's available Stripe balance and records the rest as a negative ledger balance that her next credits pay off. |
+
+The cap keeps Carol's Stripe balance at zero or above. A [negative Stripe balance](https://docs.stripe.com/connect/account-balances#accounting-for-negative-balances) makes Stripe debit her bank (Australia supports `debit_negative_balances`) and block her payouts, and EVY carries that loss on accounts created with `controller.losses.payments=application`.
 
 The ledger links each reversal to the original allocation and keeps both.
 
@@ -104,6 +109,6 @@ The ledger links each reversal to the original allocation and keeps both.
 - Duplicate order notifications, a restart of the service and two racing workers produce one allocation per payment, capability and recipient.
 - An order without both handover records keeps its shares pending. A refund before the handover leaves no credit, and Stripe returns the 0.70-dollar fee.
 - A share becomes payable only after `payout_hold_days`, and a balance below `payout_minimum_cents` waits for the next scheduled payout.
-- A transfer timeout followed by a retry creates one Stripe transfer.
-- A refund after payout creates transfer reversals, links them to the original allocations and records any shortfall as a negative balance.
+- A transfer timeout followed by a retry creates one Stripe transfer, both for a retry within 24 hours and for one after 24 hours.
+- A refund after payout creates transfer reversals capped at each recipient's available Stripe balance, links them to the original allocations and records any shortfall as a negative ledger balance.
 - Carol's `river.member.invite` units show 0 dollars, and her Marketplace units show the cents from completed sales.

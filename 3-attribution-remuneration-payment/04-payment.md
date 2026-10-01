@@ -8,6 +8,9 @@
 | `evy-marketplace` | Modified | The `propose` record gains `payment_root_key` and `policy_version`. The order contract verifies and keeps signed payment records. Marketplace's delegate signs checkout requests, and its UI shows payment status |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` binds each checkout request to the calling app and release, and keeps the paid-operation record |
 | `freenet-appkit` | Modified | The host bridge's `checkout` call, the native confirmation screen and Stripe's payment sheet in the iOS and Android host packages |
+| [stripe-ios](https://github.com/stripe/stripe-ios) and [stripe-android](https://github.com/stripe/stripe-android) | Used | Stripe's payment sheet in the iOS and Android host packages |
+| [harvest](https://github.com/freenet/harvest) | Used | [`payment.rs`](https://github.com/freenet/harvest/blob/main/common/src/payment.rs) as the model for payment proof embedded in an order |
+| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) | Used | Its bridge-signed payment claims as the trust model for the signed payment record |
 
 ## Purpose
 
@@ -44,6 +47,8 @@ sequenceDiagram
 ```
 
 - Stripe's payment sheet ([iOS](https://github.com/stripe/stripe-ios) and [Android](https://github.com/stripe/stripe-android) SDKs) runs card entry and 3-D Secure in native screens. A switch to a bank app returns to EVY through Stripe's return URL.
+- stripe-ios 26.x needs iOS 15 or later, and stripe-android 23.x needs API 23 or later. Both fit EVY's targets of iOS 17 and Android 9 (API 28) in [Web storage in 2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#web-storage).
+- The host calls the payment service directly from native code on iOS and Android.
 - Phones run their node in the foreground only, so the service's node sends the order update even when Bob closes EVY. Bob's phone sends the same bytes, so the order keeps one copy ([Sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates)).
 - Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) 3.1.3(e) and Google Play's [payments policy](https://support.google.com/googleplay/android-developer/answer/9858738) send physical-goods payments outside in-app purchase.
 
@@ -51,11 +56,11 @@ sequenceDiagram
 
 ## Checking out in a browser
 
-Core's app frame can reach only the node's origin ([client_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/client_api.rs)), but it opens popups as normal tabs ([#5100](https://github.com/freenet/freenet-core/pull/5100)). Marketplace opens a tab on the payment service's checkout page with Bob's signed request. The service runs the same checks and redirects the tab to a Stripe Checkout Session. It binds the container version its own node reads. The Marketplace tab shows paid when the order update arrives.
+Core's app frame sets `connect-src` to the node's own origin ([client_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/client_api.rs)), so a web app can't call an outside HTTP service ([freenet-bitcoin#3](https://github.com/freenet/freenet-bitcoin/issues/3), [harvest#29](https://github.com/freenet/harvest/issues/29)). The frame opens popups as normal tabs ([#5100](https://github.com/freenet/freenet-core/pull/5100)). Marketplace opens a tab on the payment service's checkout page with Bob's signed request. The service runs the same checks and redirects the tab to a Stripe Checkout Session. It binds the container version its own node reads. The Marketplace tab shows paid when the order update arrives.
 
 ## Seller account and fee
 
-Alice links a Stripe connected account once, through [Stripe-hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding) in the system browser. She signs the account ID with her store key, and the service stores the pair.
+Alice links a Stripe connected account with the Express Dashboard once. The service creates the account with controller properties (or Accounts v2), as in Stripe's [platform guide](https://docs.stripe.com/connect/interactive-platform-guide). Alice completes [Stripe-hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding) in the system browser, which EVY opens in `SFSafariViewController` on iOS and Custom Tabs on Android. Stripe's hosted onboarding doesn't run in embedded web views. Alice signs the account ID with her store key, and the service stores the pair.
 
 Each sale is a [destination charge](https://docs.stripe.com/connect/destination-charges) with `application_fee_amount` and `transfer_data.destination` set, on the PaymentIntent or under `payment_intent_data` on a Checkout Session. The fee is 100 basis points of the price in cents, rounded half up.
 
@@ -64,7 +69,13 @@ Each sale is a [destination charge](https://docs.stripe.com/connect/destination-
 | Bob pays | 70.00 dollars |
 | Alice receives | 69.30 dollars |
 | EVY holds for contributors | 0.70 dollars |
-| Stripe's fee | About 1.49 dollars at Stripe's [Australian domestic card price](https://stripe.com/au/pricing) on 2026-09-30. Stripe takes it from EVY's balance, and EVY pays it from its own budget so the contributors get the full 0.70 dollars |
+| Stripe's card fee | 1.49 dollars, at 1.7% + 0.30 dollars, Stripe's [Australian domestic card price](https://stripe.com/au/pricing) from 2026-10-01 |
+| Stripe's payout fee | About 0.42 dollars, at 0.25% + 0.25 dollars of Alice's 69.30-dollar payout ([Connect pricing](https://stripe.com/au/connect/pricing)) |
+| Stripe's active account fee | 2.00 dollars in each month that Stripe sends Alice a payout ([Connect pricing](https://stripe.com/au/connect/pricing)) |
+| EVY pays Stripe | About 1.91 dollars for this sale, plus 2.00 dollars in any month Alice is paid. The 0.70-dollar fee doesn't cover this |
+
+- With destination charges, the platform pays Stripe's fees. Stripe takes them from EVY's balance, and EVY pays them from its own budget so the contributors get the full 0.70 dollars.
+- Stripe's prices include GST. Stripe keeps its card and Connect fees when it refunds a payment.
 
 ## One attempt per order
 
@@ -88,12 +99,12 @@ The service's node follows each paid order. When the order holds a cancel record
 
 | Case | Bob | Alice | EVY |
 | --- | --- | --- | --- |
-| Cancellation before handover | Gets 70.00 dollars back | Returns 69.30 dollars | Returns the 0.70-dollar fee. Stripe keeps its 1.49 dollars |
-| Chargeback that Bob wins | Gets 70.00 dollars back | The service reverses her transfer, as for a refund | Pays Stripe's dispute fee |
+| Cancellation before handover | Gets 70.00 dollars back | Returns 69.30 dollars | Returns the 0.70-dollar fee. Stripe keeps its 1.49-dollar card fee and any Connect fees |
+| Chargeback that Bob wins | Gets 70.00 dollars back | The service reverses her transfer, as for a refund | Pays Stripe's 25.00-dollar dispute fee. Countering the dispute costs another 25.00 dollars, which Stripe refunds only if EVY wins |
 
 ## Signed payment record
 
-The payment service signs one record per payment revision and embeds it in the order update, as Harvest does with its [embedded payment proof](https://github.com/freenet/harvest/blob/main/common/src/payment.rs).
+The payment service signs one record per payment revision and embeds it in the order update. Harvest embeds payment proof in its orders the same way ([payment.rs](https://github.com/freenet/harvest/blob/main/common/src/payment.rs)). Its proofs are claims signed by the [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) bridge, and a reader trusts them through a bridge key its own app recognises. `payment_root_key` gives the order the same trust shape, with the payment service in the bridge's place.
 
 ```jsonc
 {

@@ -7,12 +7,13 @@
 | [evy](https://github.com/EVY-Platform/evy) | Modified | `web/` gains the EVY Developer workspace screens for proposals, release history, earnings and payouts, beside the existing builder. New `evy login` and `evy earnings` commands in the EVY Developer CLI. Both call `services/attribution`, `services/payment` and `services/remuneration` unchanged |
 | `freenet-appkit` | Used | The packaging CLI's publication and certification request |
 | [river](https://github.com/freenet/river) | Used | Carol's "Invite member" pull request and River version 1790640000 as the worked example |
+| [freenet-agent-skills](https://github.com/freenet/freenet-agent-skills) | Used | The dapp-builder skill Carol can use with a coding agent |
 
 ## Purpose
 
-This plan builds the screens and CLI commands where a contributor follows her work from pull request to certified release and earnings. Carol opens a pull request to River that reworks the "Invite member" screen. She tracks its review in the workspace, sees River version 1790640000 certified with her work in it, and sees the 6.8 units she earned. River has no paid operations, so Carol's River credit stays in units.
+This plan builds the screens and CLI commands where a contributor follows her work from pull request to certified release and earnings. Carol opens a pull request to River that reworks the "Invite member" screen. She tracks its review in the workspace, sees River version 1790640000 certified with her work in it, and sees the 6.8 units she earned. River has no paid operations, so Carol's River credit stays in units. Carol can write her change with a coding agent and the [dapp-builder skill](https://github.com/freenet/freenet-agent-skills/tree/main/skills/dapp-builder), which follows River's contract, delegate and UI patterns.
 
-The workspace shows records from the services built in [3.1 Contributor registration and attribution](01-attribution.md), [3.2 Release certification](02-certification.md), [3.4 Payments and checkout](04-payment.md) and [3.5 Remuneration and payouts](05-remuneration.md). Releases come from the [packaging CLI in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence). The screens use TypeScript and React, built and tested with Bun like the existing [`web/` app](https://github.com/EVY-Platform/evy/blob/main/web/package.json).
+The workspace shows records from the services built in [3.1 Contributor registration and attribution](01-attribution.md), [3.2 Release certification](02-certification.md), [3.4 Payments and checkout](04-payment.md) and [3.5 Remuneration and payouts](05-remuneration.md). Releases come from the [packaging CLI in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence). The screens use TypeScript and React, built and tested with Bun like the existing [`web/` app](https://github.com/EVY-Platform/evy/blob/dev/web/package.json).
 
 ## From pull request to release
 
@@ -47,7 +48,7 @@ flowchart LR
 | Proposals | Each proposal with its pull request, PIN check, review, size, challenges and accepted units | "Invite member", accepted, 6.8 units |
 | Release history | For each version, the website container key, version, archive digest, release commit, included acceptances, declared capabilities and certification status | River version 1790640000, certified, includes "Invite member", `["river.member.invite"]` |
 | Earnings | Units per product in one column, money per currency in another, each with the time of the last service update. `evy earnings` prints the same | 6.8 River units |
-| Payouts | Balance, `payout_minimum_cents` and `payout_schedule` from the product policy, payout history, reversals, and a link to Stripe's hosted [Connect onboarding](https://docs.stripe.com/connect/express-accounts) | Opens once Carol earns money from a paid product |
+| Payouts | Balance, `payout_minimum_cents` and `payout_schedule` from the product policy, payout history, reversals, and a link to [Stripe-hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding) for Carol's connected account, as in [Paying contributors in 3.5 Remuneration and payouts](05-remuneration.md#paying-contributors) | Opens once Carol earns money from a paid product |
 
 Money appears only after a paid sale completes. For Carol's Marketplace work, the skateboard sale from [3.3 Marketplace pickup protocol](03-marketplace-protocol.md) shows her 24-cent share as pending until Alice and Bob sign the handover, then as payable, then as paid. An allocation the service has not confirmed carries a "preview" label. A refund after payout shows as its own reversal line, linked to the payout it reverses.
 
