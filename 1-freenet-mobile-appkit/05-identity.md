@@ -65,7 +65,7 @@ On first start, `crates/mobile` creates the node encryption key and stores it wi
 
 ### What the key protects
 
-Core derives a separate key for each delegate from the node encryption key. The host derives one more key the same way for its own private records. Core also keeps encrypted earlier values of each delegate secret in that delegate's `.snapshots/` folder ([#4034](https://github.com/freenet/freenet-core/pull/4034), [#4036](https://github.com/freenet/freenet-core/issues/4036)). They use the same derived key and stay on this phone.
+Core derives a separate key for each delegate from the node encryption key. The host derives one more key the same way for its own private records. `crates/mobile` turns off Core's secret snapshots ([Storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage)), so the phone keeps only each secret's current value.
 
 | Record | Where it lives | Protected by | After a restore |
 | --- | --- | --- | --- |
@@ -106,8 +106,8 @@ Removing River from the host keeps its keys and private records on the phone unt
 
 Alice forgets River before she gives her phone away:
 
-1. The host deletes the node encryption key with Core's `KekBackend::delete`. Every delegate store and host record on the phone becomes unreadable at once. This includes the `.snapshots/` history and copies the flash storage keeps after a file delete.
-2. The host deletes River's storage directory, including each delegate's `.snapshots/` folder, and checks it is gone.
+1. The host deletes the node encryption key with Core's `KekBackend::delete`. Every delegate store and host record on the phone becomes unreadable at once. This includes copies the flash storage keeps after a file delete.
+2. The host deletes River's storage directory and checks it is gone.
 3. The host reports anything it could not delete, and what stays elsewhere:
    - Messages Alice posted stay in "Skate club" on the network.
    - Backup files she exported keep working.
@@ -172,5 +172,5 @@ A backup from an older River release restores under that release's chat delegate
 - On Android 9 to 11 and Android 15 and later, the node key has `setUnlockedDeviceRequired(true)`. On Android 12 to 14 it does not, and Alice keeps River's data after she removes her lock screen.
 - On iOS and Android, locking the phone wipes the key from memory, and delegate calls return `Locked` until the unlock. A test checks that the wipe zeroes the key and every derived key. A missing key returns `KeyLost` and keeps the encrypted store until import or forget.
 - A restore opens new sessions and passes host isolation tests. A copied backup file opens only with its recovery code.
-- Forget deletes the node encryption key first, then River's storage with its `.snapshots/` history, and reports failures and the copies that stay elsewhere.
+- Forget deletes the node encryption key first, then River's storage, and reports failures and the copies that stay elsewhere.
 - The baseline passes before public release with valuable identities.

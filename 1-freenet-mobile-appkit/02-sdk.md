@@ -150,7 +150,7 @@ The host supplies the storage paths. The SDK keeps those paths through restarts,
 | Hosted state (`max-hosting-storage`) | `clamp(RAM / 8, 128 MiB, 1 GiB)` | Set explicitly. The iPhone's stores used 6.1 MiB in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) |
 | Hosting disk (`hosting-disk-pct`) | 50% of the disk space available to Freenet, up to 32 GiB | Set explicitly |
 | Log folder (`FREENET_LOG_DIR_MAX_BYTES`) | 512 MiB ([#5404](https://github.com/freenet/freenet-core/pull/5404)) | Set explicitly. The iPhone wrote 3.2 MiB of logs |
-| Secret snapshots (`FREENET_SECRET_SNAPSHOT_BYTES_PER_SECRET`) | Up to about 62 versions and 3 MiB per secret, kept for up to 2 years ([secrets at rest](https://github.com/freenet/freenet-core/blob/main/docs/secrets-at-rest.md)) | Set explicitly |
+| Secret snapshots (`FREENET_DISABLE_SECRET_SNAPSHOTS`) | Up to about 62 versions and 3 MiB per secret, kept for up to 2 years ([secrets at rest](https://github.com/freenet/freenet-core/blob/main/docs/secrets-at-rest.md)) | Off. Phones have no snapshot restore, and the export in [1.5 Identity, keys and local protection](05-identity.md#app-specific-export-and-import) covers recovery |
 
 #### Start, stop and reconnect
 

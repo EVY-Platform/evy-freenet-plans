@@ -150,7 +150,7 @@ River stores drafts by these rules:
 - Each draft gets its own small key, apart from River's room records. River's room slots cache room state, and each chat message rewrote about 373 KiB per member until River delayed those writes ([river#533](https://github.com/freenet/river/issues/533), [river#534](https://github.com/freenet/river/pull/534)).
 - Two tabs, a background run and the UI can write the same draft. So River writes drafts with its compare-and-swap requests `GetVersionedRequest` and `CasStoreRequest` ([river#345](https://github.com/freenet/river/issues/345), [river#347](https://github.com/freenet/river/pull/347)).
 - Core sets no quota on local-scope secrets ([#5560](https://github.com/freenet/freenet-core/issues/5560)), so River caps the number and size of its drafts. `list_secrets` returns at most 4,096 keys per scope ([store.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/secrets_store/store.rs)).
-- Core keeps snapshot copies of each changed secret. [Storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage) sets that budget.
+- `crates/mobile` turns off Core's secret snapshots ([Storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage)), so a deleted draft leaves no older copy on the phone.
 
 Mail keeps drafts the same way, in a per-device delegate that saves on every keystroke ([mail#56](https://github.com/freenet/mail/pull/56)).
 
