@@ -119,7 +119,7 @@ The [distribution review](https://github.com/glesage/freenet-appkit/blob/main/do
 
 ## Prototype learnings
 
-The earlier local iOS prototype proved the behaviors below. This plan built them again from a clean Core main and re-tested them on iOS and Android. A community prototype also runs River on Android with an in-process node ([river#319](https://github.com/freenet/river/issues/319), [river#313](https://github.com/freenet/river/pull/313)). It stages fallback gateways for an offline first start and registers a synthetic auth token so River's chat delegate accepts the app's messages.
+This plan built and tested the behaviors below on iOS and Android, from a clean Core main. A community prototype also runs River on Android with an in-process node ([river#319](https://github.com/freenet/river/issues/319), [river#313](https://github.com/freenet/river/pull/313)). It stages fallback gateways for an offline first start and registers a synthetic auth token so River's chat delegate accepts the app's messages.
 
 | Learning | Apply in |
 | --- | --- |
