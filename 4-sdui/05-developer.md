@@ -12,14 +12,14 @@
 
 This plan lets a contributor build SDUI screens by dragging components onto a canvas. The editor saves its work as the ordinary `ui/sdui/` files from [4.4 SDUI bundles and publication](04-bundles.md), and sends them to the app's repository as a pull request. Review, credit and release then follow the normal repository path in [3.6 EVY Developer contribution workspace](../3-attribution-remuneration-payment/06-developer.md) and [3.1 Contributor registration and attribution](../3-attribution-remuneration-payment/01-attribution.md).
 
-Carol builds River's "Invite member" sheet, which River's Rust UI draws today in [invite_member_modal.rs](https://github.com/freenet/river/blob/main/ui/src/components/members/invite_member_modal.rs). The editor uses the components from [4.1 SDUI format](01-format.md), the web reader from [4.2 SDUI readers](02-readers.md) and the actions and delegate schemas from [4.3 SDUI actions and data](03-actions-and-data.md). Delegate and contract code stays in River's own code. The chat delegate's `CreateInvitation` message from 4.3 SDUI actions and data does the invite work.
+Carol builds River's "Invite member" sheet, which River's Rust UI draws today in [invite_member_modal.rs](https://github.com/freenet/river/blob/main/ui/src/components/members/invite_member_modal.rs). The editor uses the components from [4.1 SDUI format](01-format.md), the web reader from [4.2 SDUI readers](02-readers.md) and the actions and delegate schemas from [4.3 SDUI actions and data](03-actions-and-data.md). Delegate and contract code stays in River's own code. The chat delegate's `CreateInvitation` message from 4.3 SDUI actions and data does the invite work. The sheet builds a new one-person link each time it opens and on "New Invitation", as [Purpose in 4.3 SDUI actions and data](03-actions-and-data.md#purpose) sets.
 
 ## Building the "Invite member" sheet
 
 | Step | Carol does | The editor does |
 | --- | --- | --- |
 | 1. Open | Forks River on GitHub and opens her fork in EVY Developer on a new branch | Reads `ui/sdui/ui.json`, `ui/sdui/actions/` and `ui/sdui/schemas/`. Lists the chat delegate's messages, including `CreateInvitation` |
-| 2. Lay out | Adds a sheet to the members screen. Drags in a heading "Invite Member", a close button, three read-only text fields and the buttons "Copy Link", "Copy Code", "Copy Message" and "New Invitation" | Draws each component with the web reader, so the canvas matches what a browser shows |
+| 2. Lay out | Adds a sheet to the members screen. Drags in a heading "Invite Member", a close button, River's note "No DM yet? Share the link or code below privately, with one person only.", three read-only text fields and the buttons "Copy Link", "Copy Code", "Copy Message" and "New Invitation" | Draws each component with the web reader, so the canvas matches what a browser shows |
 | 3. Bind | Points the sheet's open event and "New Invitation" at `new-invitation`. Binds the three text fields to its link, code and message results. Points "Copy Link" at `copy-invite-link`, and each other copy button at a matching copy action | Offers only result fields whose types match the text field. Adds a `device` clipboard step to each copy action |
 | 4. Preview | Steps through the states in [Previewing](#previewing) | Answers the `CreateInvitation` call from a fixture |
 | 5. Check | Fixes the close button, which has an icon and no `a11y_label` | Shows the finding beside the button and blocks export until it passes |
@@ -55,7 +55,7 @@ The preview runs the web reader from 4.2 SDUI readers and passes it a memory hos
 | --- | --- |
 | Loading | "Generating invitation..." |
 | Error | The error text and a "Try Again" button |
-| Ready | The link, code and message fields and the four buttons |
+| Ready | The one-person note, the link, code and message fields and the four buttons |
 | Copied | "Copied!" on the pressed button, and the other buttons reset |
 | Clipboard denied | The link as selectable text, as 4.2 SDUI readers shows it |
 
@@ -77,7 +77,7 @@ The editor runs the `freenet-sdui` validation library on every edit. The packagi
 
 The export writes canonical JSON with sorted keys, two-space indents and stable component IDs. The same project and the same `freenet-sdui` version always give the same bytes. Opening and exporting a project with no edits gives an empty diff, so review shows only Carol's changes.
 
-The editor commits through the repository integration in 3.6 EVY Developer contribution workspace and opens the pull request there. Carol then signs her proposal with the EVY Developer CLI and adds its PIN to the pull request, as in 3.1 Contributor registration and attribution. She earns units like any other River contributor. The `river.member.invite` capability ID is added to the release by [3.2 Release certification](../3-attribution-remuneration-payment/02-certification.md).
+The editor commits through the repository integration in 3.6 EVY Developer contribution workspace and opens the pull request there. Carol then signs her proposal with the EVY Developer CLI and adds its PIN to the pull request, as in 3.1 Contributor registration and attribution. She earns units like any other River contributor. River's `app_definition.json` lists the `river.member.invite` capability, as [Declaring capabilities in 3.2 Release certification](../3-attribution-remuneration-payment/02-certification.md#declaring-capabilities) sets.
 
 ## Acceptance
 
@@ -88,4 +88,5 @@ The editor commits through the repository integration in 3.6 EVY Developer contr
 - A browser crash keeps the autosaved draft, and undo and redo restore each edit.
 - Playwright tests in evy `web/integration/` cover open, edit, bind, preview, check, export and pull request against a mock GitHub.
 - The editor works by keyboard alone and with a browser screen reader.
+- The exported sheet shows River's one-person note, and pressing "New Invitation" in the preview calls `CreateInvitation` again for a new link.
 - After the River publisher releases the version with Carol's sheet, Alice opens it in "Skate club" in a browser, in EVY on iOS and in EVY on Android, copies the link, and Bob joins from it.

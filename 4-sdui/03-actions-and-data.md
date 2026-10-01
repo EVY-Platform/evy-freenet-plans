@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-sdui` | Modified | The executor in the web, SwiftUI and Compose readers, its steps and limits, view states, form and draft bindings, send-state display and shared step fixtures |
-| [river](https://github.com/freenet/river) | Modified | The chat delegate gains `CreateInvitation` and `PrepareMessage`. Schemas in `ui/sdui/schemas/` describe these and the existing `StoreRequest` and `GetRequest` messages |
+| [river](https://github.com/freenet/river) | Modified | The chat delegate gains `CreateInvitation` and `PrepareMessage`. Schemas in `ui/sdui/schemas/` describe these and the existing `GetVersionedRequest` and `CasStoreRequest` messages |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Session and grant checks in `crates/mobile` from 1.3 Single-application host, subscription handles from 1.2 Embedded node and mobile SDK and the delegate secret store |
 | `freenet-appkit` | Used | The host bridge from 1.3 Single-application host carries the web reader's delegate calls and permission requests |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | River moves the chat delegate's secrets to the new delegate key |
@@ -14,7 +14,9 @@
 
 This plan makes SDUI screens do work. A view reads contract state, and a form keeps a draft. An action runs a list of steps that call the app's delegate, ask for a permission or send an update. The executor that runs actions is built into the readers from [4.2 SDUI readers](02-readers.md). Actions name routes and values as [4.1 SDUI format](01-format.md) defines them.
 
-Alice opens the "Invite member" sheet that Carol built for "Skate club". The executor gets 32 random bytes from the host and asks River's chat delegate to build an invitation. Alice taps "Copy Link" and the executor copies the link to the clipboard. Bob opens the link, joins, and sends "Skate session Saturday?" from the conversation screen. The screen shows his message as a draft until Core answers, then as sent.
+Alice opens the "Invite member" sheet that Carol built for "Skate club". The executor gets 32 random bytes from the host and asks River's chat delegate to build an invitation. Alice taps "Copy Link" and the executor copies the link to the clipboard. Bob opens the link, joins, and sends "Skate session Saturday?" from the conversation screen. The screen shows his message as sending until Core answers, then as sent.
+
+Each invite link holds a new signing key for one invitee and works for one person only ([river#566](https://github.com/freenet/river/issues/566)). So the sheet builds a new link each time it opens and on "New Invitation", and says the link is for one person.
 
 ## Views
 
@@ -41,7 +43,7 @@ An action is a named list of steps in `ui/sdui/actions/`. The executor runs the 
 | `permission` | Asks the host for a declared permission | `notifications` when Bob sends his first message |
 | `device` | Uses a device feature under a declared permission | `copy-invite-link` writes `view:invitation.url` to the clipboard |
 
-Actions add three reference prefixes to those in 4.1 SDUI format. `arg:` reads an argument, `step:` reads an earlier step's result and `host:app_url` reads the app's page URL from the host. An action's `result` fills a view, or sets a `local:` value, as `copy-invite-link` sets `local:copied`. Carol's action for the "Invite member" sheet:
+Actions add three reference prefixes to those in 4.1 SDUI format. `arg:` reads an argument, `step:` reads an earlier step's result and `host:link_base` reads the invite link base from the host. An action's `result` fills a view, or sets a `local:` value, as `copy-invite-link` sets `local:copied`. Carol's action for the "Invite member" sheet:
 
 ```jsonc
 {
@@ -55,7 +57,7 @@ Actions add three reference prefixes to those in 4.1 SDUI format. `arg:` reads a
       "input": {                                      // the executor adds request_id
         "room_key": { "ref": "arg:room" },            // the schema decodes it to 32 bytes
         "invitee_seed": { "ref": "step:seed" },       // the delegate derives Bob's key from it
-        "base_url": { "ref": "host:app_url" }         // River's page URL without its query
+        "base_url": { "ref": "host:link_base" }       // share-link base in EVY, River's page URL in a browser
       } }                                             // the reply carries url, code and message
   ],
   "result": { "view": "invitation",                   // fills view:invitation.url on the sheet
@@ -86,21 +88,25 @@ sequenceDiagram
     Delegate-->>Exec: Reply with the invite link
     Screen->>Exec: Alice taps Copy Link, runs copy-invite-link
     Exec->>Host: device, clipboard
-    Host->>Host: Ask for clipboard at first use
+    Host->>Host: On iOS and Android, ask for clipboard at first use
 ```
 
 Each schema in `ui/sdui/schemas/` describes one delegate message and its reply as bytes on the wire. River's messages are CBOR, tagged by variant name, as [chat_delegate.rs](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs) notes. The executor encodes the request from the schema, adds the request ID and matches the reply by it. It checks the whole reply against the schema before a binding sees any of it. Key generation, CBOR encoding of River's own types, room-secret encryption and signing go into delegate messages, because the executor runs only generic steps. River's chat delegate gains two messages:
 
 | Message | Input | Reply | River code it replaces |
 | --- | --- | --- | --- |
-| `CreateInvitation` | Room owner key, request ID, 32-byte seed, page URL | The `?invitation=` link, the portable code and the invitation message. The delegate derives Bob's key from the seed, signs his `Member` and adds the room secrets for a private room | [invitation_builder.rs](https://github.com/freenet/river/blob/main/ui/src/components/members/invitation_builder.rs) |
+| `CreateInvitation` | Room owner key, request ID, 32-byte seed, link base | The `?invitation=` link, the portable code and the invitation message. The delegate derives Bob's key from the seed, signs his `Member` and adds the room secrets for a private room | [invitation_builder.rs](https://github.com/freenet/river/blob/main/ui/src/components/members/invitation_builder.rs) |
 | `PrepareMessage` | Room owner key, request ID, text, time | The signed room update. The delegate encrypts the text with the room secret, signs it and saves the bytes with the draft before it replies | The send path in [conversation.rs](https://github.com/freenet/river/blob/main/ui/src/components/conversation.rs) |
 
-The chat delegate has no random source ([Cargo.toml](https://github.com/freenet/river/blob/main/delegates/chat-delegate/Cargo.toml), [river#241](https://github.com/freenet/river/issues/241)), so the seed comes from the host. River's UI reads room secrets from its own room data today, so River must check that the delegate holds every room secret an invitation or message needs. The new messages change the delegate's key, so River moves its secrets with freenet-migrate, as [Delegate secret export and import in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import) describes.
+Inside EVY, the host supplies `https://<EVY link domain>/open#raAq.../`, the link base from [Opening links and alerts in 2.1 EVY shell and curated catalogue](../2-evy-mobile-app/01-catalogue.md#opening-links-and-alerts) followed by River's container key. In a browser, the host supplies River's page URL without its query. The delegate appends `?invitation=<code>` to the base, so Alice's link in EVY has the EVY link form from that section.
+
+The chat delegate has no random source ([Cargo.toml](https://github.com/freenet/river/blob/main/delegates/chat-delegate/Cargo.toml), [river#241](https://github.com/freenet/river/issues/241)), so the seed comes from the host.
+
+Both messages read the room's signing key from the delegate's `signing_key:` entry. For a private room, they rebuild the room secret from the `room:<owner key>` entry with that key, as River's UI does. River re-keys its chat delegate roughly weekly. The migration moves `room:` entries and leaves `signing_key:` entries behind, and River's start code stores the signing key again from `room:<owner key>`, as [Delegate secret export and import in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import) lists. The new messages also change the delegate's key, so River moves its other secrets with freenet-migrate, as the same section describes.
 
 ## Permissions in actions
 
-A `permission` or `device` step names a permission from the `permissions` field in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). The host asks and checks grants under [Asking for a permission in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission). [4.2 SDUI readers](02-readers.md#showing-permission-results) sets what the screen shows. The executor acts on the result.
+A `permission` or `device` step names a permission from the `permissions` field in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). The host asks and checks grants under [Asking for a permission in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission). [4.2 SDUI readers](02-readers.md#showing-permission-results) sets what the screen shows, and when a browser returns Denied for `clipboard`. The executor acts on the result.
 
 | Host result | What the executor does |
 | --- | --- |
@@ -111,13 +117,17 @@ A `permission` or `device` step names a permission from the `permissions` field 
 
 ## Forms, drafts and send state
 
-A form names its fields, their checks, the action that submits it and the key of its draft. Bob's message input is the form `message` with one field, `text`, checked against the room's `max_message_size` as River's [message_input.rs](https://github.com/freenet/river/blob/main/ui/src/components/conversation/message_input.rs) does. Its submit action is `send-message`. The reader saves the draft in the chat delegate's store with `StoreRequest`, where [Reads and local data in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#reads-and-local-data) places drafts. It saves on each pause, on backgrounding and when Bob leaves the screen. Each draft records its form ID and schema version. A failed save shows "Not saved" with the error, and the text stays in the input.
+A form names its fields, their checks, the action that submits it and the key of its draft. Bob's message input is the form `message` with one field, `text`, checked against the room's `max_message_size` as River's [message_input.rs](https://github.com/freenet/river/blob/main/ui/src/components/conversation/message_input.rs) does. Its submit action is `send-message`. The reader saves the draft in the chat delegate's store under its own key, with `GetVersionedRequest` and then `CasStoreRequest`, as [Reads and local data in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#reads-and-local-data) sets for River's drafts. It saves on each pause, on backgrounding and when Bob leaves the screen. When another tab or River's web UI wrote the draft first, the compare-and-swap fails and the reader shows the newer draft. Each draft records its form ID and schema version. A failed save shows "Not saved" with the error, and the text stays in the input.
 
-`send-message` runs `time`, then `call_delegate` with `PrepareMessage`, then `submit`. The reader shows the send states from [Sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates). It disables Send while `PrepareMessage` runs, so a double tap signs one message.
+`send-message` runs `time`, then `call_delegate` with `PrepareMessage`, then `submit`. The reader handles each case in [Sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates) with the send states below. It disables Send while `PrepareMessage` runs, so a double tap signs one message.
+
+River's own UI signs Bob's message in the page, so its send never waits for the delegate, as [Purpose in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#purpose) explains. The executor runs only generic steps and never sees River's keys. So an SDUI send signs in the delegate with `PrepareMessage`, which saves the signed bytes before it replies, and the executor submits them after. Each SDUI send waits one delegate round trip, which can take seconds while the node merges updates ([river#512](https://github.com/freenet/river/issues/512)). The reader keeps the wait off the screen. It moves Bob's text into the message list as "Sending" when he taps Send, and the action's time limit stops a lost reply.
 
 | State | What Bob sees | Control |
 | --- | --- | --- |
-| Draft | The text in the input. "Not sent" once signed bytes are saved, including when River reopens | Send. With saved bytes, Send resends those same bytes |
+| Draft | The text in the input | Send |
+| Sending | The message in the list as "Sending" from the tap, while `PrepareMessage` and `submit` run. If the action stops before the bytes are saved, the text goes back to the input as a draft | None |
+| Not sent | The message in the list as "Not sent" once signed bytes are saved and Core has not answered, including when River reopens | Resend sends those same bytes |
 | Sent | The message in the list, read from the node's copy. The reader clears the draft | None |
 | Rejected | The text in the input with Core's error under it | Edit, then Send signs a new update |
 
@@ -126,7 +136,9 @@ A form names its fields, their checks, the action that submits it and the key of
 - In the browser and on iOS and Android, Alice's `new-invitation` and `copy-invite-link` copy a link that Bob's River accepts, and Bob joins "Skate club". Bob's "Skate session Saturday?" goes from draft to sent and appears in Alice's room state.
 - `CreateInvitation` and `PrepareMessage` bytes match shared fixtures in the TypeScript executor, the Swift executor on iOS and the Kotlin executor on Android. With a fixed seed, `CreateInvitation` builds the same invitation as River's web UI.
 - On iOS and Android, native reader calls reach River's chat delegate with the same origin as River's web UI and find Alice's signing key.
-- Killing River on iOS and Android after `PrepareMessage` and before Core answers shows "Not sent" on reopen. Send then leaves one copy in room state, and so does a double tap.
-- In the browser and on iOS and Android, a denied `clipboard` stops `copy-invite-link` and leaves the link on screen, and a denied `notifications` does not stop a send.
+- In the browser and on iOS and Android, Bob's message shows as "Sending" in the frame after his tap, before `PrepareMessage` replies. While the node merges updates for "Skate club", `PrepareMessage` replies within the `send-message` time limit, and the tests report its reply time on each platform.
+- Killing River on iOS and Android after `PrepareMessage` and before Core answers shows "Not sent" on reopen. Resend then leaves one copy in room state, and so does a double tap.
+- On iOS and Android, after a chat delegate re-key, `CreateInvitation` and `PrepareMessage` find Alice's signing key and the room secret for "Skate club".
+- On iOS and Android, and in a browser with a test host, a denied `clipboard` stops `copy-invite-link` and leaves the link on screen. In the browser and on iOS and Android, a denied `notifications` does not stop a send.
 - A malformed delegate reply, an undeclared permission or an action over its limits stops before the next step and reports the reason.
 - In the browser and on iOS and Android, the conversation view shows each of its five states from fixtures. Closing one view releases its subscription handle while other views keep theirs.

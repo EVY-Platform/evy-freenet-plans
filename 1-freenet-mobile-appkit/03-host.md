@@ -103,7 +103,7 @@ The host runs a release only after installation has verified it and supplied its
 
 - Activate a release only at a session boundary. Each session runs one release and its selected component and protocol versions.
 - Create a fresh session generation for each activated release.
-- Clear the WebView cache for the app at that boundary. Core's web responses carry no cache headers, so an open WebView keeps running the old build ([#5323](https://github.com/freenet/freenet-core/issues/5323)). A cached old River UI keeps writing to a room contract's old key after a re-key ([river#580](https://github.com/freenet/river/issues/580)).
+- Clear the WebView cache for the app at that boundary. Core's web responses carry an `ETag` but no `Cache-Control` header, so an open WebView keeps running the old build ([#5323](https://github.com/freenet/freenet-core/issues/5323)). A cached old River UI keeps writing to a room contract's old key after a re-key ([river#580](https://github.com/freenet/river/issues/580)).
 - Reject callbacks from older session generations.
 - Keep the previous release active when activation is interrupted.
 
