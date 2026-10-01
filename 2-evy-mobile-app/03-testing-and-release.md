@@ -79,7 +79,7 @@ Every test runs on iOS and Android, with the phone in the thin-peer role. Prompt
 | Release test | Passing evidence |
 | --- | --- |
 | Two-app cases | Every [two-app case](#two-app-cases) passes. |
-| Milestone 2 plans | The acceptance of [2.1 EVY shell and curated catalogue](01-catalogue.md#acceptance) and of [2.2 Two apps on one node](02-shared-node.md#acceptance) passes on the same EVY build. |
+| Milestone 2 (EVY mobile app) plans | The acceptance of [2.1 EVY shell and curated catalogue](01-catalogue.md#acceptance) and of [2.2 Two apps on one node](02-shared-node.md#acceptance) passes on the same EVY build. |
 | Thin role and budgets | The [acceptance in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md#acceptance) passes with both apps subscribed, on the pinned Core build. |
 | Accessibility | Keyboard, focus, large text and screen-reader flows work in River and Atlas inside EVY. |
 | Distribution | EVY's TestFlight and Play internal-testing builds pass review and every store build check, and every [store requirement](#store-requirements) holds. |

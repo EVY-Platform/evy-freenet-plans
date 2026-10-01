@@ -119,34 +119,60 @@ Short plans cover work with a clear next user. Idea notes record research and wa
 
 ## Upstream suggestions
 
-The plans need these changes in projects EVY does not own. New code in Core's `crates/mobile` is listed in each plan's Repositories table instead.
+The plans need these changes in projects EVY does not own. Each plan's Repositories table lists the new code in Core's `crates/mobile`. The [admission table in 1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#freenet-issues-being-worked-on-that-are-required) lists the Core issues already in progress that each release checks.
 
-| Change | Repository | Needed by |
+### Freenet Core, stdlib and freenet-migrate
+
+| Change | Repository | Issue | Needed by |
+| --- | --- | --- | --- |
+| Request IDs on client API replies. The client sets an ID on each contract request, and the node copies it into the reply | [freenet-stdlib](https://github.com/freenet/freenet-stdlib), with node support in [freenet-core](https://github.com/freenet/freenet-core) | [freenet-stdlib#106](https://github.com/freenet/freenet-stdlib/issues/106) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests) |
+| Resolve each gateway hostname in the join loop, so the node starts offline | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#start-stop-and-reconnect) |
+| Accept local UPDATE and Subscribe for stored contracts before the first join, and send them on join | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#start-stop-and-reconnect), [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates) |
+| Look up each Wasm instance's memory address again after every contract and delegate call. Host functions already do it ([#3248](https://github.com/freenet/freenet-core/issues/3248)) | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#running-wasm) |
+| Keychain and Keystore backends for the node encryption key as new `KekBackendKind` variants. The Android build refuses the keyring backend | [freenet-core](https://github.com/freenet/freenet-core) | To file under [#4137](https://github.com/freenet/freenet-core/issues/4137) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#keys), [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#node-encryption-key) |
+| An embedder supplies the `UserInputPrompter`, and Core never spawns a browser on iOS or Android | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#background-runs-and-delegate-prompts) |
+| A grant table code for each app permission, a call that sets a grant and a public Rust API. Core lists and revokes grants today ([#5730](https://github.com/freenet/freenet-core/pull/5730), [#5744](https://github.com/freenet/freenet-core/pull/5744)) | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#base-authorization-and-device-access) |
+| A freenet-migrate release on freenet-stdlib 0.12, so apps that use freenet-migrate can declare delegate manifests | [freenet-migrate](https://github.com/freenet/freenet-migrate) | To file | [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#background-runs-and-delegate-prompts), [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import) |
+| Lock and unlock on `SecretsStore`, with a test that checks the zeroizing buffers are wiped ([#5599](https://github.com/freenet/freenet-core/issues/5599)) | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#locking-and-unlocking) |
+| Thin-peer role and cellular budget enforcement | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence) |
+| Client UPDATEs sent as deltas. Core deferred the raw-delta wire format in [#4072](https://github.com/freenet/freenet-core/pull/4072) | [freenet-core](https://github.com/freenet/freenet-core) | To file | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence) |
+| A user scope on a connection without hosted mode | [freenet-core](https://github.com/freenet/freenet-core) | To file | [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md#core-needs) |
+| A per-app user scope in notification, lifecycle, wake-up and inter-delegate runs | [freenet-core](https://github.com/freenet/freenet-core) | [#5736](https://github.com/freenet/freenet-core/issues/5736) | [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md#core-needs), [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+| Core moves delegate secrets to a new delegate key | [freenet-core](https://github.com/freenet/freenet-core) | [RFC #5255](https://github.com/freenet/freenet-core/issues/5255) | [4.4 SDUI bundles and publication](4-sdui/04-bundles.md#migration-in-native-readers) |
+| Agreement on the sync design that River's sync library follows | [freenet-core](https://github.com/freenet/freenet-core) | [RFC #5587](https://github.com/freenet/freenet-core/issues/5587) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+| Delegates update contracts they do not yet hold | [freenet-core](https://github.com/freenet/freenet-core) | [#5542](https://github.com/freenet/freenet-core/issues/5542) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+| Delegate subscriptions keep the contracts they watch hosted | [freenet-core](https://github.com/freenet/freenet-core) | [#4669](https://github.com/freenet/freenet-core/issues/4669) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+| A delegate GET tells a missing contract from a failed lookup | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | [freenet-stdlib#131](https://github.com/freenet/freenet-stdlib/issues/131) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+
+### River
+
+| Change | Issue | Needed by |
 | --- | --- | --- |
-| Request IDs on client API replies. The client sets an ID on each contract request, and the node copies it into the reply | [freenet-stdlib](https://github.com/freenet/freenet-stdlib), with node support in [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests), to send parallel requests of the same type for one contract |
-| Resolve gateway hostnames in the join loop, so the node starts offline | [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md) |
-| Look up each Wasm instance's memory address again after every call, so each instance reserves only the memory it uses | [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md) |
-| Keychain and Keystore backends for the node encryption key | [freenet-core](https://github.com/freenet/freenet-core) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md) |
-| App permission codes and a public API on the grant table | [freenet-core](https://github.com/freenet/freenet-core) | [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md) |
-| Lock and unlock on `SecretsStore` | [freenet-core](https://github.com/freenet/freenet-core) | [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md) |
-| Thin-peer role and cellular budget enforcement | [freenet-core](https://github.com/freenet/freenet-core) | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md) |
-| `SecretScope::User` usable from `crates/mobile`, without hosted mode's 30-day cleanup and 4 MiB cap | [freenet-core](https://github.com/freenet/freenet-core) | [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md) |
-| Core moves delegate secrets to a new delegate key ([RFC #5255](https://github.com/freenet/freenet-core/issues/5255)) | [freenet-core](https://github.com/freenet/freenet-core) | [4.4 SDUI bundles and publication](4-sdui/04-bundles.md#publication) |
-| Sync delegate ([RFC #5587](https://github.com/freenet/freenet-core/issues/5587)) | [freenet-core](https://github.com/freenet/freenet-core) | [5.3 Device sync](5-optional-extensions/03-sync.md) |
-| Release build ships `app_definition.json` and publishes through the packaging CLI | [river](https://github.com/freenet/river) | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md) |
-| Chat delegate subscribes to rooms the user owns, River PUTs a lost room back, and River saves drafts and signed messages waiting to be sent in the chat delegate | [river](https://github.com/freenet/river) | [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md) |
-| Moderation in River's UI, a support URL and child-safety standards | [river](https://github.com/freenet/river) | [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md) |
-| Invite links built from a link base the host supplies | [river](https://github.com/freenet/river) | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md) |
-| `app_definition.json` declares `river.member.invite`, and the release build rebuilds to the same file digests | [river](https://github.com/freenet/river) | [3.2 Release certification](3-attribution-remuneration-payment/02-certification.md) |
-| Chat delegate messages `CreateInvitation` and `PrepareMessage` | [river](https://github.com/freenet/river) | [4.3 SDUI actions and data](4-sdui/03-actions-and-data.md) |
-| Unhides saved in `outbound_dms`, merging of concurrent record copies and a "Link a device" page | [river](https://github.com/freenet/river) | [5.3 Device sync](5-optional-extensions/03-sync.md) |
-| Separate test index for compatibility fixtures | [atlas](https://github.com/freenet/atlas) | [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md) |
-| `app_definition.json`, publication through the packaging CLI, a Report button on each entry and a support page | [atlas](https://github.com/freenet/atlas) | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md) |
-| A starting search query read from `#q=` in the URL | [atlas](https://github.com/freenet/atlas) | [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md) |
+| The release build ships `app_definition.json` and a chat delegate manifest | To file | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) |
+| The release build publishes through the packaging CLI with `--contract-wasm` and River's own `published-contract/web_container_contract.wasm`, so the container key stays the same. River's publisher copies River's signing key into fdev's key file, `~/.config/freenet/website-keys/<name>.toml` | To file | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#saved-copies-and-recovery) |
+| River agrees to one upward version jump, from its counter (30000392) to the Unix seconds that `fdev website publish` stamps | To file | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) |
+| The chat delegate saves drafts and signed messages waiting to be sent. River keeps signing in the page, because delegate calls queue behind contract merges ([river#512](https://github.com/freenet/river/issues/512)) | To file | [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#reads-and-local-data) |
+| River reclaims old chat delegate copies and unregisters old delegate keys after a migration completes | [river#586](https://github.com/freenet/river/issues/586) | [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#retiring-the-old-version) |
+| Reporting, blocking, a default content filter and terms before the first post in River's UI. A published support URL and child-safety standards | [river#461](https://github.com/freenet/river/issues/461), [river#371](https://github.com/freenet/river/issues/371) | [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#store-requirements) |
+| Invite links built from the share-link base the host supplies, so Alice's invite reads `https://<EVY link domain>/open#raAq.../?invitation=<code>` | To file | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md#opening-links-and-alerts) |
+| `app_definition.json` declares `river.member.invite`, and the release build rebuilds to the same file digests | [river#678](https://github.com/freenet/river/issues/678) | [3.2 Release certification](3-attribution-remuneration-payment/02-certification.md#certifying-a-version) |
+| Chat delegate messages `CreateInvitation` and `PrepareMessage`, with schemas in `ui/sdui/schemas/`. Adding them changes the chat delegate key, so River moves its secrets with freenet-migrate | To file | [4.3 SDUI actions and data](4-sdui/03-actions-and-data.md#calling-a-delegate) |
+| A sync library that follows [RFC #5587](https://github.com/freenet/freenet-core/issues/5587), compiled into the chat delegate | To file | [5.3 Device sync](5-optional-extensions/03-sync.md#purpose) |
+| Unhides saved in `outbound_dms`, a merge of two concurrent copies of each record and a "Link a device" page | To file, tracking [river#420](https://github.com/freenet/river/issues/420) | [5.3 Device sync](5-optional-extensions/03-sync.md#resolving-conflicts) |
+
+### Atlas
+
+| Change | Issue | Needed by |
+| --- | --- | --- |
+| `app_definition.json`, publication through the packaging CLI, a Report button on each entry and a support page. Users report entries in Atlas's River room today | [atlas#52](https://github.com/freenet/atlas/issues/52) | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md#atlas-in-evy) |
+| A starting search query read from `#q=` in the URL. Core's shell already passes the URL fragment to the app | To file | [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md#searching-from-evy-home) |
+
+Core auto-closes feature PRs that have no approved issue ([#4311](https://github.com/freenet/freenet-core/pull/4311)) and ranks issues by what they unblock ([D4412](https://github.com/freenet/freenet-core/discussions/4412)). So we file each row as an issue that names what it unblocks before we open any PR.
 
 ## Sources
 
 - [Freenet Core](https://github.com/freenet/freenet-core)
+- [freenet-stdlib](https://github.com/freenet/freenet-stdlib)
 - [whitepaper](https://github.com/freenet/paper-1)
 - [River](https://github.com/freenet/river)
 - [Atlas](https://github.com/freenet/atlas)
@@ -154,4 +180,9 @@ The plans need these changes in projects EVY does not own. New code in Core's `c
 - [Delta](https://github.com/freenet/delta)
 - [Ghostkeys](https://github.com/freenet/ghostkeys)
 - [freenet-migrate](https://github.com/freenet/freenet-migrate)
+- [freenet-agent-skills](https://github.com/freenet/freenet-agent-skills)
+- [freenet-test-network](https://github.com/freenet/freenet-test-network)
+- [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin)
+- [freenet-wiki](https://github.com/freenet/freenet-wiki)
+- [freenet.org website](https://github.com/freenet/web)
 - The related discussions, issues, pull requests and RFCs
