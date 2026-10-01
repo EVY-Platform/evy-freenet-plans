@@ -195,6 +195,7 @@ The repair has these limits:
 - A delegate cannot tell whether its subscription took ([#5565](https://github.com/freenet/freenet-core/issues/5565)), and only a new subscribe refreshes it ([#5622](https://github.com/freenet/freenet-core/issues/5622)). River's UI asks again on each start and after each reconnect.
 - A delegate GET returns `None` both for a missing room and when it could not find out ([stdlib #131](https://github.com/freenet/freenet-stdlib/issues/131)). So the re-PUT decision stays in River's UI, which reads the subscribe result.
 - A phone behind NAT sends a PUT slowly, and state of 1 MiB or more may not reach peers ([#5643](https://github.com/freenet/freenet-core/issues/5643)).
+- Core publishes no figure for how long a subscribed contract stays hosted. [D5310](https://github.com/freenet/freenet-core/discussions/5310) asks the same question, and we track its answer to time River's re-PUT.
 
 ## Acceptance
 
