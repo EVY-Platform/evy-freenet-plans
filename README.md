@@ -164,10 +164,10 @@ The plans need these changes in projects EVY does not own. Each plan's Repositor
 
 | Change | Issue | Needed by |
 | --- | --- | --- |
-| `app_definition.json`, publication through the packaging CLI, a Report button on each entry and a support page. Users report entries in Atlas's River room today | [atlas#52](https://github.com/freenet/atlas/issues/52) | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md#atlas-in-evy) |
+| `app_definition.json`, publication through the packaging CLI, a Report button on each entry and a support page. Users report entries in Atlas's River room today ([atlas#52](https://github.com/freenet/atlas/issues/52)) | To file | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md#atlas-in-evy) |
 | A starting search query read from `#q=` in the URL. Core's shell already passes the URL fragment to the app | To file | [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md#searching-from-evy-home) |
 
-Core auto-closes feature PRs that have no approved issue ([#4311](https://github.com/freenet/freenet-core/pull/4311)) and ranks issues by what they unblock ([D4412](https://github.com/freenet/freenet-core/discussions/4412)). So we file each row as an issue that names what it unblocks before we open any PR.
+Core auto-closes feature PRs that have no approved issue ([#4311](https://github.com/freenet/freenet-core/pull/4311)) and ranks issues by what they unblock ([D4412](https://github.com/freenet/freenet-core/discussions/4412)). So we file each row as an issue that names what it unblocks before we open any PR. [PENDING_ISSUES.md](PENDING_ISSUES.md) holds the draft for each row marked "To file".
 
 ## Sources
 
