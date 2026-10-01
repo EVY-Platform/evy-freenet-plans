@@ -62,7 +62,7 @@ Bob's request waits in the mailbox until Alice opens Marketplace, and she answer
 - Each fire needs the app's `Background` grant.
 - A run makes at most 300 contract operations a minute, and at most 60 writes a minute to one contract.
 - A run cannot message another delegate.
-- Wake-ups need a stdlib 0.12 manifest. On iOS and Android they fire only while the node runs, as [background runs in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#background-runs-and-delegate-prompts) describes.
+- Wake-ups need a stdlib 0.12 manifest. freenet-migrate builds on stdlib 0.8, so Harvest writes its manifest section by hand ([node_glue.rs](https://github.com/freenet/harvest/blob/main/delegates/harvest-delegate/src/node_glue.rs)). On iOS and Android they fire only while the node runs, as [background runs in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#background-runs-and-delegate-prompts) describes.
 
 Anyone can read Alice's store and listings, the mailbox's message count, padded sizes, arrival times and routing keys, and each order contract's parameters, record kinds, amount and currency. Only Alice and Bob can read the mailbox messages and the `private` part of each order record.
 

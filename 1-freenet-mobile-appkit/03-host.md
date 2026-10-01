@@ -6,7 +6,6 @@
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains caller admission, trusted calls, session authority, release activation at session boundaries and the host side of the SDK authority and policy hooks. This plan needs two Core changes: an embedder-supplied `UserInputPrompter` that never spawns a browser on iOS or Android, and grant table codes for each app permission with a call that sets a grant and a public API. The [admission table](#freenet-issues-being-worked-on-that-are-required) lists the Core issues each release checks |
 | `freenet-appkit` | Modified | Host bridge, iOS and Android WebView hosts, shell-bridge message handling and diagnostics redaction |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Modified | A release on freenet-stdlib 0.12, so apps that use freenet-migrate can declare delegate manifests |
 | [river](https://github.com/freenet/river) | Used | River's web UI and chat delegate are the first hosted app |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | The delegate manifest ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)) and `RequestUserInput` |
 
@@ -171,13 +170,9 @@ Camera, photos, files, notifications, clipboard, location, maps, contacts and ou
 
 #### Background runs and delegate prompts
 
-River's chat delegate needs a Wasm manifest that declares `Background` for its startup runs. [1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) names the fields River declares.
+A delegate that needs startup runs or wake-ups declares them, with `Background`, in its Wasm manifest ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)). River's chat delegate declares no manifest. It rotates private-room secrets when a room update arrives ([subscription.rs](https://github.com/freenet/river/blob/main/delegates/chat-delegate/src/subscription.rs)), and its room subscriptions survive a node restart ([#5728](https://github.com/freenet/freenet-core/pull/5728)).
 
-- River's chat delegate builds on freenet-stdlib 0.8.5 and has no manifest. Manifests need stdlib 0.12 ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)).
-- freenet-migrate 0.7 builds on stdlib 0.8, so an app that uses it cannot move to 0.12. This plan needs freenet-migrate released on stdlib 0.12. Harvest writes the manifest section by hand on stdlib 0.8.5 ([node_glue.rs](https://github.com/freenet/harvest/blob/main/delegates/harvest-delegate/src/node_glue.rs)).
-- Adding the manifest changes the delegate's Wasm and so its key.
-
-Core raises the `Background` consent itself when River registers the delegate, through the prompter's `prompt_capability` call. Core asks only when the manifest lists lifecycle runs or wake-ups. The mobile host answers that call from the installation approval, so Bob sees no second prompt.
+When an app registers a delegate whose manifest lists startup runs or wake-ups, Core raises the `Background` consent itself, through the prompter's `prompt_capability` call. The mobile host answers that call from the installation approval, so the user sees no second prompt.
 
 Manifests can also declare wake-ups ([#5747](https://github.com/freenet/freenet-core/pull/5747)). Core fires a wake-up only while the app holds the `Background` grant. On iOS and Android, wake-ups and other background work run only while the SDK lifecycle keeps the node running.
 

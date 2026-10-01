@@ -5,9 +5,8 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | `freenet-appkit` | Modified | Packaging CLI: `app_definition.json` format, metadata and component validation, install checks, a saved copy of each release, readback through an independent node, reconciliation after an uncertain submission. Host installation interface: candidate verification, release tracking, rollback and retention of installed copies |
-| [river](https://github.com/freenet/river) | Modified | River's release build gains `app_definition.json` and a chat delegate manifest, and publishes through the packaging CLI with River's own container Wasm and signing key |
+| [river](https://github.com/freenet/river) | Modified | River's release build gains `app_definition.json` and publishes through the packaging CLI with River's own container Wasm and signing key |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev website publish` as the unchanged publication command, run with each app's pinned container Wasm. `fdev execute get` for readback |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | The delegate manifest that River's chat delegate declares |
 
 ## Purpose
 
@@ -71,13 +70,11 @@ Application code loads its assets from `index.html` and coordinates concrete app
   "permissions": {                                 // each permission the app uses, as required or optional
     "required": [],                                // names are permission codes in Core's grant table
     "optional": ["notifications", "clipboard"]     // 1.3 Single-application host sets when the host asks
-  }                                                // each delegate's Wasm manifest declares Background
+  }                                                // Background lives in a delegate's Wasm manifest
 }
 ```
 
 River's [chat delegate messages](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs), its [delegate built with empty parameters](https://github.com/freenet/river/blob/main/ui/src/components/app/chat_delegate.rs#L67-L76) and its [room parameters](https://github.com/freenet/river/blob/main/common/src/room_state.rs#L527) show the component fields in real code. River defines no protocol names, so this plan assigns `river.chat/1` and the aliases `river.room` and `river.chat`. River's [pointer records](https://github.com/freenet/river/blob/main/pointer-records.toml) name the same components `river.room-contract` and `river.chat-delegate`.
-
-River's chat delegate Wasm carries a manifest with `lifecycle = [Installed, NodeStarted]` and `capabilities = [Background]` ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)). The manifest is part of the Wasm, so adding it gives the chat delegate a new key. River moves its secrets to that key as [1.7 Upgrades and migration](07-migration.md#component-identity-and-re-keying) describes. [1.3 Single-application host](03-host.md#background-runs-and-delegate-prompts) names the freenet-stdlib and freenet-migrate releases the manifest needs.
 
 River's definition leaves out 3 fields:
 

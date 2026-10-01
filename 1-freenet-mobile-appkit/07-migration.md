@@ -89,8 +89,6 @@ River re-keys its chat delegate roughly weekly. The chat delegate also holds ent
 
 Secrets pass through the app in plain text during the move, so the app's privacy notes say so. Same-key backup and restore belongs to [1.5 Identity, keys and local protection](05-identity.md).
 
-Delegate manifests need freenet-migrate on freenet-stdlib 0.12, as [background runs and delegate prompts in 1.3 Single-application host](03-host.md#background-runs-and-delegate-prompts) describes.
-
 We track [#4909](https://github.com/freenet/freenet-core/issues/4909). When a predecessor holds a corrupt blob, the pair never seals, so each start copies again and brings back secrets the user deleted. Registry fixtures include a predecessor with a corrupt blob.
 
 ### Retiring the old version
