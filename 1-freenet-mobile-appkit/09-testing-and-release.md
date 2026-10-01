@@ -80,9 +80,9 @@ Pin these for every run:
 | Index code hash and contract Wasm | That record's `code_hash` and `wasm_path` |
 | Parameter bytes | The root key and the slug `default`, encoded as `IndexParams` |
 | Signed Atlas records | The published index, byte for byte |
-| Test index parameters | EVY's own test root key and the test slug, encoded as `IndexParams` |
+| Test index parameters | A test root key kept with the `freenet-appkit` fixtures and the test slug, encoded as `IndexParams` |
 
-EVY's test root key and online key sign the test index, so Atlas's root key signs nothing in the tests. The code hash is the same for every slug, so the pointer's code hash with the test parameters gives the test index key. Each new Atlas build is tested against the test index:
+The fixtures' test root key and online key sign the test index, so Atlas's root key signs nothing in the tests. The code hash is the same for every slug, so the pointer's code hash with the test parameters gives the test index key. Each new Atlas build is tested against the test index:
 
 ```sh
 atlasctl --key-dir <test keys> --slug <test slug> init
