@@ -40,6 +40,7 @@ River publishes a signed tar.xz website archive through its [web container contr
 | Scenario | Passing result |
 | --- | --- |
 | Install and invite | A clean install verifies River's signed archive. Opening Alice's invite validates its app and room references, shows trusted consent and joins the intended room. Invalid or substituted references fail visibly. |
+| Notifications at first run | Bob runs River for the first time. The host asks for `notifications` once and stores his answer in Core's grant table. The notification modal's Enable button and Bob's first send then show the stored answer with no new prompt. After a denial, River's alerts stay in-app. |
 | Read and refresh | Bob reads the joined room, sees cached observation time while offline and receives verified updates after reconnect. |
 | Missing network copy | Remove remote copies of a River room Alice owns in an isolated test network. River PUTs the node's copy back under [lost network state in 1.6 Application protocols, data and operations](06-data-and-operations.md#lost-network-state). Verify readback through an independent peer. An interrupted or repeated PUT leaves each message in the room once. |
 | Send and sign | River signs Bob's message in the page with his room signing key, saves it with its draft, sends it and sees it in room state. An independent peer can retrieve the message. The real chat delegate answers a `SignMember` call for Alice's invitation of Carol on-device, and the signature verifies with Alice's key. |
@@ -98,6 +99,7 @@ Use a bounded deterministic index first, then the separate test index. Keep the 
 | Canonical records and identity | Browser and supported Swift/Kotlin paths preserve record bytes, signatures and pinned index identity. Malformed records fail validation. |
 | Reads and subscriptions | Known records and bounded queries return the expected results. Cached data shows observation time. Releasing one view preserves another's demand through tested SDK subscription ownership. |
 | Correlation and cancellation | Interleaved responses reach the right request/session. Reopened sessions reject late callbacks. |
+| Permissions | Running Atlas on iOS and Android raises no prompt, because Atlas declares no permissions. |
 | Publication | `atlasctl add`, `update` and `remove` with the test keys change the test index. Atlas's UI on iOS and Android shows each change after the `UpdateNotification`, with no restart. |
 | Upgrade adapter | A separate test contract changes code, recovers predecessor state through the application adapter, resumes an interrupted migration and verifies successor readback. |
 | Resource costs | Measurements separate transport/bindings, Core execution and UI work. Record large-record copying, subscription rate and elapsed time against the [device limits in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) and its [split by layer](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#large-record-copying-split-by-layer). |

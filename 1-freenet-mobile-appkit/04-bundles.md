@@ -69,7 +69,7 @@ Application code loads its assets from `index.html` and coordinates concrete app
   ],
   "permissions": {                                 // each permission the app uses, as required or optional
     "required": [],                                // names are permission codes in Core's grant table
-    "optional": ["notifications", "clipboard"]     // 1.3 Single-application host sets when the host asks
+    "optional": ["notifications"]                  // 1.3 Single-application host sets when the host asks
   }                                                // Background lives in a delegate's Wasm manifest
 }
 ```

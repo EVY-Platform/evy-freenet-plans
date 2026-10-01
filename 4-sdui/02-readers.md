@@ -58,20 +58,19 @@ The SDK hands every node callback to the platform's executor, and the reader app
 
 ## Showing permission results
 
-When a screen needs a permission, the reader asks the host through the bridge or the SDK, under [Asking for a permission in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission). On iOS and Android, the host prompts in its own trusted UI and returns one of the results in [Using a grant](../1-freenet-mobile-appkit/03-host.md#using-a-grant). While the prompt is open, the component that asked waits. The reader then shows the result on that component.
+When a screen needs a permission, the reader asks the host through the bridge or the SDK, under [Asking for a permission in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission). On iOS and Android, the host prompts in its own trusted UI and returns one of the results in [Using a grant](../1-freenet-mobile-appkit/03-host.md#using-a-grant). While the prompt is open, the component that asked waits. The reader then shows the result on that component. The host asks for `notifications` at River's first run, so the Enable button in River's notification modal gets the stored answer with no new prompt.
 
-In a browser, Core's shell answers through the [shell-bridge messages in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#shell-bridge-messages).
+In a browser, Core's shell answers through the [shell-bridge messages in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#shell-bridge-messages). For `notifications`, the shell asks the browser, keeps per-contract consent ([#4801](https://github.com/freenet/freenet-core/pull/4801)) and replies `notification_status` ([#5094](https://github.com/freenet/freenet-core/pull/5094)). River already shows each value in its modal ([river#510](https://github.com/freenet/river/issues/510), [river#542](https://github.com/freenet/river/pull/542)). The reader maps `granted` to Granted, `denied`, `dismissed` and `default` to Denied, and `undeliverable` and `unsupported` to Unavailable. Enable does nothing when the browser never settles its permission request ([#4966](https://github.com/freenet/freenet-core/issues/4966)).
 
-- For `clipboard`, the shell writes the link without a grant, and every app's frame may read and write the clipboard ([#4015](https://github.com/freenet/freenet-core/pull/4015), [#5696](https://github.com/freenet/freenet-core/pull/5696)). Core tracks per-app permissions in [#4014](https://github.com/freenet/freenet-core/issues/4014). So in a browser, Denied comes only from the browser itself, or from a test host in tests.
-- For `notifications`, the shell asks the browser, keeps per-contract consent ([#4801](https://github.com/freenet/freenet-core/pull/4801)) and replies `notification_status` ([#5094](https://github.com/freenet/freenet-core/pull/5094)). River already shows each value in its modal ([river#510](https://github.com/freenet/river/issues/510), [river#542](https://github.com/freenet/river/pull/542)). The reader maps `granted` to Granted, `denied`, `dismissed` and `default` to Denied, and `undeliverable` and `unsupported` to Unavailable. Enable does nothing when the browser never settles its permission request ([#4966](https://github.com/freenet/freenet-core/issues/4966)).
+| Host result | Enable button in River's [notification modal](https://github.com/freenet/river/blob/main/ui/src/components/room_list/notification_modal.rs) (`notifications`) |
+| --- | --- |
+| Granted | The modal says notifications are on and hides the button |
+| Denied | The modal says notifications are off and names River's settings page in EVY, or the browser's site settings |
+| Unavailable | The modal says this device cannot show notifications and that unread badges still work |
+| Locked | The reader clears the screen, as in the next section |
+| Expired session | The reader reloads the modal in the new session and drops the tap |
 
-| Host result | Copy Link in "Invite member" (`clipboard`) | Enable button in River's [notification modal](https://github.com/freenet/river/blob/main/ui/src/components/room_list/notification_modal.rs) (`notifications`) |
-| --- | --- | --- |
-| Granted | The link is copied and the button reads "Copied!" | The modal says notifications are on and hides the button |
-| Denied | The reader shows the link as selectable text, so Alice can copy it by hand for Bob | The modal says notifications are off and names River's settings page in EVY, or the browser's site settings |
-| Unavailable | As for denied | The modal says this device cannot show notifications and that unread badges still work |
-| Locked | The reader clears the screen, as in the next section | The reader clears the screen, as in the next section |
-| Expired session | The reader reloads the screen in the new session and drops the tap | The reader reloads the modal in the new session and drops the tap |
+Copy Link in "Invite member" asks for no permission on any host. Every host writes the link as Core's shell does, after a user tap, at most once per second and at most 2,048 characters ([#3748](https://github.com/freenet/freenet-core/pull/3748), [#4015](https://github.com/freenet/freenet-core/pull/4015)). A write without a tap, or within one second of the last write, fails. On iOS and Android, the host reports the failure, and the reader shows the link as selectable text so Alice can copy it by hand for Bob.
 
 ## Clearing private values on lock
 
@@ -85,5 +84,6 @@ When the host reports `Locked` ([Locking and unlocking in 1.5 Identity, keys and
 - `<freenet-web>` draws "Invite member" inside River's Dioxus UI and `FreenetWeb` draws it inside a React test page, both in Core's browser shell and in EVY's WebView on iOS and Android. A test page draws it against a test host.
 - On iOS and Android, EVY opens River's `index.html` in the WebView when the native reader lacks a component the screens require.
 - On iOS and Android, reader tests show that every screen change runs on the UI thread and that a failing component shows its fallback while the rest of the screen works. The tests join the [support matrix](https://github.com/glesage/freenet-appkit/blob/main/docs/support-matrix.md) that [1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#support-matrix) published.
-- In the iOS and Android readers, Copy Link and the notification modal show each host result as in the table. In a browser, they show each result Core's shell returns, and a test host supplies the Denied result for Copy Link.
+- In the iOS and Android readers, the notification modal shows each host result as in the table, and Enable shows the answer stored at River's first run with no new prompt. In a browser, it shows each result Core's shell returns.
+- On iOS and Android, Copy Link copies the link with no prompt. A second tap within one second shows the link as selectable text.
 - On iOS and Android, locking the phone clears the invite link, messages and input text from the reader's memory. After unlock the screen reloads and shows Alice's unsent draft.

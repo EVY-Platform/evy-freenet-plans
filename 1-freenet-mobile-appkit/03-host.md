@@ -78,12 +78,14 @@ River's frame posts `__freenet_shell__` messages to Core's shell for anything it
 
 | Message | What Core's shell does | What the host does |
 | --- | --- | --- |
-| `notification_enable_prompt` | Shows an Enable button, calls `Notification.requestPermission()` from its own frame and replies `notification_status` ([#4801](https://github.com/freenet/freenet-core/pull/4801), [#5094](https://github.com/freenet/freenet-core/pull/5094)) | Raises the trusted `notifications` prompt, stores the answer as a grant and replies `notification_status` |
-| `notification` | Shows a browser alert when the browser permission and the app's stored consent allow it | Shows a native alert when River holds the `notifications` grant |
-| `clipboard` | Writes the text with no grant, at most once per second and 2,048 characters ([#3748](https://github.com/freenet/freenet-core/pull/3748), [#4015](https://github.com/freenet/freenet-core/pull/4015)) | Checks the `clipboard` grant, then writes with the shell's rate and length limits |
+| `notification_enable_prompt` | Shows an Enable button, calls `Notification.requestPermission()` from its own frame and replies `notification_status` ([#4801](https://github.com/freenet/freenet-core/pull/4801), [#5094](https://github.com/freenet/freenet-core/pull/5094)) | Replies `notification_status` with River's stored `notifications` answer, with no new prompt |
+| `notification` | Shows a browser alert when the browser permission and the app's stored consent allow it | Shows a native alert when River holds the `notifications` grant. After a stored denial, River's alerts stay in-app |
+| `clipboard` | Writes the text with no grant after a user tap, at most once per second and at most 2,048 characters ([#3748](https://github.com/freenet/freenet-core/pull/3748), [#4015](https://github.com/freenet/freenet-core/pull/4015)) | Writes the text with no grant and no prompt, under the same three rules as Core's shell. Android 13 and later shows a short system confirmation |
 | `download` | Saves the file, at most one every 2 seconds | Hands the file to the approved files adapter |
 | `open_url` | Opens an http or https URL in a new tab | Validates the URL and opens it through the approved external-link adapter |
 | `navigate` | Moves the frame within the same app, or loads another app's shell | Validates the app identity and destination as for a deep link |
+
+River's web UI copies invite links with `document.execCommand('copy')` inside its own frame ([util.rs](https://github.com/freenet/river/blob/main/ui/src/util.rs)), so those copies need no host involvement.
 
 ## Freenet issues being worked on that are required
 
@@ -141,22 +143,33 @@ This plan needs Core to add a code for each permission, a call that sets a grant
 | App, by container contract ID | River |
 | User scope | `Node`, which on Bob's phone is Bob. Core writes only this scope today ([#5736](https://github.com/freenet/freenet-core/issues/5736)) |
 | Permission code | `notifications` |
-| Answer | Granted, or denied for 7 days |
+| Answer | Granted or denied |
 
 Removing an app deletes its grants. Store publisher trust decisions outside application-readable storage, as Core does for grants.
 
 ### Asking for a permission
 
-The bundle's `permissions` field in [1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) declares each permission as required or optional. The host asks in trusted host UI at one of two moments:
+The bundle's `permissions` field in [1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) declares each permission as required or optional. The host asks in trusted host UI at one of three moments:
 
-| Moment | Who starts it | River example |
+| Moment | Who starts it | When the host asks |
 | --- | --- | --- |
-| When the UI needs it | App code, through the host bridge from web code or the SDK from Swift/Kotlin code | River posts `notification_enable_prompt` to Core's shell when Bob sends his first message. The host intercepts it and raises the prompt |
-| First use | The host, when an action needs a permission without a grant | Alice copies an invite link for Bob, and the host asks for `clipboard` |
+| At first run | The host | The user first runs an app that declares `notifications` |
+| When the UI needs it | App code, through the host bridge from web code or the SDK from Swift/Kotlin code | The app requests another declared permission that has no answer yet |
+| First use | The host | An action needs another declared permission that has no answer yet |
+
+On iOS and Android, River's `app_definition.json` declares `notifications`:
+
+1. Bob first runs River, in River's store build or inside EVY. The host asks for `notifications` and stores Bob's answer as a grant in Core's table.
+2. Bob taps "Enable notifications" in River's [notification modal](https://github.com/freenet/river/blob/main/ui/src/components/room_list/notification_modal.rs), or sends his first message, and River posts `notification_enable_prompt`. The host replies with the stored answer and shows no new prompt.
+3. River posts a `notification` for a new message in "Skate club". The host shows a native alert when Bob allowed notifications. After a denial, River's alerts stay in-app.
+4. Bob changes his answer in the host's permission screen and in the matching iOS or Android system setting.
+
+Atlas declares no permissions, so running Atlas never raises a prompt. In a browser, Core's shell keeps its own timing, as in [Shell-bridge messages](#shell-bridge-messages).
 
 - Requests for undeclared permissions fail.
-- A stored denial answers later requests for 7 days, Core's cool-off, so app code gets one prompt per cool-off. The user can change the answer in the host's permission screen.
-- Core denies a prompt that nobody answers within 60 seconds and stores nothing ([#3811](https://github.com/freenet/freenet-core/pull/3811)). If Bob leaves River while a prompt is open, his next use asks again.
+- For a permission asked when the UI needs it or at first use, a stored denial answers later requests for 7 days, Core's cool-off, so app code gets one prompt per cool-off. The user can change the answer in the host's permission screen.
+- A first-run denial of `notifications` stays until Bob changes it in the host's permission screen. River's `notification_enable_prompt` never asks again.
+- Core denies a prompt that nobody answers within 60 seconds and stores nothing ([#3811](https://github.com/freenet/freenet-core/pull/3811)). When the first-run prompt gets no answer, the host asks again the next time Bob runs River.
 - After the trusted prompt, the host asks for the matching iOS or Android system permission if the phone lacks it.
 
 ### Using a grant
@@ -194,7 +207,8 @@ Expose per-app connection state, subscription demand, last observation time, pen
 - On iOS and Android, an invite link Bob opens during node start opens River at the invite.
 - On iOS and Android, Core's shell keeps its local storage across a restart because the host loads `127.0.0.1` on the last loopback port.
 - Trusted prompts, expanded permissions, immediate revocation, locked devices and web/native handoffs enforce base authorization. Queued work rechecks authority.
-- On iOS and Android, River's first-message `notification_enable_prompt` and first clipboard use both reach the trusted prompt and store a grant in Core's table. Undeclared requests fail, a stored denial answers without a new prompt, and removing River deletes its grants.
+- On iOS and Android, the host asks for `notifications` once, when Bob first runs River, and stores his answer as a grant in Core's table. River's `notification_enable_prompt` from the notification modal's Enable button and from Bob's first message, and River's `notification` posts, get the stored answer with no new prompt. After a denial, River's alerts stay in-app. Running Atlas raises no prompt. Undeclared requests fail, and removing River deletes its grants.
+- On iOS and Android, a `clipboard` message writes with no prompt and no grant. The host refuses a write without a user tap or within one second of the last write, and writes at most 2,048 characters.
 - On iOS and Android, Core's `Background` consent for River's chat delegate takes its answer from the installation approval, and no delegate prompt opens a browser.
 - Resource-exhaustion and malicious-input tests contain failure to the affected request or session.
 - Each required browser or native admission path passes on the pinned Core build before that profile ships.

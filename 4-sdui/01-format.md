@@ -10,7 +10,7 @@
 
 ## Purpose
 
-This plan defines the screen document `ui/sdui/ui.json`, which describes an app's screens as data. It owns the schema, values and bindings, the components River's screens use, navigation, accessibility, language, limits and compatibility rules. Carol describes River's "Invite member" sheet in this format. Alice opens the sheet from the member list of "Skate club" to invite Bob. The document sits under `ui/sdui/` in a release bundle from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). Copying an invite link uses the `clipboard` permission that River declares in its app definition, under the rules in [Asking for a permission in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission).
+This plan defines the screen document `ui/sdui/ui.json`, which describes an app's screens as data. It owns the schema, values and bindings, the components River's screens use, navigation, accessibility, language, limits and compatibility rules. Carol describes River's "Invite member" sheet in this format. Alice opens the sheet from the member list of "Skate club" to invite Bob. The document sits under `ui/sdui/` in a release bundle from [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). Copying an invite link needs no permission. The host writes it under the rules in [Shell-bridge messages in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#shell-bridge-messages).
 
 ## Screen documents
 
@@ -40,7 +40,7 @@ Carol's sheet carries River's [invite modal](https://github.com/freenet/river/bl
         "source": { "ref": "view:invitation.url" } },              // reference to an output of a declared view
       { "id": "copy-link", "type": "button",                       // label is an expression, "Copied!" after a copy
         "label": { "expr": ["if", { "ref": "local:copied" }, "Copied!", "Copy Link"] },
-        "actions": { "tap": { "action": "copy-invite-link" } } },  // declared action that uses clipboard
+        "actions": { "tap": { "action": "copy-invite-link" } } },  // declared action that writes the clipboard
       { "id": "close", "type": "button", "label": { "literal": "Close" },
         "actions": { "tap": { "close": true } } }                  // navigation that closes the sheet
     ]

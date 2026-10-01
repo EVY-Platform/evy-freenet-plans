@@ -51,7 +51,7 @@ The packaging CLI runs these checks in step 1 (Validate) of [publishing in 1.4 A
 | Schema and limits | A file under `ui/sdui/` fails the validator from the pinned `freenet-sdui` version, which checks the schema and the limits in 4.1 SDUI format |
 | References | A route or button names a route or action missing from `ui/sdui/`, such as an "Invite member" route whose `new-invitation` action is not in `actions/` |
 | Delegate schemas | The input or reply of `new-invitation`'s delegate call differs from the `CreateInvitation` schema, or the call names a delegate alias missing from `components` |
-| Permissions | A screen or action names a permission that `app_definition.json` does not declare. River declares `notifications` and `clipboard` |
+| Permissions | A screen or action names a permission that `app_definition.json` does not declare. River declares `notifications` |
 | Types and versions | A file uses a format version, component type or step type that the pinned catalogue or the reader in `ui/sdui/web/` lacks |
 | Predecessors | A `predecessors` list differs from the app's registry file |
 

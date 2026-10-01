@@ -40,8 +40,8 @@ An action is a named list of steps in `ui/sdui/actions/`. The executor runs the 
 | `submit` | Sends signed update bytes to a contract through the host | Bob's prepared message in `send-message` |
 | `random` | Returns random bytes from the host | 32 bytes for Bob's key seed |
 | `time` | Returns the current time from the host | The time field of Bob's message |
-| `permission` | Asks the host for a declared permission | `notifications` when Bob sends his first message |
-| `device` | Uses a device feature under a declared permission | `copy-invite-link` writes `view:invitation.url` to the clipboard |
+| `permission` | Asks the host for a declared permission | `notifications` when Bob sends his first message. On iOS and Android, the step returns the answer stored at River's first run |
+| `device` | Uses a device feature through the host, under a declared permission when the feature needs one | `copy-invite-link` writes `view:invitation.url` to the clipboard, with no permission |
 
 Actions add three reference prefixes to those in 4.1 SDUI format. `arg:` reads an argument, `step:` reads an earlier step's result and `host:link_base` reads the invite link base from the host. An action's `result` fills a view, or sets a `local:` value, as `copy-invite-link` sets `local:copied`. Carol's action for the "Invite member" sheet:
 
@@ -87,8 +87,9 @@ sequenceDiagram
     Core->>Delegate: Message, origin River's container
     Delegate-->>Exec: Reply with the invite link
     Screen->>Exec: Alice taps Copy Link, runs copy-invite-link
-    Exec->>Host: device, clipboard
-    Host->>Host: On iOS and Android, ask for clipboard at first use
+    Exec->>Host: device, clipboard write
+    Host->>Host: Check the tap and the one-second limit
+    Host-->>Exec: Written, or failed
 ```
 
 Each schema in `ui/sdui/schemas/` describes one delegate message and its reply as bytes on the wire. River's messages are CBOR, tagged by variant name, as [chat_delegate.rs](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs) notes. The executor encodes the request from the schema, adds the request ID and matches the reply by it. It checks the whole reply against the schema before a binding sees any of it. Key generation, CBOR encoding of River's own types, room-secret encryption and signing go into delegate messages, because the executor runs only generic steps. River's chat delegate gains two messages:
@@ -106,14 +107,16 @@ Both messages read the room's signing key from the delegate's `signing_key:` ent
 
 ## Permissions in actions
 
-A `permission` or `device` step names a permission from the `permissions` field in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). The host asks and checks grants under [Asking for a permission in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission). [4.2 SDUI readers](02-readers.md#showing-permission-results) sets what the screen shows, and when a browser returns Denied for `clipboard`. The executor acts on the result.
+A `permission` step, and a `device` step whose feature needs a grant, names a permission from the `permissions` field in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition). The host asks and checks grants under [Asking for a permission in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#asking-for-a-permission). [4.2 SDUI readers](02-readers.md#showing-permission-results) sets what the screen shows. The executor acts on the result.
 
 | Host result | What the executor does |
 | --- | --- |
-| Granted | Continues, and `copy-invite-link` copies the link |
+| Granted | Continues |
 | Denied or unavailable, optional permission | A `permission` step returns the result and the action continues, so Bob's send goes ahead without alerts. A `device` step stops the action and keeps earlier results |
 | Denied or unavailable, required permission | Stops the action. River declares no required permissions |
 | Locked or expired session | Stops the action with that result |
+
+Clipboard writes need no grant. When the host reports a failed write, `copy-invite-link` stops and leaves the link on screen.
 
 ## Forms, drafts and send state
 
@@ -139,6 +142,6 @@ River's own UI signs Bob's message in the page, so its send never waits for the 
 - In the browser and on iOS and Android, Bob's message shows as "Sending" in the frame after his tap, before `PrepareMessage` replies. While the node merges updates for "Skate club", `PrepareMessage` replies in a median under 1 second and a 95th percentile under 5 seconds on the iPhone 13 mini and the Android emulator, and the tests report its reply time on each platform. A reply after 10 seconds turns the message to "Not sent", and the late reply then completes the send.
 - Killing River on iOS and Android after `PrepareMessage` and before Core answers shows "Not sent" on reopen. Resend then leaves one copy in room state, and so does a double tap.
 - On iOS and Android, after a chat delegate re-key, `CreateInvitation` and `PrepareMessage` find Alice's signing key and the room secret for "Skate club".
-- On iOS and Android, and in a browser with a test host, a denied `clipboard` stops `copy-invite-link` and leaves the link on screen. In the browser and on iOS and Android, a denied `notifications` does not stop a send.
+- On iOS and Android, `copy-invite-link` copies the link with no prompt, and a second tap within one second stops the action and leaves the link on screen. In the browser and on iOS and Android, a denied `notifications` does not stop a send. On iOS and Android, the `permission` step in Bob's first send raises no prompt.
 - A malformed delegate reply, an undeclared permission or an action over its limits stops before the next step and reports the reason.
 - In the browser and on iOS and Android, the conversation view shows each of its five states from fixtures. Closing one view releases its subscription handle while other views keep theirs.

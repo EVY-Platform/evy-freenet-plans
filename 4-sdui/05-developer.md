@@ -57,7 +57,7 @@ The preview runs the web reader from 4.2 SDUI readers and passes it a memory hos
 | Error | The error text and a "Try Again" button |
 | Ready | The one-person note, the link, code and message fields and the four buttons |
 | Copied | "Copied!" on the pressed button, and the other buttons reset |
-| Clipboard denied | The link as selectable text, as 4.2 SDUI readers shows it |
+| Copy failed | The link as selectable text, as 4.2 SDUI readers shows it |
 
 Carol switches between browser widths and iOS and Android phone frames, light and dark themes, large text and right-to-left text. Phone frames show layout only.
 
@@ -71,7 +71,7 @@ The editor runs the `freenet-sdui` validation library on every edit. The packagi
 | Unbound field | The code field has no binding | Error |
 | Type mismatch | The message field is bound to a result that is not text | Error |
 | Unreachable screen | No route opens the sheet | Warning |
-| Undeclared permission | A copy button in an app whose app definition lacks `clipboard` | Error. The editor offers to add the entry to `app_definition.json` in the same change |
+| Undeclared permission | A `permission` step for `notifications` in an app whose app definition lacks `notifications` | Error. The editor offers to add the entry to `app_definition.json` in the same change |
 
 ## Exporting and proposing
 
