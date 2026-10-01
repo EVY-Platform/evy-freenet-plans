@@ -71,7 +71,7 @@ EVY shares the other rules with River's store build in [store requirements in 1.
 | EU trader status | Declare EVY's trader status for EU listings. |
 | Age rating | Answer App Store Connect's updated age rating questions and Play's content rating questionnaire for EVY. The resulting rating is `store_age_rating` in `catalogue.json`. |
 | Minimum OS | EVY's iOS deployment target is 17.0, for the per-app data store in [Web storage in 2.2 Two apps on one node](02-shared-node.md#web-storage). EVY's Android `minSdk` stays 28. |
-| Core version | On "update the app", EVY tells the user to install the new EVY store build. |
+| Core version | On "update the app", EVY shows one message for the whole app, not one per app, with a button to EVY's App Store or Google Play listing. River and Atlas keep showing their stored data meanwhile. |
 
 ## Release tests
 
