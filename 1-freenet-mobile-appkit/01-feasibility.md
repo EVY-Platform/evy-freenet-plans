@@ -25,11 +25,11 @@ Show that River and Atlas run on iOS and Android through an embedded Core node, 
 | Profile | Supported |
 | --- | --- |
 | River and Atlas WebView on iOS | iOS 16 and later, arm64 devices, Pulley, with the iOS Store limits in [Device limits](#device-limits) |
-| River and Atlas WebView on Android | Android 8 (API 26) and later. Release builds run Pulley on arm64-v8a, armeabi-v7a and x86_64 ([Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)) |
+| River and Atlas WebView on Android | Android 9 (API 28) and later, the first level with the node key setting in [Node encryption key in 1.5 Identity, keys and local protection](05-identity.md#node-encryption-key). Release builds run Pulley on arm64-v8a, armeabi-v7a and x86_64 ([Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)) |
 | Custom Swift/Kotlin | Put, get, update and subscribe on the same targets. [1.2 Embedded node and mobile SDK](02-sdk.md) adds delegate calls and the per-contract request queue |
 | Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers until [1.8 Thin-peer role and cellular data budgets](08-thin-peer.md) lands |
 
-River's and Atlas's web clients use freenet-stdlib 0.8.5 and run against Core 0.12.1 with no adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/main/docs/support-matrix.md#protocol-compatibility)). The Atlas demos use Atlas main's web UI.
+River's and Atlas's web clients use freenet-stdlib 0.8.5 and run against Core 0.2.139 (freenet-stdlib 0.12.1) with no adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/main/docs/support-matrix.md#protocol-compatibility)). The Atlas demos use Atlas main's web UI.
 
 ## Support matrix
 
@@ -47,11 +47,11 @@ Each operation matched the desktop fixtures on every device that ran it: the sam
 
 | Limit | Value | Evidence |
 | --- | --- | --- |
-| Memory per Wasm instance | 256 MiB. River's and Atlas's contracts use about 1 MiB | [Reservation finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations) |
-| iOS Store limits | Replace each Store after 4 instances, 2 executors. With these, the iPhone stored 300 contracts | Same |
+| Memory per Wasm instance | 256 MiB. River's and Atlas's contracts use about 1 MiB | [Reservation finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations). Core set the 256 MiB default in [#3990](https://github.com/freenet/freenet-core/pull/3990) after the same reservation failure on a 4 GB Raspberry Pi ([#3986](https://github.com/freenet/freenet-core/issues/3986)) |
+| iOS Store limits | Replace each Store after 4 instances, 2 executors. With these, the iPhone stored 300 contracts | Same. Core's default replaces each Store after 500 instances ([#5268](https://github.com/freenet/freenet-core/issues/5268)) |
 | Local updates | About 21 per second, 45 ms each, on every device | [Local update finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#a-local-update-takes-about-45-ms) |
 | Large records | 32 MiB records cross Core, the bindings and the UI intact. On the iPhone a 32 MiB put takes 292 ms and a get 77 ms | [Large-record copying](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#large-record-copying-split-by-layer) |
-| Memory footprint | 24–27 MiB on the iPhone and 105–122 MiB on the emulator, with River open | [Memory and storage](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#memory-storage-and-address-space) |
+| Memory footprint | 24 to 27 MiB on the iPhone and 105 to 122 MiB on the emulator, with River open | [Memory and storage](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#memory-storage-and-address-space). Core tracks memory per hosted contract in [#5647](https://github.com/freenet/freenet-core/issues/5647) and per distinct Wasm module in [#5348](https://github.com/freenet/freenet-core/issues/5348) |
 | Storage | Stores 6.1 MiB, unpacked web apps 8.3 MiB and logs 3.2 MiB on the iPhone | Same |
 | Package size | iOS 41.8 MiB stripped (16.8 MiB zipped before App Store thinning). Android APK 40.9 MiB for arm64-v8a, 27.7 MiB for armeabi-v7a | [Package size](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#package-size) |
 | River download | River's 1.06 MB archive downloads as 1.2 MiB from the public network | [River and Atlas in the WebView](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#river-and-atlas-in-the-webview) |
@@ -66,7 +66,7 @@ Each operation matched the desktop fixtures on every device that ran it: the sam
 | River shown after a fresh install, public network | 2.43 s | 2.02 s |
 | River shown again after 20 s in another app | 678 ms | 576 ms |
 | Full peer on Wi-Fi | 27 peers, about 60 KiB/s each way | 22 peers, about 22 KiB/s each way |
-| Idle | Under 1.3 KiB/s each way | Under 1.3 KiB/s each way |
+| Idle | Under 1 KiB/s each way | 1.4 KiB/s up and 1.1 KiB/s down, with 1 peer |
 | Fresh start on cellular | First peer through the carrier NAT in 5.6 s | Not a real carrier |
 
 These findings pass to later plans:
@@ -119,7 +119,7 @@ The [distribution review](https://github.com/glesage/freenet-appkit/blob/main/do
 
 ## Prototype learnings
 
-The earlier local iOS prototype proved the behaviors below. This plan built them again from a clean Core main and re-tested them on iOS and Android.
+The earlier local iOS prototype proved the behaviors below. This plan built them again from a clean Core main and re-tested them on iOS and Android. A community prototype also runs River on Android with an in-process node ([river#319](https://github.com/freenet/river/issues/319), [river#313](https://github.com/freenet/river/pull/313)). It stages fallback gateways for an offline first start and registers a synthetic auth token so River's chat delegate accepts the app's messages.
 
 | Learning | Apply in |
 | --- | --- |
@@ -143,3 +143,4 @@ The harness runs these when the equipment is available ([not run yet](https://gi
 | UDP-filtering network | A network that blocks UDP |
 | LAN test gateway on the iPhone | The phone and Mac on one Wi-Fi |
 | Cold start after a reboot | A phone reboot before the `startup` run |
+| Wasm backend conformance on wasmtime 48 | Core merging the wasmtime 48 update ([#5694](https://github.com/freenet/freenet-core/pull/5694)) |

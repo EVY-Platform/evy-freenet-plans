@@ -20,7 +20,7 @@ The packaging CLI copies the app repository's `ui/sdui/` folder into the release
 
 ```text
 index.html              # River's Dioxus web app (1.4 Application bundles)
-contracts/  delegates/  # as in 1.4 Application bundles
+contracts/              # as in 1.4 Application bundles
 app_definition.json     # as in 1.4 Application bundles, plus the sdui field and predecessors lists
 ui/sdui/ui.json         # routes, views and forms, such as "Invite member" (4.1 SDUI format)
 ui/sdui/actions/        # actions, such as new-invitation (4.3 SDUI actions and data)
