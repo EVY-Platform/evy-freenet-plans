@@ -43,7 +43,7 @@ The SDK hands every node callback to the platform's executor, and the reader app
 
 - `freenet-sdui` publishes one npm package. React apps use the `FreenetWeb` component. Any other page uses the `<freenet-web src="ui/sdui/ui.json">` custom element, for example inside River's [Dioxus UI](https://github.com/freenet/river/blob/main/ui/Cargo.toml).
 - The package builds to `reader.js` with its CSS, fonts and icons. It loads them by relative paths, so the same build works from `ui/sdui/web/` in any bundle.
-- In a browser, the reader runs in Core's sandboxed frame, which has an opaque origin. Service workers, web storage and cookies throw there ([#4945](https://github.com/freenet/freenet-core/issues/4945), [river#219](https://github.com/freenet/river/issues/219)), so the reader uses none of them. Web storage stays with Core's shell, as in [Web storage in 2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#web-storage).
+- In a browser, the reader runs in Core's sandboxed frame, which has an opaque origin. Service workers, web storage and cookies throw there ([#4945](https://github.com/freenet/freenet-core/issues/4945), [river#219](https://github.com/freenet/river/issues/219)), so the reader uses none of them. Web storage stays with Core's shell, as in [Web storage in 2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md#web-storage).
 - The reader loads `ui/sdui/ui.json` as a subresource of the website container. Core serves subresources to the sandboxed frame with `Access-Control-Allow-Origin: *`, and fetches them on a cold cache within a time bound ([#5406](https://github.com/freenet/freenet-core/issues/5406), [#3940](https://github.com/freenet/freenet-core/issues/3940)).
 - Core serves contract web files with no `Cache-Control` header, as [Installing a copy in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#installing-a-copy) notes, so an open browser can keep a superseded release. `reader.js` loads its CSS, fonts and icons under content-hashed names. It fetches `ui/sdui/ui.json` with `cache: "no-cache"`, so the browser fetches a fresh copy.
 - Two open TypeScript SDK issues affect the web reader. Contracts of 20 to 50 MB time out on slow links ([freenet-stdlib#127](https://github.com/freenet/freenet-stdlib/issues/127)), and a late GET reply can reach the wrong request ([freenet-stdlib#96](https://github.com/freenet/freenet-stdlib/issues/96)).
@@ -51,8 +51,8 @@ The SDK hands every node callback to the platform's executor, and the reader app
 
 ## Native readers in EVY
 
-- Each reader reads `ui/sdui/ui.json` from the verified bundle. It calls the app's delegates through the Swift or Kotlin SDK, in the session EVY opened for that app in [2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md).
-- The SwiftUI reader runs on iOS 17 and later and the Compose reader on Android 9 (API 28) and later, the EVY targets in [Web storage in 2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#web-storage).
+- Each reader reads `ui/sdui/ui.json` from the verified bundle. It calls the app's delegates through the Swift or Kotlin SDK, in the session EVY opened for that app in [2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md).
+- The SwiftUI reader runs on iOS 17 and later and the Compose reader on Android 9 (API 28) and later, the EVY targets in [Web storage in 2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md#web-storage).
 - EVY uses the native reader when that reader supports every component and format version the screens require. Otherwise EVY opens the bundle's `index.html` in the app's WebView, as it does for every app in milestone 2 (EVY mobile app).
 - New components reach the native readers in an EVY update through the App Store and Google Play. Browsers get them when the publisher's next release carries a newer web reader.
 

@@ -15,7 +15,7 @@ This plan keeps River's private records the same on Alice's phone and her laptop
 
 River uses the sync design proposed in [RFC #5587](https://github.com/freenet/freenet-core/issues/5587), which builds on the encrypted CRDT sync RFC [#4560](https://github.com/freenet/freenet-core/issues/4560). The design encrypts each record with a group seed that only Alice's linked devices hold, and keeps two concurrent writes as two values for the app to resolve. #5587 is an open proposal with no owner yet.
 
-River builds the sync logic as a library and compiles it into its chat delegate. The sync code then runs inside the chat delegate, in River's secret scope from [2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#forgetting-one-app). Only River joins, because Atlas has [no delegate](https://github.com/freenet/atlas/blob/main/ui/src/main.rs).
+River builds the sync logic as a library and compiles it into its chat delegate. The sync code then runs inside the chat delegate, in River's secret scope from [2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md#secret-scopes). Only River joins, because Atlas has [no delegate](https://github.com/freenet/atlas/blob/main/ui/src/main.rs).
 
 ## Linking and removing a device
 
@@ -71,7 +71,7 @@ We track these River issues:
 | Delegate subscriptions keep the sync contracts hosted, within the limits in [Lost network state in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#lost-network-state) | [#4669](https://github.com/freenet/freenet-core/issues/4669) |
 | A delegate GET tells a missing sync contract from a failed lookup | [stdlib #131](https://github.com/freenet/freenet-stdlib/issues/131) |
 | freenet-migrate released on freenet-stdlib 0.12. River runs freenet-migrate, which builds on stdlib 0.8, and manifests need stdlib 0.12 ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)). Harvest writes its manifest section by hand ([node_glue.rs](https://github.com/freenet/harvest/blob/main/delegates/harvest-delegate/src/node_glue.rs)) | To file |
-| River's per-app scope in notification, lifecycle and wake-up runs on the phone, as [Core needs in 2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#core-needs) lists | [#5736](https://github.com/freenet/freenet-core/issues/5736) |
+| River's per-app scope in notification, lifecycle and wake-up runs on the phone, as [Core and AppKit requirements in 2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md#core-and-appkit-requirements) lists | [#5736](https://github.com/freenet/freenet-core/issues/5736) |
 
 ## Acceptance
 

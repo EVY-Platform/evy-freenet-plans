@@ -57,9 +57,8 @@ flowchart LR
     Node --> Full[Serving full peers]
 ```
 
-- [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md)
-- [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md)
-- [2.3 Testing and release](2-evy-mobile-app/03-testing-and-release.md)
+- [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md)
+- [2.2 Testing and release](2-evy-mobile-app/02-testing-and-release.md)
 
 ### 3. Attribution, remuneration and payment
 

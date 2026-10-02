@@ -12,9 +12,9 @@
 
 Manage embedded Core, transport, lifecycle and platform bindings. The app supplies storage paths while core verifies contract state and executes delegates on the device.
 
-## Owned API
+## What to build
 
-| Operation | Required behavior |
+| Operations needed | Required behavior |
 | --- | --- |
 | Start, stop and status | Serialize lifecycle transitions and define repeated-call results. |
 | Get and put | Validate code, original parameter bytes and returned instance identity. |
@@ -25,30 +25,15 @@ Manage embedded Core, transport, lifecycle and platform bindings. The app suppli
 | Permission requests | Pass the app's request for a declared permission to the [policy hook](#caller-hooks) and return granted, denied or unavailable, under the [permission rules in 1.3 Single-application host](03-host.md#asking-for-a-permission). |
 | Events and cancellation | Include SDK request and session identity, [typed errors](#typed-errors) and submission uncertainty. Hand every callback from the node runtime's threads to the platform's expected executor ([callback threads finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#callbacks-run-on-the-nodes-own-threads)), and reject expired-session callbacks. |
 
-#### Build
+[UniFFI](https://mozilla.github.io/uniffi-rs/latest/) generates the Swift and Kotlin bindings from it, delivering every operation in the table above, plus build scripts for iOS and Android.
 
-Build the mobile crate fresh from Core main. [UniFFI](https://mozilla.github.io/uniffi-rs/latest/) generates the Swift and Kotlin bindings from it. Deliver every operation in the table above, plus build scripts for iOS and Android. Apply the [prototype learnings in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#prototype-learnings).
-
-Core sends telemetry by default ([#2466](https://github.com/freenet/freenet-core/pull/2466)). The SDK sets `telemetry-enabled = false` and keeps `otel-telemetry-enabled` off. Core saves both in `config.toml` ([#5512](https://github.com/freenet/freenet-core/pull/5512)), so the SDK sets them on every start.
+Core sends telemetry by default ([#2466](https://github.com/freenet/freenet-core/pull/2466)) so the SDK must set `telemetry-enabled = false` and keep `otel-telemetry-enabled` off. Core saves both in `config.toml` ([#5512](https://github.com/freenet/freenet-core/pull/5512)), so the SDK sets them on every start.
 
 #### Matching replies to requests
 
-A stdlib reply carries its type and contract key, and nothing more. Alice's room list and her conversation screen might both read the "Skate club" room at the same moment. Both replies then arrive as "read result for Skate club", and the SDK sees them as identical.
+An stdlib reply carries its type and contract key, and nothing more. This means that if Alice's room list and conversation screen both read the "Skate club" room at the same moment, both replies could arrive as "read result for Skate club" and the SDK sees them as identical. So the SDK sends one request of each type per contract at a time and queues the rest, while being able to parallelise distinct requests.
 
-So the SDK sends one request of each type per contract at a time and queues the rest. The next reply of that type and contract then belongs to the request in flight.
-
-| Step | "Skate club" read in flight | Queue | What the SDK does |
-| --- | --- | --- | --- |
-| The room list reads the room | Room list | Empty | Sends the read |
-| The conversation screen reads the room | Room list | Conversation | Holds the second read |
-| A read result for "Skate club" arrives | Conversation | Empty | Hands the result to the room list and sends the queued read |
-| A second read result arrives | None | Empty | Hands the result to the conversation screen |
-
-Requests of other types, or for other contracts, go out in parallel. For example, Alice's new message to "Skate club" goes out as an update while her room list's read of the room is still in flight.
-
-Core merges byte-identical concurrent updates into one transaction and sends one reply ([stdlib #94](https://github.com/freenet/freenet-stdlib/pull/94)). The queue never has two updates for one contract in flight on a connection, so each update gets its own reply.
-
-When a request times out, the SDK tells the app its outcome is uncertain, and the request keeps its place in flight. Core sends a timeout error after 60 seconds ([#3442](https://github.com/freenet/freenet-core/pull/3442)). The queue moves on when the late reply or Core's timeout error arrives, or when the connection resets, so a late reply never reaches the next request.
+When a request times out (after 60 seconds [#3442](https://github.com/freenet/freenet-core/pull/3442)), the SDK tells the app its outcome is uncertain, and the request keeps its place in flight. The queue moves on when the late reply or Core's timeout error arrives, or when the connection resets, so a late reply never reaches the next request.
 
 A reply can also never arrive, for example when Core drops a result under load ([stdlib #105](https://github.com/freenet/freenet-stdlib/pull/105)). So when neither a reply nor Core's timeout error arrives within a window longer than Core's 60 seconds, the SDK resets the connection. It reports every request in flight on that connection as uncertain and restores the connection's subscriptions.
 
@@ -112,28 +97,26 @@ sequenceDiagram
 
 #### Packaging
 
-| Platform | Package |
-| --- | --- |
-| iOS | XCFramework in the Swift package |
-| Android | AAR in the Kotlin library, for each selected processor type (ABI) |
+- **iOS:** XCFramework in the Swift package
+- **Android:** AAR in the Kotlin library, for each selected processor type (ABI)
 
 #### Running Wasm
 
 The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). No release build maps executable memory, so iOS builds fit the App Store rules and Android builds fit Google Play's interpreter exception ([distribution review](https://github.com/glesage/freenet-appkit/blob/main/docs/distribution-review.md)). Both platforms run one backend and the same test fixtures.
 
-wasmtime rates Pulley Tier 2 and the iOS and Android targets Tier 3, with no upstream CI. It does not list 32-bit ARM Android ([wasmtime stability tiers](https://docs.wasmtime.dev/stability-tiers.html)). So the appkit conformance suite on iOS and Android devices is the CI for these targets. It runs again on each wasmtime update, such as wasmtime 48 ([#5694](https://github.com/freenet/freenet-core/pull/5694)).
+Wasmtime tests and maintains the Pulley interpreter, but its iOS and Android builds need platform-specific testing and maintenance ([Wasmtime support tiers](https://docs.wasmtime.dev/stability-tiers.html)). We run the appkit conformance suite on iOS and Android devices to validate these builds, including after every Wasmtime update, such as Wasmtime 48 ([#5694](https://github.com/freenet/freenet-core/pull/5694)). We also validate 32-bit ARM Android support ourselves.
 
 | Limit | Core default | Mobile |
 | --- | --- | --- |
-| Memory per Wasm instance | 256 MiB ([#3990](https://github.com/freenet/freenet-core/pull/3990)) | 256 MiB. The contracts measured in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) use about 1 MiB. Contracts that need more run on desktop nodes |
-| Concurrent Wasm executors | One per CPU core, from 1 to 16 (`FREENET_RUNTIME_POOL_SIZE`) | iOS: 2. Android: Core default |
-| Store replacement | After 500 instances, after 4 hours, or when retired instance memory reaches `clamp(RAM / 8 / executors, 4 MiB, 256 MiB)` ([#5324](https://github.com/freenet/freenet-core/pull/5324)) | iOS: after 4 instances. Android: Core default |
-| State per contract | 50 MiB | 50 MiB |
+| Memory per Wasm instance | 256 MiB ([#3990](https://github.com/freenet/freenet-core/pull/3990)) | same as core (usage measured in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) showed ~1 MiB so this will be overkill but at least same as core) |
+| Concurrent Wasm executors | One per CPU core, from 1 to 16 (`FREENET_RUNTIME_POOL_SIZE`) | iOS: 2.<br>Android: same as core |
+| Store replacement | After 500 instances, after 4 hours, or when retired instance memory reaches `clamp(RAM / 8 / executors, 4 MiB, 256 MiB)` ([#5324](https://github.com/freenet/freenet-core/pull/5324)) | iOS: after 4 instances.<br>Android: same as core |
+| State per contract | 50 MiB | same as core |
 | Compiled module cache in memory | `clamp(RAM / 8, 64 MiB, 4 GiB)`, read from physical RAM, which gives a 4 GB phone 512 MiB ([#4452](https://github.com/freenet/freenet-core/pull/4452)) | An explicit size, set with `--module-cache-budget-bytes` |
-| Compile cache on disk | `clamp(RAM / 8, 128 MiB, 512 MiB)` in the data folder, within the hosting disk budget ([#5328](https://github.com/freenet/freenet-core/pull/5328)) | Core default, bounded by the hosting disk budget in [Storage](#storage) |
+| Compile cache on disk | `clamp(RAM / 8, 128 MiB, 512 MiB)` in the data folder, within the hosting disk budget ([#5328](https://github.com/freenet/freenet-core/pull/5328)) | Same as core, bounded by the hosting disk budget in [Storage](#storage) |
 | Wasm execution time | 5 seconds of wall-clock time, including time spent in host calls such as secret reads ([#5593](https://github.com/freenet/freenet-core/pull/5593), [#5594](https://github.com/freenet/freenet-core/issues/5594)) | 5 seconds of wall-clock time |
 
-Each Wasm instance reserves 256 MiB of address space up front and keeps it until its Store is replaced. The iPhone refused the 23rd reservation ([reservation finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations)). So iOS runs 2 executors and replaces each Store after 4 instances. Core already looks up the memory address again inside each host function ([#3248](https://github.com/freenet/freenet-core/issues/3248)). Once Core also does it after each contract and delegate call, each instance reserves only the memory it uses, and iOS uses Core's default executors and Store replacement ([memory address recommendation](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call)).
+The iPhone refused the 23rd reservation of address space ([reservation finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations)) so it must run 2 executors and replaces each Store after 4 instances. Core already looks up the memory address again inside each host function ([#3248](https://github.com/freenet/freenet-core/issues/3248)). Once Core also does it after each contract and delegate call, each instance reserves only the memory it uses, and iOS uses Core's default executors and Store replacement ([memory address recommendation](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call)).
 
 The host enforces per-app limits for concurrent requests, response size and delegate event frequency. Each phone applies about 21 local updates per second, 45 ms each, on every device that 1.1 Mobile feasibility and supported profiles measured ([local update finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#a-local-update-takes-about-45-ms)). A serving peer accepts about 10 UPDATEs per second for one contract from one sender address and silently drops the rest ([#4285](https://github.com/freenet/freenet-core/pull/4285)). The dropped updates reach peers later through Core's state summary comparison. Phones behind one carrier NAT share a sender address, so they share that limit.
 

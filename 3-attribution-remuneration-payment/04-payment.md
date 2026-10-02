@@ -16,7 +16,7 @@
 
 This plan lets Bob pay Alice 70 dollars for her skateboard and records the payment in their order. On iOS and Android, Bob pays in native screens with Stripe's payment sheet. In a browser, he pays on Stripe Checkout. Stripe sends Alice the price minus a 1% contributor fee of 0.70 dollars, which EVY holds for contributors.
 
-Bob pays after he and Alice accept the terms in the order contract from [3.3 Marketplace pickup protocol](03-marketplace-protocol.md). The payment service takes the fee rate from Marketplace's product policy in [3.1 Contributor registration and attribution](01-attribution.md), and checks that Bob's release has paid eligibility in [3.2 Release certification](02-certification.md). On phones, EVY binds the request to Marketplace's session through the [trusted calls in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#trusted-calls) and [2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md).
+Bob pays after he and Alice accept the terms in the order contract from [3.3 Marketplace pickup protocol](03-marketplace-protocol.md). The payment service takes the fee rate from Marketplace's product policy in [3.1 Contributor registration and attribution](01-attribution.md), and checks that Bob's release has paid eligibility in [3.2 Release certification](02-certification.md). On phones, EVY binds the request to Marketplace's session through the [trusted calls in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#trusted-calls) and [2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md).
 
 ## Terms and checkout request
 
@@ -47,7 +47,7 @@ sequenceDiagram
 ```
 
 - Stripe's payment sheet ([iOS](https://github.com/stripe/stripe-ios) and [Android](https://github.com/stripe/stripe-android) SDKs) runs card entry and 3-D Secure in native screens. A switch to a bank app returns to EVY through Stripe's return URL.
-- stripe-ios 26.x needs iOS 15 or later, and stripe-android 23.x needs API 23 or later. Both fit EVY's targets of iOS 17 and Android 9 (API 28) in [Web storage in 2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#web-storage).
+- stripe-ios 26.x needs iOS 15 or later, and stripe-android 23.x needs API 23 or later. Both fit EVY's targets of iOS 17 and Android 9 (API 28) in [Web storage in 2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md#web-storage).
 - The host calls the payment service directly from native code on iOS and Android.
 - Phones run their node in the foreground only, so the service's node sends the order update even when Bob closes EVY. Bob's phone sends the same bytes, so the order keeps one copy ([Sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates)).
 - Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) 3.1.3(e) and Google Play's [payments policy](https://support.google.com/googleplay/android-developer/answer/9858738) send physical-goods payments outside in-app purchase.

@@ -12,7 +12,7 @@
 
 This plan runs the first paid sale on phones. Alice lists a skateboard for 70 dollars on her iPhone. Bob buys it on his Android phone with Saturday pickup, and the 0.70-dollar contributor fee reaches the contributors whose code the sale used. The pilot runs again with the platforms swapped, so iOS and Android each play both roles.
 
-Marketplace is the app from [3.3 Marketplace pickup protocol](03-marketplace-protocol.md), certified under [3.2 Release certification](02-certification.md) and listed in EVY by [2.1 EVY shell and curated catalogue](../2-evy-mobile-app/01-catalogue.md). Payment uses [3.4 Payments and checkout](04-payment.md), and remuneration uses [3.5 Remuneration and payouts](05-remuneration.md). This plan adds the approvals, privacy notices, disputes and moderation that a live sale needs.
+Marketplace is the app from [3.3 Marketplace pickup protocol](03-marketplace-protocol.md), certified under [3.2 Release certification](02-certification.md) and listed in EVY by [2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md). Payment uses [3.4 Payments and checkout](04-payment.md), and remuneration uses [3.5 Remuneration and payouts](05-remuneration.md). This plan adds the approvals, privacy notices, disputes and moderation that a live sale needs.
 
 ## Pilot scope and approvals
 
@@ -27,7 +27,7 @@ The pilot sells in one region and one currency. Only stores on a curated seller 
 
 ## The skateboard sale
 
-Alice shares her store link, and EVY opens it in Marketplace through the link routing in 2.1 EVY shell and curated catalogue. First contact and the order records follow 3.3 Marketplace pickup protocol.
+Alice shares her store link, and EVY opens it in Marketplace through the link routing in 2.1 EVY catalogue and app hosting. First contact and the order records follow 3.3 Marketplace pickup protocol.
 
 ```mermaid
 sequenceDiagram

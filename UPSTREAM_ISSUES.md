@@ -9,7 +9,7 @@ Core auto-closes feature pull requests that have no approved issue ([#4311](http
 | Change | Issue | Needed by |
 | --- | --- | --- |
 | Request IDs on client API replies. The client sets an ID on each contract request, and the node copies it into the reply | [freenet-stdlib#106](https://github.com/freenet/freenet-stdlib/issues/106) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests) |
-| A per-app user scope in notification, lifecycle, wake-up and inter-delegate runs | [freenet-core#5736](https://github.com/freenet/freenet-core/issues/5736) | [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md#core-needs), [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+| A per-app user scope in notification, lifecycle, wake-up and inter-delegate runs | [freenet-core#5736](https://github.com/freenet/freenet-core/issues/5736) | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#core-and-appkit-requirements), [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
 | Core moves delegate secrets to a new delegate key | [freenet-core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) | [4.4 SDUI bundles and publication](4-sdui/04-bundles.md#migration-in-native-readers) |
 | Agreement on the sync design that River's sync library follows | [freenet-core RFC #5587](https://github.com/freenet/freenet-core/issues/5587) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
 | Delegates update contracts they do not yet hold | [freenet-core#5542](https://github.com/freenet/freenet-core/issues/5542) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
@@ -34,17 +34,17 @@ We file the Core entries first, because the River and freenet-migrate entries bu
 | C7 | [Lock and unlock on `SecretsStore`](#c7-lock-and-unlock-on-secretsstore) | freenet-core | [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#locking-and-unlocking) |
 | C8 | [Thin-peer role and cellular budgets](#c8-thin-peer-role-and-cellular-budgets) | freenet-core | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence) |
 | C9 | [Send client updates as deltas](#c9-send-client-updates-as-deltas) | freenet-core | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence) |
-| C10 | [A user scope on a connection without hosted mode](#c10-a-user-scope-on-a-connection-without-hosted-mode) | freenet-core | [2.2 Two apps on one node](2-evy-mobile-app/02-shared-node.md#core-needs) |
+| C10 | [A user scope on a connection without hosted mode](#c10-a-user-scope-on-a-connection-without-hosted-mode) | freenet-core | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#core-and-appkit-requirements) |
 | M1 | [Release freenet-migrate on freenet-stdlib 0.12](#m1-release-freenet-migrate-on-freenet-stdlib-012) | freenet-migrate | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
 | R1 | [Ship `app_definition.json` in the release build](#r1-ship-app_definitionjson-in-the-release-build) | river | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) |
 | R2 | [Publish with the packaging CLI and River's own container Wasm](#r2-publish-with-the-packaging-cli-and-rivers-own-container-wasm) | river | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#saved-copies-and-recovery) |
 | R3 | [One upward jump to Unix-second versions](#r3-one-upward-jump-to-unix-second-versions) | river | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) |
 | R4 | [Save drafts and pending signed messages in the chat delegate](#r4-save-drafts-and-pending-signed-messages-in-the-chat-delegate) | river | [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#reads-and-local-data) |
-| R5 | [Build invite links from a link base the host supplies](#r5-build-invite-links-from-a-link-base-the-host-supplies) | river | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md#opening-links-and-alerts) |
+| R5 | [Build invite links from a link base the host supplies](#r5-build-invite-links-from-a-link-base-the-host-supplies) | river | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#opening-links-and-alerts) |
 | R6 | [Chat delegate messages `CreateInvitation` and `PrepareMessage`](#r6-chat-delegate-messages-createinvitation-and-preparemessage) | river | [4.3 SDUI actions and data](4-sdui/03-actions-and-data.md#calling-a-delegate) |
 | R7 | [A sync library and a manifest for the chat delegate](#r7-a-sync-library-and-a-manifest-for-the-chat-delegate) | river | [5.3 Device sync](5-optional-extensions/03-sync.md#purpose) |
 | R8 | [Saved unhides, record merges and a "Link a device" page](#r8-saved-unhides-record-merges-and-a-link-a-device-page) | river | [5.3 Device sync](5-optional-extensions/03-sync.md#resolving-conflicts) |
-| A1 | [App definition, packaging CLI, Report button and support page](#a1-app-definition-packaging-cli-report-button-and-support-page) | atlas | [2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md#atlas-in-evy) |
+| A1 | [App definition, packaging CLI, Report button and support page](#a1-app-definition-packaging-cli-report-button-and-support-page) | atlas | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#atlas-in-evy) |
 | A2 | [Read a starting search query from `#q=`](#a2-read-a-starting-search-query-from-q) | atlas | [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md#searching-from-evy-home) |
 
 ```mermaid
@@ -225,7 +225,7 @@ EVY lists Atlas in its catalogue. The store rules then need a way to report an e
 
 Atlas ships `app_definition.json` and publishes through the packaging CLI with `--contract-wasm` and its own container Wasm. It adds a Report button on each entry and a support page.
 
-Sources: [Atlas in EVY in 2.1 EVY shell and curated catalogue](2-evy-mobile-app/01-catalogue.md#atlas-in-evy) and Atlas's [web-container](https://github.com/freenet/atlas/tree/main/contracts/web-container).
+Sources: [Atlas in EVY in 2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#atlas-in-evy) and Atlas's [web-container](https://github.com/freenet/atlas/tree/main/contracts/web-container).
 
 #### A2 Read a starting search query from `#q=`
 

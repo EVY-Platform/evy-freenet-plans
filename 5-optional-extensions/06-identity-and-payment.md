@@ -14,7 +14,7 @@
 
 This plan is an idea note. EVY's vision is one identity and one payment setup across every app. Each app keeps its own identity and payment step:
 
-- Each app has its own keys and its own secret scope under [2.2 Two apps on one node](../2-evy-mobile-app/02-shared-node.md#forgetting-one-app). Bob in River and Bob in Marketplace are two unlinked identities, and forgetting one app leaves the other untouched.
+- Each app has its own keys and its own secret scope under [2.1 EVY catalogue and app hosting](../2-evy-mobile-app/01-catalogue-and-hosting.md#secret-scopes). Bob in River and Bob in Marketplace are two unlinked identities, and forgetting one app leaves the other untouched.
 - Bob enters his card in Stripe's payment sheet for each sale under [3.4 Payments and checkout](../3-attribution-remuneration-payment/04-payment.md#checking-out-on-a-phone).
 
 A shared identity would be a delegate in its own secret scope that signs for any app Bob allows, as the [Ghostkeys delegate](https://github.com/freenet/ghostkeys#scoped-signatures) does. Each signature names the calling app, so one app cannot replay it in another. Apps would find the delegate through a published `delegate-key.json`, as they find the Ghostkeys delegate, because a delegate key changes with every Wasm build ([ghostkeys#21](https://github.com/freenet/ghostkeys/issues/21)). A passkey brokered by the shell is another way to hold the shared identity ([#5764](https://github.com/freenet/freenet-core/issues/5764)). It syncs across Bob's devices through iCloud Keychain on iOS or Google Password Manager on Android, with the origin limit that [Recovery code in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#recovery-code) notes.
