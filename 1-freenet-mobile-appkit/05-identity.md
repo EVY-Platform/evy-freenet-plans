@@ -4,8 +4,8 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `SecretsStore` gains lock and unlock. `crates/mobile` gains the phone key settings, lock states, forget, the encrypted backup file and the restore flow, built on the delegate secret store and FNSX bundle. The Keychain and Keystore backends come from 1.2 Embedded node and mobile SDK |
-| [river](https://github.com/freenet/river) | Used | River's chat delegate store and `riverctl identity export` |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Key protection, backup and restore |
+| [river](https://github.com/freenet/river) | Used | Identity export fixture |
 
 ## Purpose
 

@@ -4,11 +4,11 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Modified | River screen fixtures for the four screens, the cross-target suite, the upgrade tests and published results |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Test builds of the `ios/` and `android/` apps with the native readers, App Review notes, TestFlight and Play internal-testing builds |
-| `freenet-appkit` | Used | Scenario harness from [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#release-tests) for iOS and Android runs, and the packaging CLI for the test releases |
-| [river](https://github.com/freenet/river) | Used | Room contract and chat delegate with `CreateInvitation`, run for real in every test |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | One pinned build for every run |
+| [freenet-sdui](https://github.com/EVY-Platform/freenet-sdui) | Modified | SDUI reader tests and results |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android test builds and release |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Cross-platform test harness |
+| [river](https://github.com/freenet/river) | Used | River action fixtures |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Pinned Core build |
 
 ## Purpose
 

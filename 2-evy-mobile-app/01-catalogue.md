@@ -4,12 +4,12 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `ios/` rebuilt on the AppKit Swift package and a new `android/` app on the Kotlin package. Home, `catalogue.json`, per-app settings, link and alert routing, the store index, the age check and per-app diagnostics export. The `freenet:` scheme registration on iOS and Android. The `/open` page, `apple-app-site-association` and `assetlinks.json` files for EVY's link domain |
-| [atlas](https://github.com/freenet/atlas) | Modified | `app_definition.json`, publication through the packaging CLI, a Report button on each entry and a support page |
-| [river](https://github.com/freenet/river) | Modified | Invite links use the share-link base the host supplies |
-| `freenet-appkit` | Used | Swift and Kotlin packages, WebView hosts and bridge, installation interface and packaging CLI from milestone 1 (Freenet mobile AppKit) |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Embedded node in the thin-peer role, and `crates/mobile` host authority and grant API from milestone 1 (Freenet mobile AppKit). The share-link checks and test vectors of the `freenet:` handler |
-| [web](https://github.com/freenet/web) | Used | The [freenet.org/open](https://freenet.org/open) page and the [share links manual](https://freenet.org/build/manual/share-links/) |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android shell and app catalogue |
+| [atlas](https://github.com/freenet/atlas) | Modified | Atlas bundle and support page |
+| [river](https://github.com/freenet/river) | Modified | River share links |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Mobile SDK and host packages |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Embedded node and share links |
+| [web](https://github.com/freenet/web) | Used | EVY open page and share-link docs |
 
 ## Purpose
 

@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `web/` gains the SDUI editor beside the workspace from 3.6 EVY Developer contribution workspace. It opens an app's repository, edits screens on a canvas, previews them on a memory host, runs the SDUI checks, exports canonical `ui/sdui/` files and opens a pull request |
-| `freenet-sdui` | Used | Component schemas, the web reader and the validation library |
-| [river](https://github.com/freenet/river) | Used | Worked example. Carol's pull request adds the "Invite member" sheet under `ui/sdui/` |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Visual SDUI editor |
+| [freenet-sdui](https://github.com/EVY-Platform/freenet-sdui) | Used | SDUI components and validation |
+| [river](https://github.com/freenet/river) | Used | River screen example |
 
 ## Purpose
 

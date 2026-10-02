@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | New `services/remuneration` with order subscriptions, the ledger, fee allocation, balances, Stripe Connect onboarding links, transfers to contributors and reversals |
-| `evy-marketplace` | Used | The order contract with its signed payment records and handover |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | A Freenet node inside `services/remuneration` that subscribes to paid order contracts |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Contributor ledger and payouts |
+| [evy-marketplace](https://github.com/EVY-Platform/evy-marketplace) | Used | Paid order and handover fixture |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Order contract subscriptions |
 
 ## Purpose
 

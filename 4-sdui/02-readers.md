@@ -4,12 +4,12 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Modified | One web reader package that exports `<freenet-web>` and `FreenetWeb`, the SwiftUI reader, the Compose reader and the reader tests |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `ios/` builds in the SwiftUI reader and `android/` builds in the Compose reader. Both apps pick the native reader or the app's WebView for each release |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | The [TypeScript SDK](https://github.com/freenet/freenet-stdlib/tree/main/typescript) (`@freenetorg/freenet-stdlib` 0.4.0) that the web reader calls |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Core's browser shell, app sessions in `crates/mobile` and the `Locked` state |
-| `freenet-appkit` | Used | The iOS and Android WebView hosts that run the web reader inside EVY |
-| [river](https://github.com/freenet/river) | Used | Room list, conversation, members and "Invite member" screens as fixtures, with the Copy Link button and the notification modal |
+| [freenet-sdui](https://github.com/EVY-Platform/freenet-sdui) | Modified | Web, SwiftUI and Compose readers |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android native readers |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | TypeScript client SDK |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Browser shell and app sessions |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | iOS and Android WebView hosts |
+| [river](https://github.com/freenet/river) | Used | River screen fixtures |
 
 ## Purpose
 

@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution` gains the second-node read, the source check, contribution records, snapshots, saved evidence, paid eligibility and record lookup |
-| `freenet-appkit` | Modified | Packaging CLI validates the `capabilities` field in `app_definition.json` and sends the certification request after readback |
-| [river](https://github.com/freenet/river) | Modified | `app_definition.json` declares `river.member.invite`. The release build uses the pinned toolchain, `--locked` and path remapping, and rebuilds to the same file digests |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev --node-url <url> execute get <key>` and the website container's signature check |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Release certification records and checks |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Bundle capability validation |
+| [river](https://github.com/freenet/river) | Modified | Reproducible certified release |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Container readback and signature check |
 
 ## Purpose
 

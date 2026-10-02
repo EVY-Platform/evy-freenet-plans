@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Creates `services/attribution` for products, contributor keys, PINs, proposals, reviews, size decisions, challenges, units, product policies and key recovery. Creates the EVY GitHub App, which checks PINs and posts the required merge check. Creates the EVY Developer CLI in `cli/` with its key, registration and proposal commands |
-| [river](https://github.com/freenet/river) | Used | Fixture product, with its repository, the website container files in [`published-contract/`](https://github.com/freenet/river/tree/main/published-contract) and Carol's "Invite member" pull request |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev get-contract-id` shows how the service recomputes a website container's contract key |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Attribution service, GitHub App and CLI |
+| [river](https://github.com/freenet/river) | Used | River contribution fixture |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Container key lookup |
 
 ## Purpose
 

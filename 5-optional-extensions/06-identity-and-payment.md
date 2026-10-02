@@ -4,11 +4,11 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [ghostkeys](https://github.com/freenet/ghostkeys) | Used | A delegate that signs for any app after the user allows it, as the model for a shared identity delegate |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Core attests which app calls a delegate, so a shared delegate knows who asks |
-| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) | Used | Bridge-signed Bitcoin payment evidence, as a possible payment path beside Stripe |
-| [evy](https://github.com/EVY-Platform/evy) | Used | `services/payment` and the Stripe payment sheet in the `ios/` and `android/` apps |
-| [raven](https://github.com/freenet/raven) | Used | An identity delegate that signs for one app, as prior art |
+| [ghostkeys](https://github.com/freenet/ghostkeys) | Used | Shared identity delegate model |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Calling-app attestation |
+| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) | Used | Bitcoin payment evidence |
+| [evy](https://github.com/EVY-Platform/evy) | Used | iOS and Android payment setup |
+| [raven](https://github.com/freenet/raven) | Used | Single-app identity example |
 
 ## Purpose
 

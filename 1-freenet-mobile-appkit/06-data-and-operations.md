@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains arrival times on contract responses. Built on the delegate secret store in `native_api.rs`, [#5730](https://github.com/freenet/freenet-core/pull/5730) startup behavior, Core's offline update handling and delegate subscriptions, which take network interest ([#5615](https://github.com/freenet/freenet-core/pull/5615)) and survive a restart ([#5728](https://github.com/freenet/freenet-core/pull/5728)) |
-| `freenet-appkit` | Modified | River signing fixture |
-| [river](https://github.com/freenet/river) | Modified | River saves drafts and signed messages waiting to be sent in the chat delegate's store. Chat delegate `SignMember` and `SignResponse`, `AuthorizedMessageV1`, room state merge rules, the owner-room subscription and the re-PUT of a lost room are fixtures |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Contract response timing and offline behavior |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | River signing fixture |
+| [river](https://github.com/freenet/river) | Modified | Drafts and signed chat messages |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API and delegate interface |
 
 ## Purpose

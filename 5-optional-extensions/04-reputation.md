@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [ghostkeys](https://github.com/freenet/ghostkeys) | Used | Ghost key delegate that signs requests for apps after the user allows them |
-| [harvest](https://github.com/freenet/harvest) | Used | Receipted complaints, the seller standing design and its privacy analysis |
-| [web](https://github.com/freenet/web) | Used | Ghost key issuing in `rust/gklib`, and the research on unlinkable ghost keys |
-| `evy-marketplace` | Used | Handovers signed by both buyer and seller in the order contract, as the evidence a proof would count |
+| [ghostkeys](https://github.com/freenet/ghostkeys) | Used | App-authorized ghost keys |
+| [harvest](https://github.com/freenet/harvest) | Used | Seller complaints and standing |
+| [web](https://github.com/freenet/web) | Used | Ghost key research |
+| [evy-marketplace](https://github.com/EVY-Platform/evy-marketplace) | Used | Marketplace handover evidence |
 
 ## Purpose
 

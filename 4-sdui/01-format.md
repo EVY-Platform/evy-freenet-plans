@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Created | JSON Schema for `ui/sdui/ui.json`<br>Generated TypeScript, Rust, Swift and Kotlin models<br>Validator, expression evaluator, schema comparison and shared fixtures |
-| [evy](https://github.com/EVY-Platform/evy) | Used | [Flow, page and row schemas](https://github.com/EVY-Platform/evy/tree/dev/types/schema/sdui) as the source for 8 components |
-| [river](https://github.com/freenet/river) | Used | Room list, conversation, members and "Invite member" screens as the fixtures |
+| [freenet-sdui](https://github.com/EVY-Platform/freenet-sdui) | Created | SDUI schema, models and validator |
+| [evy](https://github.com/EVY-Platform/evy) | Used | Component schema references |
+| [river](https://github.com/freenet/river) | Used | River screen fixtures |
 
 ## Purpose
 

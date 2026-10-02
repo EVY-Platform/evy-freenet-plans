@@ -4,12 +4,12 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | River scenario suite, Atlas compatibility fixtures, destructive-migration test contract and published results. Developer package: River WebView starter, Swift and Kotlin examples, version matrix, setup, diagnostics export and release checklist. Store release: first-download size prompt, App Review notes, the [store build checks](#store-build-checks) and the [Core version rule](#core-version-and-the-network) |
-| [river](https://github.com/freenet/river) | Modified | Moderation in River's UI: reporting, blocking, a default content filter and terms before the first post. A published support URL and child-safety standards |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | The pinned Core build in network mode, `fdev verify-merge` on River's room contract, and `min-compatible-version` |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | `freenet_migrate::pointer::resolve_app_pointer` in the Atlas fixtures |
-| [freenet-test-network](https://github.com/freenet/freenet-test-network) | Used | Isolated test networks with Docker NAT simulation |
-| [atlas](https://github.com/freenet/atlas) | Used | Atlas's own web UI, built against a separate test index made with `atlasctl --slug` and `--key-dir`. `atlasctl add`, `update` and `remove` for the publication fixture. The signed pointer record |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | AppKit tests, developer package and store release |
+| [river](https://github.com/freenet/river) | Modified | River moderation and support materials |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Pinned Core build and compatibility |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Atlas migration fixture |
+| [freenet-test-network](https://github.com/freenet/freenet-test-network) | Used | Isolated test networks |
+| [atlas](https://github.com/freenet/atlas) | Used | Atlas publication fixture |
 
 ## Purpose
 

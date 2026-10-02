@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin role in the connect protocol, connection manager, ring and serving-peer selection, subscription delivery and lifecycle configuration; cellular budget accounting, cap enforcement and role and traffic diagnostics |
-| `freenet-appkit` | Modified | Workload test definitions for the iOS and Android device runs, built on the harness's `watch` scenario |
-| [river](https://github.com/freenet/river) | Used | The join, read and send sequence and the reconnect behavior that the workloads measure |
-| [freenet-test-network](https://github.com/freenet/freenet-test-network) | Used | Local gateways and peers with Docker NAT simulation for the carrier-NAT and serving-peer-loss runs |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin-peer role and cellular budgets |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | iOS and Android workload tests |
+| [river](https://github.com/freenet/river) | Used | Mobile app workload fixture |
+| [freenet-test-network](https://github.com/freenet/freenet-test-network) | Used | NAT and peer-loss test network |
 
 ## Purpose
 

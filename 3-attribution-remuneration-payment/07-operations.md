@@ -4,8 +4,8 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `docker-compose.prod.yml` gets a named Postgres volume and pgBackRest archiving, plus a restore drill script, key runbooks and backup alerts for `services/attribution`, `services/payment` and `services/remuneration` |
-| `evy-marketplace` | Used | The drill checks Alice's and Bob's order contract after it republishes the signed payment record |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Service backups, restore drills and alerts |
+| [evy-marketplace](https://github.com/EVY-Platform/evy-marketplace) | Used | Payment record restore fixture |
 
 ## Purpose
 

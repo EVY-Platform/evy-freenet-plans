@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `evy-marketplace` | Modified | Participant terms, privacy notices, reporting and blocking in Marketplace's UI, the curated seller list, the nonce hash in Bob's request, and `claim` and `dispute` records in the order contract |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Marketplace's catalogue entry moves from the internal test configuration to EVY's release configuration for `ios/` and `android/`. `services/payment` gains the dispute queue |
-| [harvest](https://github.com/freenet/harvest) | Used | Receipted complaints ([#143](https://github.com/freenet/harvest/pull/143)) and the pre-signed claim design ([#8](https://github.com/freenet/harvest/issues/8)) as references |
+| [evy-marketplace](https://github.com/EVY-Platform/evy-marketplace) | Modified | Marketplace terms, safety and disputes |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android pilot release; dispute queue |
+| [harvest](https://github.com/freenet/harvest) | Used | Complaint and claim references |
 
 ## Purpose
 

@@ -4,13 +4,13 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` delivers the owned API, UniFFI Swift and Kotlin bindings, Keychain and Keystore key backends, per-platform Wasm profiles and build scripts. This plan needs three Core changes: resolve gateway hostnames in the join loop, so the node starts offline; look up each Wasm instance's memory address again after every contract and delegate call, so each instance reserves only the memory it uses; accept local UPDATE and Subscribe for stored contracts before the first join |
-| `freenet-appkit` | Modified | Swift package and Kotlin library that wrap the bindings, package the XCFramework and AAR builds. The Kotlin library declares `ACCESS_LOCAL_NETWORK` for apps that target API 37 or later |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API wire format. The SDK adopts request IDs ([stdlib #106](https://github.com/freenet/freenet-stdlib/issues/106)) and client Unsubscribe ([stdlib #95](https://github.com/freenet/freenet-stdlib/pull/95)) once the pinned stdlib has them |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Mobile API, bindings, key stores and Wasm profiles |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Swift and Kotlin SDK packages |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Client API wire format |
 
 ## Purpose
 
-Manage embedded Core, transport, lifecycle and platform bindings. The app supplies storage paths. Core verifies contract state and executes delegates on the device.
+Manage embedded Core, transport, lifecycle and platform bindings. The app supplies storage paths while core verifies contract state and executes delegates on the device.
 
 ## Owned API
 

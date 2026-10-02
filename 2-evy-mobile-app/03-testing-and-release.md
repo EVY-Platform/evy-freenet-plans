@@ -4,12 +4,12 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Two-app case suite for the `ios/` and `android/` apps. TestFlight and Play internal-testing builds, store listing entries, App Review notes with the store index, bridged permissions and interpreted code, and published results |
-| `freenet-appkit` | Used | Scenario harness, store build checks and Core version rule from [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md), run on EVY's builds |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Per-app sessions and per-app secret scope in `crates/mobile` from [2.2 Two apps on one node](02-shared-node.md), on the pinned Core build in the thin-peer role. The network's `min-compatible-version` |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | River's migration on the first start of a new version, as in [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md) |
-| [river](https://github.com/freenet/river) | Used | River's own web UI and invite links, and a newer River release for the update case |
-| [atlas](https://github.com/freenet/atlas) | Used | Atlas's own web UI, and an Atlas build that reads the separate test index from [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#atlas-today-and-pinned-identity), made with `atlasctl --slug` and `--key-dir` |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android tests and release builds |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Scenario harness and store checks |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Shared-node build and compatibility |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | River migration fixture |
+| [river](https://github.com/freenet/river) | Used | River update fixture |
+| [atlas](https://github.com/freenet/atlas) | Used | Atlas catalogue fixture |
 
 ## Purpose
 

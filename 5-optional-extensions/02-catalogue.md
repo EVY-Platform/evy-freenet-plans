@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | The `ios/` and `android/` apps read the signed catalogue container, save the accepted version, rebuild home, the store index and the age check from it, and add the home search box |
-| [atlas](https://github.com/freenet/atlas) | Modified | Atlas's UI reads a starting query from `#q=` in its URL |
-| `freenet-appkit` | Used | Installation interface from 1.4 Application bundles |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Stock [website container contract](https://github.com/freenet/freenet-core/blob/main/crates/website-contract/src/lib.rs) and the unchanged `fdev website publish` for the catalogue. The shell passes the URL fragment to Atlas |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android live catalogue and search |
+| [atlas](https://github.com/freenet/atlas) | Modified | Atlas search links |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | App installation interface |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Catalogue publishing and links |
 
 ## Purpose
 

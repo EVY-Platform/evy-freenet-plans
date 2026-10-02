@@ -4,13 +4,13 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `evy-marketplace` | Created | Store, mailbox and order contracts, the Marketplace delegate, the web UI with its `app_definition.json`, and codec, merge and migration fixtures |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Marketplace catalogue entry in the internal test release configuration of the iOS and Android apps |
-| `freenet-appkit` | Used | Packaging CLI from 1.4 Application bundles and the WebView host |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Sessions in `crates/mobile`, delegate subscriptions ([#5615](https://github.com/freenet/freenet-core/pull/5615), [#5728](https://github.com/freenet/freenet-core/pull/5728)), wake-ups ([#5747](https://github.com/freenet/freenet-core/pull/5747)) and `fdev verify-merge` ([#5344](https://github.com/freenet/freenet-core/pull/5344), [#5401](https://github.com/freenet/freenet-core/pull/5401)) |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | `ProbeDriver` and `migrate_delegate_secrets` on first start, as in 1.7 Upgrades and migration |
-| [freenet-scaffold](https://github.com/freenet/freenet-scaffold) | Used | `ComposableState` as a model for the contracts' merge state |
-| [harvest](https://github.com/freenet/harvest) | Used | Mailbox contract and encryption, request and order IDs from instant checkout [#159](https://github.com/freenet/harvest/pull/159), always-open stores and merge-law tests, as design sources |
+| [evy-marketplace](https://github.com/EVY-Platform/evy-marketplace) | Created | Marketplace contracts, delegate and UI |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android catalogue entry |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Packaging CLI and WebView host |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Sessions, subscriptions and merge checks |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Delegate migration |
+| [freenet-scaffold](https://github.com/freenet/freenet-scaffold) | Used | Contract merge model |
+| [harvest](https://github.com/freenet/harvest) | Used | Marketplace design references |
 
 ## Purpose
 

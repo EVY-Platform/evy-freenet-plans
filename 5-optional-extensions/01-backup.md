@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains the EVY backup file with one entry per app, the stored backup key, the verified write and the restore of chosen apps |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Backup page and restore screen in the iOS and Android apps, the folder picker and the daily run while EVY is open |
-| [river](https://github.com/freenet/river) | Used | Export and restore fixture from 1.5 Identity, keys and local protection |
-| [atlas](https://github.com/freenet/atlas) | Used | Second app in the file, with no delegate records |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | EVY backup and restore support |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android backup screens |
+| [river](https://github.com/freenet/river) | Used | River backup fixture |
+| [atlas](https://github.com/freenet/atlas) | Used | Atlas backup fixture |
 
 ## Purpose
 

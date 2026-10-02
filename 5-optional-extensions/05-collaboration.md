@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | The `web/` editor gains live sessions that share edits and show which component each author has selected |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Contract subscriptions deliver each author's edits to the others. `fdev verify-merge` tests the session contract's merge |
-| [freenet-wiki](https://github.com/freenet/freenet-wiki) | Used | Worked example of shared editing through one contract |
-| [river](https://github.com/freenet/river) | Used | Worked example. Two contributors edit the "Invite member" sheet under `ui/sdui/` |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Live collaborative editor |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Shared edit subscriptions and merge |
+| [freenet-wiki](https://github.com/freenet/freenet-wiki) | Used | Shared editing example |
+| [river](https://github.com/freenet/river) | Used | River co-editing example |
 
 ## Purpose
 

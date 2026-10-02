@@ -4,11 +4,11 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | The packaging CLI copies `ui/sdui/` and the web reader into the bundle, writes the `sdui` field and the `predecessors` lists, writes a reader-only `index.html` and runs the SDUI checks. The iOS and Android WebView hosts run an app's web UI in a hidden WebView to move delegate secrets |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` carries contracts forward from the `predecessors` lists for native readers. `fdev website publish` stays unchanged and runs with each app's pinned container Wasm, as in 1.4 Application bundles |
-| `freenet-sdui` | Used | The validator, the component and step catalogue, and the web reader build |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | `migrate_contract` for contract carry-forward |
-| [river](https://github.com/freenet/river) | Used | Example bundle and its two predecessor registries |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | SDUI bundle packaging and host support |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Contract carry-forward and publication |
+| [freenet-sdui](https://github.com/EVY-Platform/freenet-sdui) | Used | SDUI validation and web reader |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Contract migration |
+| [river](https://github.com/freenet/river) | Used | River bundle fixture |
 
 ## Purpose
 

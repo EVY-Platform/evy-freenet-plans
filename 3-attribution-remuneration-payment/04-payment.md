@@ -4,13 +4,13 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | New `services/payment` with seller accounts, Stripe destination charges, webhooks, refunds, signed payment records and the service's own Freenet node |
-| `evy-marketplace` | Modified | The `propose` record gains `payment_root_key` and `policy_version`. The order contract verifies and keeps signed payment records. Marketplace's delegate signs checkout requests, and its UI shows payment status |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` binds each checkout request to the calling app and release, and keeps the paid-operation record |
-| `freenet-appkit` | Modified | The host bridge's `checkout` call, the native confirmation screen and Stripe's payment sheet in the iOS and Android host packages |
-| [stripe-ios](https://github.com/stripe/stripe-ios) and [stripe-android](https://github.com/stripe/stripe-android) | Used | Stripe's payment sheet in the iOS and Android host packages |
-| [harvest](https://github.com/freenet/harvest) | Used | [`payment.rs`](https://github.com/freenet/harvest/blob/main/common/src/payment.rs) as the model for payment proof embedded in an order |
-| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) | Used | Its bridge-signed payment claims as the trust model for the signed payment record |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Payment service and Stripe integration |
+| [evy-marketplace](https://github.com/EVY-Platform/evy-marketplace) | Modified | Marketplace payment records and checkout |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Checkout authorization and records |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Native checkout confirmation |
+| [stripe-ios](https://github.com/stripe/stripe-ios) and [stripe-android](https://github.com/stripe/stripe-android) | Used | iOS and Android payment sheets |
+| [harvest](https://github.com/freenet/harvest) | Used | Payment proof reference |
+| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) | Used | Signed payment claim model |
 
 ## Purpose
 

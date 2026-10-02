@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` gains caller admission, trusted calls, session authority, release activation at session boundaries and the host side of the SDK authority and policy hooks. This plan needs two Core changes: an embedder-supplied `UserInputPrompter` that never spawns a browser on iOS or Android, and grant table codes for each app permission with a call that sets a grant and a public API. The [admission table](#freenet-issues-being-worked-on-that-are-required) lists the Core issues each release checks |
-| `freenet-appkit` | Modified | Host bridge, iOS and Android WebView hosts, shell-bridge message handling and diagnostics redaction |
-| [river](https://github.com/freenet/river) | Used | River's web UI and chat delegate are the first hosted app |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | The delegate manifest ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)) and `RequestUserInput` |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Caller admission, sessions and permissions |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | iOS and Android host bridge |
+| [river](https://github.com/freenet/river) | Used | Hosted app fixture |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Delegate manifest and user input |
 
 ## Purpose
 

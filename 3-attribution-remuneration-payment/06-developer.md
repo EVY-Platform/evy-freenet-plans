@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `web/` gains the EVY Developer workspace screens for proposals, release history, earnings and payouts, beside the existing builder. New `evy login` and `evy earnings` commands in the EVY Developer CLI. Both call `services/attribution`, `services/payment` and `services/remuneration` unchanged |
-| `freenet-appkit` | Used | The packaging CLI's publication and certification request |
-| [river](https://github.com/freenet/river) | Used | Carol's "Invite member" pull request and River version 1790640000 as the worked example |
-| [freenet-agent-skills](https://github.com/freenet/freenet-agent-skills) | Used | The dapp-builder skill Carol can use with a coding agent |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Developer workspace and CLI |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Publication and certification tools |
+| [river](https://github.com/freenet/river) | Used | River contribution example |
+| [freenet-agent-skills](https://github.com/freenet/freenet-agent-skills) | Used | Dapp builder agent skill |
 
 ## Purpose
 

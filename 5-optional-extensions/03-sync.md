@@ -4,10 +4,10 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` counts sync traffic against the cellular budgets |
-| [river](https://github.com/freenet/river) | Modified | River adds a sync library that follows the design proposed in [#5587](https://github.com/freenet/freenet-core/issues/5587) and compiles it into the chat delegate. The chat delegate gains a Wasm manifest that declares lifecycle runs, a wake-up and `Background`, which gives it a new key, so River moves its secrets as [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#component-identity-and-re-keying) describes. River saves unhides in `outbound_dms`, merges two concurrent copies of each record and gets a "Link a device" page in its web UI |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Device list, link and remove screens, and the per-app sync switch, in the iOS and Android apps |
-| `freenet-appkit` | Modified | The Swift and Kotlin packages expose linking, removal and sync status to the EVY iOS and Android apps |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Cellular sync accounting |
+| [river](https://github.com/freenet/river) | Modified | River device sync and merge |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android device controls |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | SDK device-linking APIs |
 
 ## Purpose
 

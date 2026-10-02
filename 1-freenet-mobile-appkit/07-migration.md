@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [river](https://github.com/freenet/river) | Modified | Reclaims old chat delegate copies and unregisters old delegate keys once a migration completes |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Registry build, contract and delegate migration, walk policies and pointer resolution |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Typed `Missing` probe answers ([#5729](https://github.com/freenet/freenet-core/pull/5729)) and `UnregisterDelegate` |
+| [river](https://github.com/freenet/river) | Modified | Delegate cleanup after migration |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Contract and delegate migration |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Migration probes and delegate removal |
 
 ## Purpose
 

@@ -4,9 +4,9 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Modified | Packaging CLI: `app_definition.json` format, metadata and component validation, install checks, a saved copy of each release, readback through an independent node, reconciliation after an uncertain submission. Host installation interface: candidate verification, release tracking, rollback and retention of installed copies |
-| [river](https://github.com/freenet/river) | Modified | River's release build gains `app_definition.json` and publishes through the packaging CLI with River's own container Wasm and signing key |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev website publish` as the unchanged publication command, run with each app's pinned container Wasm. `fdev execute get` for readback |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Bundle packaging and installation |
+| [river](https://github.com/freenet/river) | Modified | River bundle publication |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Website publishing and readback |
 
 ## Purpose
 

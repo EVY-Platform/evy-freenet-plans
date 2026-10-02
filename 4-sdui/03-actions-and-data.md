@@ -4,11 +4,11 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-sdui` | Modified | The executor in the web, SwiftUI and Compose readers, its steps and limits, view states, form and draft bindings, send-state display and shared step fixtures |
-| [river](https://github.com/freenet/river) | Modified | The chat delegate gains `CreateInvitation` and `PrepareMessage`. Schemas in `ui/sdui/schemas/` describe these and the existing `GetVersionedRequest` and `CasStoreRequest` messages |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Session and grant checks in `crates/mobile` from 1.3 Single-application host, subscription handles from 1.2 Embedded node and mobile SDK and the delegate secret store |
-| `freenet-appkit` | Used | The host bridge from 1.3 Single-application host carries the web reader's delegate calls and permission requests |
-| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | River moves the chat delegate's secrets to the new delegate key |
+| [freenet-sdui](https://github.com/EVY-Platform/freenet-sdui) | Modified | SDUI action executor and bindings |
+| [river](https://github.com/freenet/river) | Modified | Invitation and message delegate actions |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Session permissions and secret storage |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Reader host bridge |
+| [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Delegate secret migration |
 
 ## Purpose
 

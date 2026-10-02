@@ -4,11 +4,11 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | `crates/mobile` binds each app's session to its own website container key, routes replies and alerts to that session, keeps one secret scope per app for forget, and turns off the 30-day sweep. Core needs a user scope without hosted mode and in background runs ([#5736](https://github.com/freenet/freenet-core/issues/5736)) |
-| `freenet-appkit` | Modified | WebView hosts give each app its own data store and its own container path on iOS and Android, and recover one WebView at a time. The installation interface refuses a delegate key that another installed app already uses |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | The iOS and Android apps open River and Atlas side by side, each in its own WebView and session, and forget one app without touching the other |
-| [river](https://github.com/freenet/river) | Used | First app in the two-app tests, with its chat delegate |
-| [atlas](https://github.com/freenet/atlas) | Used | Second app in the two-app tests. It has no delegate and subscribes to its index contract |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Per-app sessions and secret scopes |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Per-app WebView storage and recovery |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | iOS and Android multi-app shell |
+| [river](https://github.com/freenet/river) | Used | River test app |
+| [atlas](https://github.com/freenet/atlas) | Used | Atlas test app |
 
 ## Purpose
 

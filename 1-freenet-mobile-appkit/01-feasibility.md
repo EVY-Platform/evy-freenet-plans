@@ -13,8 +13,8 @@ This plan is done. It ran on 2026-09-30 on an iPhone 13 mini (iOS 27.0, 4 GB), t
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| `freenet-appkit` | Created | iOS and Android WebView demos, [measurement harness](https://github.com/glesage/freenet-appkit/tree/main/harness), support matrix and device results |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | New `crates/mobile` started from clean main (commit `576f5445`), Pulley backend and iOS Store limits (commit `f5d32b58`) |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Created | iOS and Android demos; device measurements |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Mobile crate and iOS and Android store feasibility |
 
 ## Purpose
 
