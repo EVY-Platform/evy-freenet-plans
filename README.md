@@ -18,14 +18,6 @@ EVY fits with Freenet perfectly as it's peer network distributes applications an
 
 ## Roadmap
 
-The roadmap has three milestones:
-
-| Milestone | Result |
-| --- | --- |
-| milestone 1 (Freenet mobile AppKit) | River runs on iOS and Android with a reusable mobile SDK and host. |
-| milestone 2 (EVY on Freenet) | EVY runs on iOS and Android, reads UI documents from Freenet contracts, takes Marketplace payments and pays contributors. Real customers complete paid sales. |
-| milestone 3 (Optional extensions) | Add backup and device sync, then develop the remaining ideas as customers need them. |
-
 ### 1. Freenet mobile AppKit
 
 Package River as matching iOS and Android apps. River's web UI runs in an in-app WebView served by the embedded node. Developers can also build Swift and Kotlin screens with the SDK.
@@ -73,13 +65,16 @@ flowchart LR
     Svc[EVY payment, attribution and remuneration services] --> Data
 ```
 
-| Step | Result | Plans |
-| --- | --- | --- |
-| Proof of concept | Alice and Bob open EVY and read "Hello EVY world" from an EVY contract. | [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md) |
-| SDUI | The home and hello screens come from UI contracts. Alice signs the hello guestbook. | [2.2 EVY UI contracts and publishing](2-evy-on-freenet/02-ui-contracts.md), [2.3 Native SDUI readers](2-evy-on-freenet/03-readers.md), [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md), [2.5 EVY Developer on Freenet](2-evy-on-freenet/05-developer.md) |
-| Payments and Marketplace | Bob buys Alice's skateboard for 70 dollars, pays in the native payment sheet and picks it up on Saturday. | [2.6 Payments](2-evy-on-freenet/06-payments.md), [2.7 EVY Marketplace](2-evy-on-freenet/07-marketplace.md) |
-| Attribution and remuneration | Carol improves Marketplace's "Create item" flow and earns part of the 0.70-dollar contributor fee. | [2.8 Attribution](2-evy-on-freenet/08-attribution.md), [2.9 Remuneration and payouts](2-evy-on-freenet/09-remuneration.md) |
-| Release | Customers complete the first paid sale on real iOS and Android phones. | [2.10 Testing and release](2-evy-on-freenet/10-testing-and-release.md) |
+- [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md)
+- [2.2 EVY UI contracts and publishing](2-evy-on-freenet/02-ui-contracts.md)
+- [2.3 Native SDUI readers](2-evy-on-freenet/03-readers.md)
+- [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md)
+- [2.5 EVY Developer on Freenet](2-evy-on-freenet/05-developer.md)
+- [2.6 Payments](2-evy-on-freenet/06-payments.md)
+- [2.7 EVY Marketplace](2-evy-on-freenet/07-marketplace.md)
+- [2.8 Attribution](2-evy-on-freenet/08-attribution.md)
+- [2.9 Remuneration and payouts](2-evy-on-freenet/09-remuneration.md)
+- [2.10 Testing and release](2-evy-on-freenet/10-testing-and-release.md)
 
 ### 3. Optional extensions
 
