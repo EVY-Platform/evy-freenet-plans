@@ -4,17 +4,17 @@
 
 EVY connects people to services and pays the people who build them. Anyone can contribute code, create a service or inspect how it works.
 
-A driver can offer food delivery directly to customers. You can sell your skateboard and share your pickup address with the buyer. Services use the same identity and payment setup, so you enter your details once.
+A driver could deliver food without a middleman taking 30%. You could sell your skateboard without your data being used to target you with ads. Bringing these services together in one open platform means you can use the same identity and payment setup, instead of downloading another app, signing up and entering your details each time.
 
-EVY's code and public data are open for anyone to inspect. Private data is encrypted for the people who need it. For example, only the driver making a delivery can decrypt the delivery address.
+That is the vision for EVY. Its code and data are open for anyone to inspect, so people can verify how it works. Private data stays protected and is shared only with the parties who need it, such as an address sent directly to the driver making a delivery, not to the cloud.
 
-EVY keeps your identity and keys on your phone. Contributors get paid when an in-app transaction uses their work.
+EVY starts with a simple idea: a super app on your phone that acts as your identity and your key. The app is community built, and those contributors get paid when an in-app transaction uses their functionality, giving them a reason to build useful features.
 
-Contributors and agents build screens with a shared server-driven UI system. Publishing a UI document updates those screens on customers' phones. Changes to the native readers ship through app store releases.
+A server-driven UI system ensures consistent design and allows contributors and agents to quickly create applications and release them to customers in realtime instead of going through app store release cycles.
 
-The launch product is Marketplace for local buying and selling. Buyer and seller sign pickup terms, including the time and place. Only those two people can read the exact address.
+The initial launch product is a Marketplace (facebook/craigslist style) because we believe we can build a 10x better product than what is out there.
 
-Freenet's peer network distributes applications and verifies who published them. Its delegates keep private data and signing keys on the device.
+EVY fits with Freenet perfectly as it's peer network distributes applications and verifies who published them, and its delegates keep private data and signing keys on the device.
 
 ## Roadmap
 
