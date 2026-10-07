@@ -18,7 +18,7 @@ Freenet fits EVY well. It distributes applications through its peer network with
 
 ## Roadmap
 
-Start with River running on a reusable mobile AppKit, then extend it into EVY, a host that runs River and Atlas. The last piece before going live is contribution and payment services with a Marketplace pickup pilot. At that point we can go live to real customers with an MVP. The next milestones are optional, but they build pieces of the EVY ecosystem that we should build shortly after.
+Start with River running on a reusable mobile AppKit. Then build EVY on it: a native app on iOS and Android whose screens come from EVY's server-driven UI, published as Freenet contract state. EVY then takes payments, launches Marketplace and pays contributors. At that point we can go live to real customers with an MVP. Milestone 3 (Optional extensions) builds pieces of the EVY ecosystem that we should build shortly after.
 
 ### 1. Freenet mobile AppKit
 
@@ -44,84 +44,58 @@ flowchart LR
 - [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md)
 - [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md)
 
-### 2. EVY mobile app
+### 2. EVY on Freenet
 
-Rebuild EVY's iOS app and build its Android app on the AppKit from milestone 1 (Freenet mobile AppKit). EVY lists River and Atlas and opens each in its own in-app WebView. Both apps run on one embedded thin-peer node inside EVY.
+Build EVY's iOS and Android apps on the AppKit from milestone 1 (Freenet mobile AppKit). Each app has native SDUI readers, released as store builds from GitHub. Every screen is an EVY UI document stored in a Freenet contract, the home page included: home is a service like any other, and it lists the other services. Publishing a new UI version updates every phone without an app release. EVY Developer, the authoring tool, is the only EVY web app and ships inside Freenet as a website container.
 
-```mermaid
-flowchart LR
-    EVY[EVY on iOS and Android] --> River[River WebView]
-    EVY --> Atlas[Atlas WebView]
-    River --> Node[One embedded thin-peer node]
-    Atlas --> Node
-    Node --> Full[Serving full peers]
-```
-
-- [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md)
-- [2.2 Testing and release](2-evy-mobile-app/02-testing-and-release.md)
-
-### 3. Attribution, remuneration and payment
-
-Pay contributors when their code is used in a paid sale. Carol's pull request that reworks River's "Invite member" screen earns her attribution units. Marketplace then runs the first paid flow. Alice sells a skateboard to Bob for 70 dollars, and the 1% contributor fee of 0.70 dollars pays the contributors whose code the sale used.
+Home, Hello and Marketplace use the [shared EVY catalogue in 2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md#shared-evy-catalogue): common UI readers, resource adapters, purchases, messages, private-address and file interfaces, and one EVY delegate per user installation. Purchase instances hold individual sales and file instances hold individual content objects. Payment, attribution and payout services retain each operation's originating service and participant permissions.
 
 ```mermaid
 flowchart LR
-    PR[Pull request] --> Accepted[Accepted work and weights]
-    Accepted --> Release[Certified release]
-    Release --> Checkout[Bob pays in the native payment sheet]
-    Checkout --> Handover[Alice and Bob sign the handover]
-    Handover --> Allocation[Fee allocated to contributors]
-    Allocation --> Payout[Payout]
+    GH[GitHub release builds] --> Apps[EVY on iOS and Android<br>native SDUI readers]
+    Apps --> Node[Embedded node in the thin-peer role]
+    Node --> UI[EVY UI contracts<br>home, hello, marketplace]
+    Node --> Data[EVY data contracts and the EVY delegate]
+    Dev[EVY Developer in a website container] -->|signed UI versions| UI
+    Svc[EVY payment, attribution and remuneration services] --> Data
 ```
 
-- [3.1 Contributor registration and attribution](3-attribution-remuneration-payment/01-attribution.md)
-- [3.2 Release certification](3-attribution-remuneration-payment/02-certification.md)
-- [3.3 Marketplace pickup protocol](3-attribution-remuneration-payment/03-marketplace-protocol.md)
-- [3.4 Payments and checkout](3-attribution-remuneration-payment/04-payment.md)
-- [3.5 Remuneration and payouts](3-attribution-remuneration-payment/05-remuneration.md)
-- [3.6 EVY Developer contribution workspace](3-attribution-remuneration-payment/06-developer.md)
-- [3.7 Operating readiness](3-attribution-remuneration-payment/07-operations.md)
-- [3.8 Marketplace pickup pilot](3-attribution-remuneration-payment/08-marketplace-pilot.md)
+The plans run in five steps:
 
-### 4. SDUI
+- **Proof of concept.** Alice and Bob open EVY and read "Hello EVY world" from an EVY contract.
+  - [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md)
+- **SDUI.** EVY's home page and the hello service come from their UI contracts, and Alice signs the hello guestbook.
+  - [2.2 EVY UI contracts and publishing](2-evy-on-freenet/02-ui-contracts.md)
+  - [2.3 Native SDUI readers](2-evy-on-freenet/03-readers.md)
+  - [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md)
+  - [2.5 EVY Developer on Freenet](2-evy-on-freenet/05-developer.md)
+- **Payments and Marketplace.** Bob buys Alice's skateboard for 70 dollars in Marketplace, pays in the native payment sheet and picks it up on Saturday.
+  - [2.6 Payments](2-evy-on-freenet/06-payments.md)
+  - [2.7 EVY Marketplace](2-evy-on-freenet/07-marketplace.md)
+- **Attribution and remuneration.** Carol improves Marketplace's "Create item" flow and earns part of the 0.70-dollar contributor fee.
+  - [2.8 Attribution](2-evy-on-freenet/08-attribution.md)
+  - [2.9 Remuneration and payouts](2-evy-on-freenet/09-remuneration.md)
+- **Release.** The first paid sale runs on real iOS and Android phones.
+  - [2.10 Testing and release](2-evy-on-freenet/10-testing-and-release.md)
 
-Describe screens as data. One screen then runs in the web reader that ships in the app's release bundle and in the native readers built into EVY on iOS and Android. Carol rebuilds River's "Invite member" screen as an SDUI screen in EVY Developer, River publishes it in its next release, and Alice opens it in a browser and in EVY on iOS and Android.
+### 3. Optional extensions
 
-```mermaid
-flowchart LR
-    Dev[EVY Developer or the repository] --> Files[ui/sdui/ in the release bundle]
-    Files --> Web[Web reader in ui/sdui/web/]
-    Files --> iOS[SwiftUI reader in EVY iOS]
-    Files --> Android[Compose reader in EVY Android]
-    Web --> Host[Host session, delegates and contracts]
-    iOS --> Host
-    Android --> Host
-```
+Short plans cover work with a clear next user. Idea notes record research and wait until EVY shows the need.
 
-- [4.1 SDUI format](4-sdui/01-format.md)
-- [4.2 SDUI readers](4-sdui/02-readers.md)
-- [4.3 SDUI actions and data](4-sdui/03-actions-and-data.md)
-- [4.4 SDUI bundles and publication](4-sdui/04-bundles.md)
-- [4.5 EVY Developer visual authoring](4-sdui/05-developer.md)
-- [4.6 SDUI testing and release](4-sdui/06-testing-and-release.md)
-
-### 5. Optional extensions
-
-Short plans cover work with a clear next user. Idea notes record research and wait until an app shows the need.
-
-- [5.1 Automated backup](5-optional-extensions/01-backup.md)
-- [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md)
-- [5.3 Device sync](5-optional-extensions/03-sync.md)
-- [5.4 Peer reputation](5-optional-extensions/04-reputation.md) (idea note)
-- [5.5 Live authoring collaboration](5-optional-extensions/05-collaboration.md) (idea note)
-- [5.6 Shared identity and payment](5-optional-extensions/06-identity-and-payment.md) (idea note)
+- [3.1 Automated backup](3-optional-extensions/01-backup.md)
+- [3.2 Device sync](3-optional-extensions/02-sync.md)
+- [3.3 Peer reputation](3-optional-extensions/03-reputation.md) (idea note)
+- [3.4 Live authoring collaboration](3-optional-extensions/04-collaboration.md) (idea note)
+- [3.5 Saved payment methods](3-optional-extensions/05-payment-methods.md) (idea note)
+- [3.6 EVY services for Freenet apps](3-optional-extensions/06-shared-services.md) (idea note)
 
 ## Upstream suggestions
 
-The plans need changes in Freenet Core, freenet-stdlib, freenet-migrate, River and Atlas. [UPSTREAM_ISSUES.md](UPSTREAM_ISSUES.md) lists each change, the plan it unblocks and its issue, both the ones already filed and drafts for the ones still to file.
+The plans need changes in Freenet Core, freenet-stdlib, freenet-migrate and River. [UPSTREAM_ISSUES.md](UPSTREAM_ISSUES.md) lists each change, the plan it unblocks and its issue, both the ones already filed and drafts for the ones still to file.
 
 ## Sources
 
+- [EVY](https://github.com/EVY-Platform/evy)
 - [Freenet Core](https://github.com/freenet/freenet-core)
 - [freenet-stdlib](https://github.com/freenet/freenet-stdlib)
 - [whitepaper](https://github.com/freenet/paper-1)

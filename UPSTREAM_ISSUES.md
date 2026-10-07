@@ -8,20 +8,41 @@ Core auto-closes feature pull requests that have no approved issue ([#4311](http
 
 | Change | Issue | Needed by |
 | --- | --- | --- |
-| Request IDs on client API replies. The client sets an ID on each contract request, and the node copies it into the reply | [freenet-stdlib#106](https://github.com/freenet/freenet-stdlib/issues/106) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests) |
-| A per-app user scope in notification, lifecycle, wake-up and inter-delegate runs | [freenet-core#5736](https://github.com/freenet/freenet-core/issues/5736) | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#core-and-appkit-requirements), [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
-| Core moves delegate secrets to a new delegate key | [freenet-core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) | [4.4 SDUI bundles and publication](4-sdui/04-bundles.md#migration-in-native-readers) |
-| Agreement on the sync design that River's sync library follows | [freenet-core RFC #5587](https://github.com/freenet/freenet-core/issues/5587) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
-| Delegates update contracts they do not yet hold | [freenet-core#5542](https://github.com/freenet/freenet-core/issues/5542) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
-| Delegate subscriptions keep the contracts they watch hosted | [freenet-core#4669](https://github.com/freenet/freenet-core/issues/4669) | [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#lost-network-state), [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
-| A delegate GET tells a missing contract from a failed lookup | [freenet-stdlib#131](https://github.com/freenet/freenet-stdlib/issues/131) | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+| Request IDs on client API success and error replies. The client sets an ID on each request, and Core and stdlib preserve it through every reply path for the request types enabled for parallel execution. The SDK uses one submitted request per connection until this coverage passes conformance tests | [freenet-stdlib#106](https://github.com/freenet/freenet-stdlib/issues/106), [freenet-core#5724](https://github.com/freenet/freenet-core/issues/5724) | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests), [2.6 Payments](2-evy-on-freenet/06-payments.md#paying-on-a-phone) |
+| Core backup includes delegate Wasm and exact registration parameters, then installs and registers them during restore. #4035 is open and unassigned as checked 2026-10-07; the mobile export and import surface must expose the capability | [freenet-core#4035](https://github.com/freenet/freenet-core/issues/4035) | [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#the-backup-file), [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import), [3.1 Automated backup](3-optional-extensions/01-backup.md#the-backup-file) |
+| Agreement on the sync design that the EVY delegate's sync library follows | [freenet-core RFC #5587](https://github.com/freenet/freenet-core/issues/5587) | [3.2 Device sync](3-optional-extensions/02-sync.md#what-core-still-needs) |
+| Delegates update contracts they do not yet hold | [freenet-core#5542](https://github.com/freenet/freenet-core/issues/5542) | [3.2 Device sync](3-optional-extensions/02-sync.md#what-core-still-needs) |
+| Delegate subscriptions register hosting demand on a running node and restore subscriptions after restart | [freenet-core#4669](https://github.com/freenet/freenet-core/issues/4669) | [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#lost-network-state), [3.2 Device sync](3-optional-extensions/02-sync.md#what-core-still-needs) |
+| A delegate GET tells a missing contract from a failed lookup | [freenet-stdlib#131](https://github.com/freenet/freenet-stdlib/issues/131) | [3.2 Device sync](3-optional-extensions/02-sync.md#what-core-still-needs) |
 | River reclaims old chat delegate copies and unregisters old delegate keys after a migration completes | [river#586](https://github.com/freenet/river/issues/586) | [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#retiring-the-old-version) |
-| Reporting, blocking, a default content filter and terms before the first post in River's UI. A published support URL and child-safety standards | [river#461](https://github.com/freenet/river/issues/461), [river#371](https://github.com/freenet/river/issues/371) | [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#store-requirements) |
-| `app_definition.json` declares `river.member.invite`, and the release build rebuilds to the same file digests | [river#678](https://github.com/freenet/river/issues/678) | [3.2 Release certification](3-attribution-remuneration-payment/02-certification.md#certifying-a-version) |
+| Persistent DM blocking and leaving a DM | [river#461](https://github.com/freenet/river/issues/461) | The DM part of blocking in [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#store-requirements) |
+
+## Future Core migration work
+
+| Proposal | Scope | Adoption |
+| --- | --- | --- |
+| [freenet-core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) | Author-bound delegate provenance and Core-mediated secret transfer to a successor delegate | Evaluate when the provenance checks and secret-deposit path are implemented and tested. |
+
+EVY uses application-driven `migrate_delegate_secrets` with its own export and import adapters, as [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import) specifies. Its release requirements are the compatible library release in [M1](#m1-release-freenet-migrate-on-the-freenet-stdlib-that-core-pins), the mobile SDK interface in [C13](#c13-expose-application-driven-delegate-migration-to-mobile-hosts) and the migration fixtures in [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md#updating-the-evy-delegate).
+
+## Core retention and delivery research
+
+Durable offline delivery across contract eviction belongs to separate Core work. Milestone 1 (Freenet mobile AppKit) and milestone 2 (EVY on Freenet) test reconnect delivery with contract state retained within the pinned Core build's hosting budget. The milestones and [3.2 Device sync](3-optional-extensions/02-sync.md#traffic-and-lifecycle) adopt stronger retention and delivery guarantees when they ship in Core, including availability while all linked mobile nodes are stopped.
+
+| Thread | Scope | Status checked 2026-10-07 |
+| --- | --- | --- |
+| [#5041 Bounded local contract pin](https://github.com/freenet/freenet-core/issues/5041) | A quota-bounded API for retaining selected contracts on the user's node through normal demand eviction | Open design proposal with an exploratory fork; awaiting approach approval |
+| [#4651 Contract storage design](https://github.com/freenet/freenet-core/issues/4651) | Evaluates on-disk persistence and a targeted backstop for newly published contracts until a second replica exists | Open design question |
+| [#4785 Persist hosting demand across restart](https://github.com/freenet/freenet-core/issues/4785) | Restores live subscriptions for contracts with prior client demand after a node restart | Open follow-up proposal |
+| [#3465 PUT propagation reliability](https://github.com/freenet/freenet-core/issues/3465) | Tracks locally applied PUTs whose reported results or remote propagation are unreliable | Open; assigned to iduartgomez |
+| [#3611 PUT forwarding acknowledgements and retries](https://github.com/freenet/freenet-core/pull/3611) | Adds hop-level forwarding acknowledgements and retries for in-flight PUT operations | Merged 2026-03-21 |
+| [#5515 Repair dropped broadcast UPDATEs](https://github.com/freenet/freenet-core/pull/5515) | Adds resynchronization for rate-limited broadcasts; [#5527](https://github.com/freenet/freenet-core/issues/5527) tracks repair latency when a throttle window suppresses another request | Merged 2026-09-02; latency follow-up open |
+
+Local retention, live subscription recovery and in-flight retries address separate parts of offline recovery. The open proposals establish the upstream threads for evaluating future Core releases. [#3626](https://github.com/freenet/freenet-core/pull/3626) defines the client PUT response as local persistence, with propagation continuing asynchronously.
 
 ## To file
 
-We file the Core entries first, because the River and freenet-migrate entries build on them.
+We file the Core entries first, because the River entries build on them.
 
 | # | Issue | Repository | Unblocks |
 | --- | --- | --- | --- |
@@ -34,25 +55,26 @@ We file the Core entries first, because the River and freenet-migrate entries bu
 | C7 | [Lock and unlock on `SecretsStore`](#c7-lock-and-unlock-on-secretsstore) | freenet-core | [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#locking-and-unlocking) |
 | C8 | [Thin-peer role and cellular budgets](#c8-thin-peer-role-and-cellular-budgets) | freenet-core | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence) |
 | C9 | [Send client updates as deltas](#c9-send-client-updates-as-deltas) | freenet-core | [1.8 Thin-peer role and cellular data budgets](1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence) |
-| C10 | [A user scope on a connection without hosted mode](#c10-a-user-scope-on-a-connection-without-hosted-mode) | freenet-core | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#core-and-appkit-requirements) |
-| M1 | [Release freenet-migrate on freenet-stdlib 0.12](#m1-release-freenet-migrate-on-freenet-stdlib-012) | freenet-migrate | [5.3 Device sync](5-optional-extensions/03-sync.md#what-core-still-needs) |
+| C10 | [Stage and activate a complete app restore](#c10-stage-and-activate-a-complete-app-restore) | freenet-core | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#what-to-build), [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#staged-restore-transaction), [3.1 Automated backup](3-optional-extensions/01-backup.md#restoring-on-a-new-phone) |
+| C11 | [Scope private-data operations on a shared node](#c11-scope-private-data-operations-on-a-shared-node) | freenet-core | [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#shared-node-and-key-scope), [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#app-specific-export-and-import), [3.1 Automated backup](3-optional-extensions/01-backup.md#the-backup-file) |
+| C12 | [Prepare and replay signed website publications](#c12-prepare-and-replay-signed-website-publications) | freenet-core | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence) |
+| C13 | [Expose application-driven delegate migration to mobile hosts](#c13-expose-application-driven-delegate-migration-to-mobile-hosts) | freenet-core | [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#what-to-build), [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import), [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md#updating-the-evy-delegate) |
+| S1 | [A public delegate call in the TypeScript client](#s1-a-public-delegate-call-in-the-typescript-client) | freenet-stdlib | [2.5 EVY Developer on Freenet](2-evy-on-freenet/05-developer.md#the-evy-developer-bundle) |
+| M1 | [Release freenet-migrate on the freenet-stdlib that Core pins](#m1-release-freenet-migrate-on-the-freenet-stdlib-that-core-pins) | freenet-migrate | [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md#updating-the-evy-delegate) |
 | R1 | [Ship `app_definition.json` in the release build](#r1-ship-app_definitionjson-in-the-release-build) | river | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) |
 | R2 | [Publish with the packaging CLI and River's own container Wasm](#r2-publish-with-the-packaging-cli-and-rivers-own-container-wasm) | river | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#saved-copies-and-recovery) |
-| R3 | [One upward jump to Unix-second versions](#r3-one-upward-jump-to-unix-second-versions) | river | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) |
+| R3 | [Use the common publication version allocator](#r3-use-the-common-publication-version-allocator) | river | [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) |
 | R4 | [Save drafts and pending signed messages in the chat delegate](#r4-save-drafts-and-pending-signed-messages-in-the-chat-delegate) | river | [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#reads-and-local-data) |
-| R5 | [Build invite links from a link base the host supplies](#r5-build-invite-links-from-a-link-base-the-host-supplies) | river | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#opening-links-and-alerts) |
-| R6 | [Chat delegate messages `CreateInvitation` and `PrepareMessage`](#r6-chat-delegate-messages-createinvitation-and-preparemessage) | river | [4.3 SDUI actions and data](4-sdui/03-actions-and-data.md#calling-a-delegate) |
-| R7 | [A sync library and a manifest for the chat delegate](#r7-a-sync-library-and-a-manifest-for-the-chat-delegate) | river | [5.3 Device sync](5-optional-extensions/03-sync.md#purpose) |
-| R8 | [Saved unhides, record merges and a "Link a device" page](#r8-saved-unhides-record-merges-and-a-link-a-device-page) | river | [5.3 Device sync](5-optional-extensions/03-sync.md#resolving-conflicts) |
-| A1 | [App definition, packaging CLI, Report button and support page](#a1-app-definition-packaging-cli-report-button-and-support-page) | atlas | [2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#atlas-in-evy) |
-| A2 | [Read a starting search query from `#q=`](#a2-read-a-starting-search-query-from-q) | atlas | [5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md#searching-from-evy-home) |
+| R5 | [Complete River's store-release requirements](#r5-complete-rivers-store-release-requirements) | river | [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#store-requirements) |
 
 ```mermaid
 flowchart LR
-    M1[M1 freenet-migrate on stdlib 0.12] --> R7[R7 sync library and manifest]
-    R2[R2 packaging CLI and container Wasm] --- R3[R3 version jump]
+    R2[R2 packaging CLI and container Wasm] --- R3[R3 publication version allocator]
     R1[R1 app_definition.json] --> R2
+    C12[C12 prepare and replay signed state] --> R2
+    C12 --> R3
     C1[C1 gateway hostnames] --> C2[C2 updates before first join]
+    M1[M1 compatible migration library] --> C13[C13 mobile migration interface]
 ```
 
 ### freenet-core
@@ -131,23 +153,52 @@ We ask Core to send the client's delta, computed against what the receiving peer
 
 Sources: [#4072](https://github.com/freenet/freenet-core/pull/4072) deferred the raw-delta wire format, `RequestUpdate` in [op_ctx_task.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/operations/update/op_ctx_task.rs), and [#2427](https://github.com/freenet/freenet-core/pull/2427) on why deltas must use the receiver's summary.
 
-#### C10 A user scope on a connection without hosted mode
+#### C10 Stage and activate a complete app restore
 
-EVY runs River and Atlas on one node, and each app needs its own secret scope. Core attaches a `SecretScope::User` to a connection only in hosted mode, from a loopback source with `X-Forwarded-Proto: https`. Hosted mode also turns delegate capabilities off.
+Core and `crates/mobile` provide isolated restore stores and a durable activation record for one app's complete data generation. The transaction stages delegate Wasm, exact registrations, secrets and declared host records, runs local migration adapters, verifies successor readback and selects the complete generation in one recoverable activation step. Staged delegates run only the restore adapters; network activity resumes after activation. Other applications retain their data under the shared node KEK. Activation also replaces the sessions of consumers whose shared namespace changes. Lost-KEK recovery creates one replacement KEK and retains each affected application's old encrypted generation in quarantine until its own recovery completes.
 
-We ask Core to let an embedder bind a user scope to a connection without hosted mode. The 4 MiB quota and 30-day cleanup stay configurable as they are today (`--per-user-secret-quota`, `--per-user-inactive-ttl`).
+The mobile SDK exposes the transaction to Swift and Kotlin, and startup recovery selects a complete generation before opening sessions. Tests on iOS and Android inject write failures, full storage, migration failures and termination before and after activation. This work follows the [staged restore transaction in 1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#staged-restore-transaction) and uses the executable-inclusive backup capability proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035).
 
-Sources: [websocket.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/client_events/websocket.rs), [user.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/secrets_store/user.rs), [#4381](https://github.com/freenet/freenet-core/issues/4381) and [#4561](https://github.com/freenet/freenet-core/issues/4561). Background runs in that scope are [#5736](https://github.com/freenet/freenet-core/issues/5736), which is already filed.
+#### C11 Scope private-data operations on a shared node
+
+Core and `crates/mobile` accept a host-authorized application ownership selection for executable-inclusive export, staged import and private-data deletion. The selection includes exact current and supported predecessor delegate namespaces and declared host-record sets. Core checks the selection before reading, writing or deleting records. Shared component access follows ownership and grants; an application releases its grant while the owning component and remaining consumers retain their data.
+
+The shared node keeps one KEK across applications. Application Forget removes selected private records, registrations and grants. Whole-node reset closes all sessions, deletes the KEK and clears the shared store. The host exposes these as separate operations with explicit coverage reports. Tests on iOS and Android export, restore and forget one application while a second keeps its records and working sessions, reject ownership substitution and verify whole-node reset. [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#shared-node-and-key-scope) and [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#forget) define these rules.
+
+#### C12 Prepare and replay signed website publications
+
+fdev exposes separate preparation and submission capabilities. Preparation takes the release directory, explicit unsigned 32-bit version, publisher key and pinned container Wasm, and returns the exact archive and complete signed container state without network submission. Submission sends saved state with the same container Wasm and parameters. The packaging CLI saves those bytes durably before sending and replays them unchanged after an uncertain result.
+
+The packaging CLI owns the per-container journal, version reservation and release-job serialization defined in [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence). fdev supplies the archive and signing encoding and validates the supplied version and state. Fixtures cover preparation without submission, exact replay after termination and readback through a second node. This is proposed fdev work in Core.
+
+#### C13 Expose application-driven delegate migration to mobile hosts
+
+Core's `crates/mobile` runs freenet-migrate's `migrate_delegate_secrets` in Rust and exposes it to Swift and Kotlin. The app supplies its predecessor registry, walk policy and export, import and verification adapters. The host authorizes the selected application and delegate namespaces before migration starts, using the ownership rules in C11.
+
+The runner holds other calls to the successor until imported records pass readback verification. An interrupted run retains the predecessor records and resumes on the next start. Retirement follows [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#retiring-the-old-version). Backup restore runs the same adapters inside the staging transaction in C10.
+
+Fixtures on iOS and Android cover normal upgrades, skipped supported generations, interruption, failed imports, successor readback and isolation from another application's records. EVY fixtures preserve `root_seed`, derived public keys, addresses and pending signed operations. This is proposed mobile SDK work and depends on M1.
+
+### freenet-stdlib
+
+
+#### S1 A public delegate call in the TypeScript client
+
+EVY Developer runs in a browser and keeps the service publisher key in its own delegate, so the page asks the delegate to sign each UI version. freenet-stdlib's TypeScript `FreenetWsApi` makes only `put`, `update`, `get`, `subscribe` and `disconnect` public. Its `sendRequest` is private, so a web app can't send `RegisterDelegate` or `ApplicationMessages` or read the delegate's reply.
+
+We ask for public calls that register a delegate and send it application messages, and that return the delegate's outbound messages.
+
+Sources: [websocket-interface.ts](https://github.com/freenet/freenet-stdlib/blob/main/typescript/src/websocket-interface.ts), which already imports the delegate request and response types.
 
 ### freenet-migrate
 
-#### M1 Release freenet-migrate on freenet-stdlib 0.12
+#### M1 Release freenet-migrate on the freenet-stdlib that Core pins
 
-Freenet-migrate builds on freenet-stdlib 0.8.2, but delegate manifests need stdlib 0.12. An app that uses freenet-migrate can't declare lifecycle runs or wake-ups. Harvest writes its manifest section by hand.
+freenet-migrate 0.7.0 builds on freenet-stdlib 0.8.2, and the Core that the SDK pins uses freenet-stdlib 0.12.1. EVY's app moves the EVY delegate's records with freenet-migrate's `migrate_delegate_secrets`, which `crates/mobile` runs for the Swift and Kotlin SDK, so both must build on one stdlib.
 
-We ask for a freenet-migrate release on freenet-stdlib 0.12.
+We ask for a freenet-migrate release on the freenet-stdlib that Core pins. The selected Core, stdlib and freenet-migrate versions build together in the mobile SDK, and the migration fixtures run on that exact dependency set before release. C13 exposes the runner to Swift and Kotlin.
 
-Sources: [Cargo.toml](https://github.com/freenet/freenet-migrate/blob/main/freenet-migrate/Cargo.toml), [stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136), [stdlib #137](https://github.com/freenet/freenet-stdlib/pull/137) and Harvest's [node_glue.rs](https://github.com/freenet/harvest/blob/main/delegates/harvest-delegate/src/node_glue.rs).
+Sources: [Cargo.toml](https://github.com/freenet/freenet-migrate/blob/main/freenet-migrate/Cargo.toml), [stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136) and [stdlib #137](https://github.com/freenet/freenet-stdlib/pull/137).
 
 ### river
 
@@ -159,21 +210,19 @@ River's release build writes `app_definition.json` as [The archive and its defin
 
 #### R2 Publish with the packaging CLI and River's own container Wasm
 
-River signs its web container with its own tool and publishes with `fdev network publish`. The packaging CLI wraps `fdev website publish`, which embeds a different container Wasm. Without River's own Wasm, River's container key `raAq...` changes.
-
-River publishes through the packaging CLI with `--contract-wasm published-contract/web_container_contract.wasm`. River's publisher copies River's signing key into fdev's key file, `~/.config/freenet/website-keys/<name>.toml`, and backs it up.
+River publishes through the packaging CLI with `--contract-wasm published-contract/web_container_contract.wasm`. Preparation and submission both use that pinned Wasm and River's existing publisher key, preserving the container key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`. River's publisher copies the signing key into fdev's key file, `~/.config/freenet/website-keys/<name>.toml`, and backs it up with the publication journal and prepared signed states.
 
 Sources: River's [Makefile.toml](https://github.com/freenet/river/blob/main/Makefile.toml), [river-publish.md](https://github.com/freenet/river/blob/main/.claude/rules/river-publish.md), [website.rs](https://github.com/freenet/freenet-core/blob/main/crates/fdev/src/website.rs) and [publish-readback.sh](https://github.com/freenet/river/blob/main/scripts/publish-readback.sh).
 
-Depends on R1. File together with R3.
+Depends on R1 and C12. File together with R3.
 
-#### R3 One upward jump to Unix-second versions
+#### R3 Use the common publication version allocator
 
-River versions its container with a counter (30000392 today), and its publish rules forbid wall-clock versions. `fdev website publish` stamps Unix seconds and has no version flag.
+River release jobs use the packaging CLI's per-container journal and lock. Each new publication reserves a version higher than the journal's highest reservation and the verified network version, with Unix seconds as a starting floor. Retries retain the exact prepared signed state and its version. River's publish rules and CI route releases through this common publisher workspace.
 
-River's first release through the packaging CLI moves once from the counter to Unix seconds. That jump is upward, so peers accept it, and every later release keeps rising.
+The first release reconciles the existing container version before reservation. Recovery restores the journal and prepared states alongside the publisher key, then reconciles pending attempts before preparing another release. [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence) defines the allocator and readback rules.
 
-Sources: [contract-version.txt](https://github.com/freenet/river/blob/main/published-contract/contract-version.txt), [river-publish.md](https://github.com/freenet/river/blob/main/.claude/rules/river-publish.md) and fdev's second-precision versions ([#4761](https://github.com/freenet/freenet-core/pull/4761)).
+Depends on C12. File together with R2.
 
 #### R4 Save drafts and pending signed messages in the chat delegate
 
@@ -183,55 +232,17 @@ River saves the draft and the signed message in the chat delegate's store with `
 
 Sources: [river#345](https://github.com/freenet/river/issues/345) (CAS requests), Mail's per-device drafts delegate ([mail#56](https://github.com/freenet/mail/pull/56)) and [Sending updates in 1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates).
 
-#### R5 Build invite links from a link base the host supplies
+#### R5 Complete River's store-release requirements
 
-River builds invite links from `window.location`. Inside EVY that is the node's loopback address, which nobody else can open.
+File a River release issue for the following work from [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#store-requirements). Each row needs an owner and completion evidence before the iOS and Android store submissions.
 
-River takes its link base from the host bridge when the host supplies one, so Alice's invite reads `https://<EVY link domain>/open#raAq.../?invitation=<code>`. The invite stays in the URL fragment, so no server receives it.
+| Work | Completion evidence |
+| --- | --- |
+| Reporting | River's UI reports a message or member to a monitored River-team inbox. A test report reaches the inbox, and the team publishes its response deadline on the support page. |
+| Room-wide blocking | A user can block a member and hide that member's room messages. The block survives restart and new messages. Combined room and DM tests use the DM blocking work tracked in [river#461](https://github.com/freenet/river/issues/461). |
+| Default content filter | River's UI filters objectionable messages by default, with acceptance fixtures covering the release's filter behavior. |
+| Terms before posting | River shows its terms and requires acceptance before the user's first post. Tests cover acceptance and reopening the app. |
+| Support page and listings | A published support page gives contact details and the report-response deadline. The iOS and Android store listings link to it. |
+| Child-safety materials | River publishes its child-safety standards and completes the Play Console declaration. The release checklist records the published URL and declaration. |
 
-Sources: [invite_member_modal.rs](https://github.com/freenet/river/blob/main/ui/src/components/members/invite_member_modal.rs), Core's share links ([#5726](https://github.com/freenet/freenet-core/issues/5726), [#5753](https://github.com/freenet/freenet-core/pull/5753), [share links manual](https://freenet.org/build/manual/share-links/)) and [river#566](https://github.com/freenet/river/issues/566).
-
-#### R6 Chat delegate messages `CreateInvitation` and `PrepareMessage`
-
-River's SDUI screens run in a generic executor that never sees River's keys. So the delegate must build Alice's invitation and sign Bob's message.
-
-We ask River for two chat delegate messages, with schemas in `ui/sdui/schemas/`. `CreateInvitation` takes a seed and a link base and returns the invite. `PrepareMessage` signs and saves Bob's message before it replies. Both read Alice's signing key from `signing_key:` and rebuild a private room's secret from `room:<owner key>`. Adding them changes the chat delegate key, so River moves its secrets with freenet-migrate.
-
-Sources: [Calling a delegate in 4.3 SDUI actions and data](4-sdui/03-actions-and-data.md#calling-a-delegate), [invitation_builder.rs](https://github.com/freenet/river/blob/main/ui/src/components/members/invitation_builder.rs) and [chat_delegate.rs](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs).
-
-#### R7 A sync library and a manifest for the chat delegate
-
-Alice's hidden DM threads and other private records live only in the chat delegate on each device. Core drops River's secret scope on delegate-to-delegate calls and blocks those calls in background runs, so a separate sync delegate can't work.
-
-We ask River for a sync library that follows the design proposed in [RFC #5587](https://github.com/freenet/freenet-core/issues/5587), compiled into the chat delegate. The chat delegate also gets a Wasm manifest with lifecycle runs, a wake-up and `Background`, so Alice's laptop syncs with River's tab closed.
-
-Sources: [5.3 Device sync](5-optional-extensions/03-sync.md), [stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136) and [#5747](https://github.com/freenet/freenet-core/pull/5747).
-
-Depends on M1, and agreement on RFC #5587.
-
-#### R8 Saved unhides, record merges and a "Link a device" page
-
-When Alice unhides a DM thread, River remembers it only for the session. Two devices that each change a record have no merge rule, and River has no page to link a second device.
-
-River saves unhides in `outbound_dms`, merges two concurrent copies of each record by reusing `merge_outbound_dms`, and gets a "Link a device" page.
-
-Sources: [Resolving conflicts in 5.3 Device sync](5-optional-extensions/03-sync.md#resolving-conflicts), [river#420](https://github.com/freenet/river/issues/420) (identity conflicts across tabs and devices) and [river#433](https://github.com/freenet/river/pull/433) (portable sent DMs).
-
-### atlas
-
-#### A1 App definition, packaging CLI, Report button and support page
-
-EVY lists Atlas in its catalogue. The store rules then need a way to report an entry and a published support page. Users report entries in Atlas's River room today ([atlas#52](https://github.com/freenet/atlas/issues/52)), and the curator removes them with `atlasctl remove`. Atlas's container version is typed by hand ([atlas#53](https://github.com/freenet/atlas/issues/53)).
-
-Atlas ships `app_definition.json` and publishes through the packaging CLI with `--contract-wasm` and its own container Wasm. It adds a Report button on each entry and a support page.
-
-Sources: [Atlas in EVY in 2.1 EVY catalogue and app hosting](2-evy-mobile-app/01-catalogue-and-hosting.md#atlas-in-evy) and Atlas's [web-container](https://github.com/freenet/atlas/tree/main/contracts/web-container).
-
-#### A2 Read a starting search query from `#q=`
-
-EVY's home search opens Atlas with Bob's query. Atlas starts with an empty search box.
-
-Atlas reads `#q=` from its URL at startup and runs that search. Core's shell already forwards the URL fragment into the app's frame ([shell_bridge.js](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/path_handlers/assets/shell_bridge.js)), so this is a change in Atlas only.
-
-Sources: [Searching from EVY home in 5.2 Catalogue updates and Atlas search](5-optional-extensions/02-catalogue.md#searching-from-evy-home) and Atlas's [main.rs](https://github.com/freenet/atlas/blob/main/ui/src/main.rs).
-
+River's invite-only release uses its room-owner and deputy ban controls. Related design work includes room membership and delegated moderation in [river#371](https://github.com/freenet/river/issues/371), and a recent-actions admin panel in [river#492](https://github.com/freenet/river/issues/492). R5 tracks the store-release work above and links the existing DM issue for its blocking checks.

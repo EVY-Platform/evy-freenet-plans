@@ -22,6 +22,9 @@ Manage embedded Core, transport, lifecycle and platform bindings. The app suppli
 | Subscribe and release | Return owned handles, count them per session and contract, and close the subscription when the last handle is released. |
 | Register, unregister and message delegates | Authenticate the app/user/session and call the [authority hook](#caller-hooks) before each delegate call. |
 | Delegate startup and prompts | Call the [policy hook](#caller-hooks) for installation and permission decisions, including approved foreground startup. |
+| Application-driven delegate migration | Expose the Rust migration runner and app adapters to Swift and Kotlin under [C13 in Upstream issues](../UPSTREAM_ISSUES.md#c13-expose-application-driven-delegate-migration-to-mobile-hosts). Authorize the selected namespaces and verify the successor records before opening its app session, following [1.7 Upgrades and migration](07-migration.md#delegate-secret-export-and-import). |
+| Stage and activate a restore | Expose the [staged restore transaction in 1.5 Identity, keys and local protection](05-identity.md#staged-restore-transaction) to Swift and Kotlin. Isolate imported code, registrations, secrets and host records; recover the selected complete generation before opening sessions. |
+| Shared-node private-data operations | Expose host-authorized ownership selections for export, restore and Forget. Keep the installation's single KEK active for other consumers; whole-node reset has its own host-owned operation, as [1.3 Single-application host](03-host.md#shared-node-and-key-scope) specifies |
 | Permission requests | Pass the app's request for a declared permission to the [policy hook](#caller-hooks) and return granted, denied or unavailable, under the [permission rules in 1.3 Single-application host](03-host.md#asking-for-a-permission). |
 | Events and cancellation | Include SDK request and session identity, [typed errors](#typed-errors) and submission uncertainty. Hand every callback from the node runtime's threads to the platform's expected executor ([callback threads finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#callbacks-run-on-the-nodes-own-threads)), and reject expired-session callbacks. |
 
@@ -31,13 +34,20 @@ Core sends telemetry by default ([#2466](https://github.com/freenet/freenet-core
 
 #### Matching replies to requests
 
-An stdlib reply carries its type and contract key, and nothing more. This means that if Alice's room list and conversation screen both read the "Skate club" room at the same moment, both replies could arrive as "read result for Skate club" and the SDK sees them as identical. So the SDK sends one request of each type per contract at a time and queues the rest, while being able to parallelise distinct requests.
+The SDK assigns each request its own ID, session and connection generation. Contract success replies identify the response type and contract, while some errors carry neither a request ID nor a structured contract key ([#5724](https://github.com/freenet/freenet-core/issues/5724)). The SDK therefore allows one request awaiting a reply per client connection and queues all further requests on that connection, across contract keys, request types and app sessions. For example, an UPDATE to "Skate club" waits while a PUT to another room awaits its reply.
 
-When a request times out (after 60 seconds [#3442](https://github.com/freenet/freenet-core/pull/3442)), the SDK tells the app its outcome is uncertain, and the request keeps its place in flight. The queue moves on when the late reply or Core's timeout error arrives, or when the connection resets, so a late reply never reaches the next request.
+| Event | What the SDK does |
+| --- | --- |
+| Request reply | Matches it to the sole request awaiting a reply, checks any returned type and key, and returns the result with that request's SDK ID and session. A terminal success or error releases the slot. |
+| Subscription update or unsolicited delegate event | Routes it to its owning subscription or event handler while the request slot stays occupied. |
+| Cancellation | Removes a queued request before submission. For a submitted request, stops its app callback and holds its slot until a terminal reply or connection reset. |
+| Timeout | Reports the submitted request's outcome as uncertain and holds its slot. Its retry waits in the queue. A late terminal reply settles that request before the next request is sent. |
+| Connection reset | Reports the submitted request as uncertain, rejects callbacks from the previous connection generation, and restores subscriptions through the new connection's queue. Requests still queued retain their unsubmitted state. |
+| Unclassifiable reply | Reports the submitted request as uncertain and resets the connection before sending the next request. |
 
-A reply can also never arrive, for example when Core drops a result under load ([stdlib #105](https://github.com/freenet/freenet-stdlib/pull/105)). So when neither a reply nor Core's timeout error arrives within a window longer than Core's 60 seconds, the SDK resets the connection. It reports every request in flight on that connection as uncertain and restores the connection's subscriptions.
+Core's request timeout is 60 seconds ([#3442](https://github.com/freenet/freenet-core/pull/3442)). If a terminal reply or Core timeout error is still absent after a bounded window longer than 60 seconds, the SDK resets the connection. This covers dropped replies under load ([stdlib #105](https://github.com/freenet/freenet-stdlib/pull/105)). It uses structured response fields for matching and the connection's request slot for errors with no key.
 
-After a timeout, the SDK cannot tell a late reply from the reply to a retry until replies carry request IDs ([stdlib #106](https://github.com/freenet/freenet-stdlib/issues/106)). Until stdlib carries the ID, the SDK queues a retry behind the timed-out request.
+Parallel requests on one connection require the pinned Core and stdlib to carry the client's request ID through every success and error reply for the request types involved. [stdlib #106](https://github.com/freenet/freenet-stdlib/issues/106) tracks request IDs. Conformance fixtures verify this coverage before the SDK enables parallel requests; subscription updates continue flowing in both modes.
 
 #### Ending subscriptions
 
@@ -66,8 +76,8 @@ The SDK returns each Core failure as a typed error that the app can act on.
 | The delegate fails | An error ([#5287](https://github.com/freenet/freenet-core/pull/5287)). One path still returns an empty `DelegateResponse` ([#5590](https://github.com/freenet/freenet-core/issues/5590)) | Delegate failure. After a timeout, an empty reply counts as a possible failure |
 | The connection holds 500 subscriptions | A typed error ([#5391](https://github.com/freenet/freenet-core/pull/5391)) | Subscription limit |
 | The node lacks a request type, such as Unsubscribe on an older node | An error ([#5392](https://github.com/freenet/freenet-core/pull/5392)) | Unsupported request |
-| The contract refuses a PUT | `OperationError` text without the contract key. [#5746](https://github.com/freenet/freenet-core/issues/5746) proposes a typed error | Refused, not to be retried. The SDK maps the typed error once the pinned Core has it |
-| An UPDATE reaches a node that lacks the contract | A retry error without the contract key or a request ID ([#5724](https://github.com/freenet/freenet-core/issues/5724)) | Uncertain, for the update in flight on that contract |
+| The contract refuses a PUT | `OperationError` text without the contract key. [#5746](https://github.com/freenet/freenet-core/issues/5746) proposes a typed error | Uncertain for the sole submitted request when the error lacks a structured reason. A structured refusal maps to Refused once the pinned Core supports it |
+| An UPDATE reaches a node that lacks the contract | A retry error without the contract key or a request ID ([#5724](https://github.com/freenet/freenet-core/issues/5724)) | Uncertain for the sole submitted request; the SDK retains its contract key and request ID from submission |
 | The node has not joined yet | `PeerNotJoined` for UPDATE, PUT and Subscribe ([#2385](https://github.com/freenet/freenet-core/pull/2385)) | Not yet joined. See [Start, stop and reconnect](#start-stop-and-reconnect) |
 | Peers require a newer Core than the app ships | The handshake fails with "too old for remote's min_compatible", and Core sets its public version-mismatch flag (`freenet::transport::has_version_mismatch`) | Update the app. The app tells the user to install the new store build |
 
@@ -104,7 +114,7 @@ sequenceDiagram
 
 The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). No release build maps executable memory, so iOS builds fit the App Store rules and Android builds fit Google Play's interpreter exception ([distribution review](https://github.com/glesage/freenet-appkit/blob/main/docs/distribution-review.md)). Both platforms run one backend and the same test fixtures.
 
-Wasmtime tests and maintains the Pulley interpreter, but its iOS and Android builds need platform-specific testing and maintenance ([Wasmtime support tiers](https://docs.wasmtime.dev/stability-tiers.html)). We run the appkit conformance suite on iOS and Android devices to validate these builds, including after every Wasmtime update, such as Wasmtime 48 ([#5694](https://github.com/freenet/freenet-core/pull/5694)). We also validate 32-bit ARM Android support ourselves.
+Wasmtime tests and maintains the Pulley interpreter, but its iOS and Android builds need platform-specific testing and maintenance ([Wasmtime support tiers](https://docs.wasmtime.dev/stability-tiers.html)). We run the appkit conformance suite on iOS and every supported Android ABI using the Wasmtime version resolved in the selected Core commit's `Cargo.lock`. The results record that Core commit and Wasmtime version. This check runs for the initial selected build and repeats whenever the resolved Wasmtime version changes. Release requires passing results for the version actually included in the build. We also validate 32-bit ARM Android support ourselves.
 
 | Limit | Core default | Mobile |
 | --- | --- | --- |
@@ -125,6 +135,8 @@ Core's on-disk compile cache keys each compiled module by its Wasm bytes and the
 #### Storage
 
 The host supplies the storage paths. The SDK keeps those paths through restarts, reinstalls and moves of the app's data folder by iOS or Android. Test fixtures use their own store, separate from the network store. Core's sizes come from the RAM and disk of the device it runs on, so the SDK sets each budget explicitly.
+
+One coordinator owns each node store and its KEK. EVY services use the same installation paths and node handle. Admitted applications share contract storage and budgets while their private-data operations use the verified ownership selections from [1.3 Single-application host](03-host.md#shared-node-and-key-scope). Shared-node export and deletion require [C11 Scope private-data operations on a shared node](../UPSTREAM_ISSUES.md#c11-scope-private-data-operations-on-a-shared-node).
 
 | Path or budget | Core default | Mobile |
 | --- | --- | --- |
@@ -206,7 +218,9 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 
 - The node starts in Airplane Mode on iOS and Android, River shows stored rooms, and the node joins the network once the phone is back online.
 - On a real iPhone and a real Android phone, Alice turns off Wi-Fi while "Skate club" is open. The node rejoins on cellular, and Bob's next message reaches her within 30 seconds.
-- Concurrent requests stay isolated: two screens reading the same contract each get their own result, and a late reply after a timeout never reaches a queued request. A request that never gets a reply ends as uncertain when the SDK resets the connection. Real delegate calls succeed, cancellation is safe, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes on iOS and Android.
+- On iOS and Android, concurrent app requests queue behind one submitted request per connection. Fixtures mix GET, PUT, UPDATE, Subscribe and delegate calls across contracts and sessions, including two screens reading the same contract. A keyless error reaches only the submitted request. Subscription updates and unsolicited delegate events flow while a request awaits its reply and leave its slot occupied.
+- On iOS and Android, cancellation, timeout, a late reply and a dropped reply preserve request ownership. A submitted request holds its slot until a terminal reply or reset, while queued requests remain unsubmitted. Reset rejects callbacks from the previous connection generation and restores subscriptions through the queue. Real delegate calls succeed, releasing a local subscription preserves other sessions' handles, and repeated start/stop/reconnect passes.
+- Before enabling parallel requests on a connection, fixtures verify that the pinned Core and stdlib echo request IDs in every success and error path for the request types involved. Out-of-order replies, keyless errors and timeout retries reach the correct request and session on iOS and Android.
 - An iPhone and an Android phone share a Wi-Fi network with a gateway on the Wi-Fi subnet. If the user allows the local-network prompt, the node joins through that gateway. If the user denies it, the node joins through public gateways. Run this on real devices, where iOS shows the prompt. On Android, run it with a build that targets API 37 or later.
 - On an iPhone and an Android phone, 300 stored contracts and 200 updates to one contract pass with the mobile limits in [Running Wasm](#running-wasm).
 - A slow Swift listener on iOS and a slow Kotlin listener on Android delay neither other notifications nor request replies.

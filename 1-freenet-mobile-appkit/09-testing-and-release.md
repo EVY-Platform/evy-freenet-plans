@@ -44,13 +44,14 @@ River publishes a signed tar.xz website archive through its [web container contr
 | Read and refresh | Bob reads the joined room, sees cached observation time while offline and receives verified updates after reconnect. |
 | Missing network copy | Remove remote copies of a River room Alice owns in an isolated test network. River PUTs the node's copy back under [lost network state in 1.6 Application protocols, data and operations](06-data-and-operations.md#lost-network-state). Verify readback through an independent peer. An interrupted or repeated PUT leaves each message in the room once. |
 | Send and sign | River signs Bob's message in the page with his room signing key, saves it with its draft, sends it and sees it in room state. An independent peer can retrieve the message. The real chat delegate answers a `SignMember` call for Alice's invitation of Carol on-device, and the signature verifies with Alice's key. |
-| Offline and interrupted send | Send with no signal, on Wi-Fi with no internet, and with River terminated before and after Core answers. The message reaches an independent peer after reconnect, and a resend leaves one copy in the room. |
+| Offline and interrupted send | Send with no signal, on Wi-Fi with no internet, and with River terminated before and after Core answers. With the room state retained within Core's hosting budget, the message reaches an independent peer after reconnect, and a resend leaves one copy in the room. Retention scope follows [Core retention and offline delivery in 1.6 Application protocols, data and operations](06-data-and-operations.md#core-retention-and-offline-delivery). |
 | Changed room authority | Write a draft offline, change membership or rotate the room secret, then reconnect. River keeps the draft and applies its protocol's conflict/repair rules. |
 | Foreground lifecycle | Lock, background, terminate and resume during startup, signing, submission and refresh. Retain committed drafts, keys and sent messages, invalidate old callbacks and release ports/store locks. Alerts follow the foreground scope that [1.1 Mobile feasibility and supported profiles](01-feasibility.md#message-alerts) confirmed. |
 | Connectivity | Change Wi-Fi/cellular paths and remove the serving peer. Reconnect restores demand. |
 | Compatible web update | Install a verified new version while an open session stays on the version it started with. Activate it under the [rules in 1.3 Single-application host](03-host.md#activating-a-release) and keep drafts and signed messages waiting to be sent. |
 | Interrupted component upgrade | Upgrade from an older River release on iOS and Android and kill the app during the migration. The next start finishes it, and the checks in [1.7 Upgrades and migration](07-migration.md#acceptance) pass. |
 | Protected data | Test permission revocation, locked or invalidated keys and app-specific encrypted export/import through 1.5 Identity, keys and local protection. Show coverage and keep drafts. |
+| Interrupted restore | On iOS and Android, restore over an existing identity and inject storage, migration and process failures before and after activation. Recovery selects one complete generation, as [1.5 Identity, keys and local protection](05-identity.md#staged-restore-transaction) requires. |
 | Device limits and usability | Storage exhaustion, large records and rapid updates remain within the [device limits in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) and the mobile limits in [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm). Keyboard, focus, large text and screen-reader flows work on both platforms. River tracks two mobile layout gaps in [river#714](https://github.com/freenet/river/issues/714) and [river#718](https://github.com/freenet/river/issues/718). |
 
 Use a separate test contract for destructive migration cases and small Atlas records for canonical encoding, request correlation, subscriptions and binding costs. Preserve the published Atlas index identity. River upgrade runs exercise River's actual delegate and migration path. Its [room predecessor registry](https://github.com/freenet/river/blob/main/common/legacy_room_contracts.toml), [delegate registry](https://github.com/freenet/river/blob/main/legacy_delegates.toml) and [migration build rules](https://github.com/freenet/river/blob/main/.claude/rules/delegate-migration.md) provide the recorded source evidence.
@@ -98,7 +99,7 @@ Use a bounded deterministic index first, then the separate test index. Keep the 
 | --- | --- |
 | Canonical records and identity | Browser and supported Swift/Kotlin paths preserve record bytes, signatures and pinned index identity. Malformed records fail validation. |
 | Reads and subscriptions | Known records and bounded queries return the expected results. Cached data shows observation time. Releasing one view preserves another's demand through tested SDK subscription ownership. |
-| Correlation and cancellation | Interleaved responses reach the right request/session. Reopened sessions reject late callbacks. |
+| Correlation and cancellation | Concurrent app requests follow the [connection queue in 1.2 Embedded node and mobile SDK](02-sdk.md#matching-replies-to-requests). Keyless errors reach the sole submitted request; subscription updates flow while its slot stays occupied. Cancellation, timeout and reopened sessions preserve request ownership and reject callbacks from superseded connections. |
 | Permissions | Running Atlas on iOS and Android raises no prompt, because Atlas declares no permissions. |
 | Publication | `atlasctl add`, `update` and `remove` with the test keys change the test index. Atlas's UI on iOS and Android shows each change after the `UpdateNotification`, with no restart. |
 | Upgrade adapter | A separate test contract changes code, recovers predecessor state through the application adapter, resumes an interrupted migration and verifies successor readback. |
@@ -125,7 +126,16 @@ The package lets a developer build River, or their own app, for iOS and Android.
 
 The release sends River to TestFlight on iOS and to Play internal testing on Android. River is a chat app, so both stores' rules for user-generated content apply. River's own UI handles moderation. The policy sources are the versions published on 2026-09-30.
 
-River's room owner and member deputies can ban a member ([river#411](https://github.com/freenet/river/pull/411)). River warns about names that look like a moderator's ([river#489](https://github.com/freenet/river/pull/489)), and the official room's invite service limits automated requests ([web#83](https://github.com/freenet/web/pull/83)). River has no report, block or content filter, and a DM has no block or leave ([river#461](https://github.com/freenet/river/issues/461)). Delegated moderation and an admin log are open in [river#371](https://github.com/freenet/river/issues/371) and [river#492](https://github.com/freenet/river/issues/492).
+River's room owner and member deputies can ban a member ([river#411](https://github.com/freenet/river/pull/411)). River warns about names that look like a moderator's ([river#489](https://github.com/freenet/river/pull/489)), and the official room's invite service limits automated requests ([web#83](https://github.com/freenet/web/pull/83)). The iOS and Android release uses these controls in invite-only rooms.
+
+The remaining work is tracked by requirement:
+
+| Release work | Tracking |
+| --- | --- |
+| DM blocking and leaving a DM | [river#461](https://github.com/freenet/river/issues/461) |
+| Reporting and a monitored inbox; room-wide blocking; default content filter; terms before posting; support page and store links; child-safety standards and declaration | [R5 in Upstream issues](../UPSTREAM_ISSUES.md#r5-complete-rivers-store-release-requirements), to file |
+
+Related River design proposals cover room membership and delegated moderation in [river#371](https://github.com/freenet/river/issues/371), and a recent-actions admin panel in [river#492](https://github.com/freenet/river/issues/492). Store-release completion is checked against the requirements below.
 
 | Requirement | What the release does | App Store | Google Play |
 | --- | --- | --- | --- |

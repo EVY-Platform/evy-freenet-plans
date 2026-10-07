@@ -11,11 +11,29 @@
 
 ## Purpose
 
-Run one defined application's code through authorized access to a Freenet node. Own the core host bridge, caller admission, basic session authority, release activation, base authorization and diagnostic redaction.
+Run admitted applications through authorized sessions on a shared Freenet node. Own the core host bridge, caller admission, basic session authority, release activation, base authorization, storage ownership and diagnostic redaction.
 
 The first mobile route is River's web UI in a WebView served by the embedded node. Custom Swift/Kotlin applications use the same SDK from [1.2 Embedded node and mobile SDK](02-sdk.md).
 
 ## Who controls what
+
+### Shared node and key scope
+
+The host owns a node installation with one node store and one node encryption key (KEK). Its admitted applications use that node through separate sessions, grants and private-data namespaces. The host records which application owns each delegate namespace and host-record set, and which applications have permission to use shared components.
+
+EVY's iOS and Android hosts each run one node for all EVY services, including Home, Hello and Marketplace. All those services share the installation's KEK and the EVY delegate. Service changes, UI publication and opening another EVY flow retain that node and key. The EVY store and test installations each have their own node store and KEK.
+
+The EVY delegate stores one root seed in its encrypted records and derives service and purchase signing keys from it, as [The EVY delegate in 2.4 SDUI data and actions](../2-evy-on-freenet/04-data-and-actions.md#the-evy-delegate) defines. The shared node KEK protects those records; signing operations use the delegate's service or purchase identity.
+
+| Scope | Key and storage rule |
+| --- | --- |
+| Node installation | One KEK protects all delegate secrets and host private records in the node store. [1.5 Identity, keys and local protection](05-identity.md#node-encryption-key) defines its Keychain and Keystore protection |
+| Application data | Ownership and grants select private namespaces for access, backup, restore and Forget. Core's derived delegate encryption keys use the shared KEK |
+| EVY services | One EVY delegate and private-data ownership scope serve Home, Hello, Marketplace and other admitted EVY services |
+| Application Forget | Stop owned activity and delete the application's private records, backup keys, folder access, settings, temporary files, registrations and grants. Verify cleanup before a new identity starts. Keep shared components according to their ownership and remaining consumers |
+| Whole-node reset | Close every session, erase the node KEK and clear the node store. The host shows all affected applications before the reset |
+
+The host supplies a verified application ownership selection to the backup, restore and deletion interfaces in [1.5 Identity, keys and local protection](05-identity.md#app-specific-export-and-import). Every operation enforces that selection against the host's ownership and grant records. Application code requests its own scope through the trusted bridge.
 
 | Part | Authority |
 | --- | --- |
@@ -159,7 +177,7 @@ The bundle's `permissions` field in [1.4 Application bundles](04-bundles.md#the-
 
 On iOS and Android, River's `app_definition.json` declares `notifications`:
 
-1. Bob first runs River, in River's store build or inside EVY. The host asks for `notifications` and stores Bob's answer as a grant in Core's table.
+1. Bob first runs River's store build. The host asks for `notifications` and stores Bob's answer as a grant in Core's table.
 2. Bob taps "Enable notifications" in River's [notification modal](https://github.com/freenet/river/blob/main/ui/src/components/room_list/notification_modal.rs), or sends his first message, and River posts `notification_enable_prompt`. The host replies with the stored answer and shows no new prompt.
 3. River posts a `notification` for a new message in "Skate club". The host shows a native alert when Bob allowed notifications. After a denial, River's alerts stay in-app.
 4. Bob changes his answer in the host's permission screen and in the matching iOS or Android system setting.
@@ -214,9 +232,11 @@ Expose per-app connection state, subscription demand, last observation time, pen
 - Resource-exhaustion and malicious-input tests contain failure to the affected request or session.
 - Each required browser or native admission path passes on the pinned Core build before that profile ships.
 
-## One node per app
+## Node placement and sharing
 
 | Platform | Node placement | Cross-app requests |
 | --- | --- | --- |
-| iOS | Each app embeds its own node, as a full or thin peer. Apps from one developer team may share one node store in an App Group container, run by whichever app is in the foreground. That app closes the store and releases file locks before suspension. | A foreground app switch through universal links, carrying one request and one reply |
-| Android | Each app embeds its own node. A node app may also offer a bound service that other apps call, protected by a permission. | An intent with a result, or calls to the bound service |
+| iOS | EVY embeds one node shared by all its services. Authorized installed apps from one developer team may share a node store in an App Group container and its KEK through an entitled Keychain access group. One foreground host owns the node at a time and closes the store and releases locks before suspension | A foreground app switch through universal links, carrying one request and one reply. Admission and ownership checks apply to each caller |
+| Android | EVY embeds one node shared by all its services. A node-owning app may offer a permission-protected bound service to authorized installed apps. That owner holds the store and Keystore-protected KEK | An intent with a result, or calls to the bound service, with admitted caller identity and application scope |
+
+Shared-node acceptance runs on iOS and Android verify that every admitted application uses the same node and KEK, while each private-data operation follows its ownership selection. Backing up, restoring or forgetting one application preserves unrelated applications' records, grants and working sessions. Restoring an owned shared component coordinates the affected consumers' session replacement through [Staged restore transaction in 1.5 Identity, keys and local protection](05-identity.md#staged-restore-transaction). Whole-node reset closes all sessions and removes the KEK once.

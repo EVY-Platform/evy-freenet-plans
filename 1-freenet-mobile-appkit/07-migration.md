@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [river](https://github.com/freenet/river) | Modified | Delegate cleanup after migration |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | Contract and delegate migration |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Migration probes and delegate removal |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Migration probes, delegate removal and the mobile migration interface |
 
 ## Purpose
 
@@ -64,7 +64,7 @@ Each app names the policy its migration walk uses. Under the default policies, a
 
 | Policy | Part | What the walk does | Trade-off | Used by |
 | --- | --- | --- | --- | --- |
-| `NewestSnapshotWins` (default) | Delegate secrets | Takes the newest generation that answers and stops at the first one that stays silent | Protects against rollback. Generations behind a silent one stay stranded | None |
+| `NewestSnapshotWins` (default) | Delegate secrets | Takes the newest generation that answers and stops at the first one that stays silent | Protects against rollback. Generations behind a silent one stay stranded | EVY |
 | `NewestSnapshotWinsContinuePastUnresponsive(RollbackRiskAck)` (0.7.0) | Delegate secrets | Walks past a silent generation | Gives up rollback protection | None |
 | `UnionAllGenerations` | Delegate secrets | Merges every generation that answers | Can bring back secrets that were deleted by leaving them out. River limits this with ranked tombstones ([river#590](https://github.com/freenet/river/issues/590)) | River, Delta, Harvest |
 | `NewestFirstWins` (default) | Contract state | Takes the newest real state and stops at an unknown newer generation, unless the app passes `RollbackRiskAck` to `continue_past_unknown` | Protects against rollback | River's room contract |
@@ -72,7 +72,11 @@ Each app names the policy its migration walk uses. Under the default policies, a
 
 ### Delegate secret export and import
 
-Apps move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River, Delta and Harvest do. It reads each old delegate through the app's own messages, writes through the new delegate's own handler, and marks each old key done. Core's own copy-forward of delegate secrets stays disabled ([#4908](https://github.com/freenet/freenet-core/pull/4908), [#5199](https://github.com/freenet/freenet-core/pull/5199)), so this app-side call is the only path.
+Apps move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River, Delta and Harvest do. It reads each predecessor through the app's own messages, writes through the successor's own handler, and marks each migrated pair done after verification. EVY uses its `ExportRecords` and `ImportRecords` adapters through the proposed Swift and Kotlin interface in [C13 in Upstream issues](../UPSTREAM_ISSUES.md#c13-expose-application-driven-delegate-migration-to-mobile-hosts). The SDK builds against the compatible Core, stdlib and freenet-migrate dependency set required by [M1 in Upstream issues](../UPSTREAM_ISSUES.md#m1-release-freenet-migrate-on-the-freenet-stdlib-that-core-pins).
+
+Core-assisted migration is a future improvement tracked under [RFC #5255 in Upstream issues](../UPSTREAM_ISSUES.md#future-core-migration-work). Adoption will include tests for delegate provenance, secret transfer and preservation of the app's records.
+
+For a backup restore on a fresh iOS or Android installation, Core first installs and registers the predecessor Wasm and exact parameters from the authenticated backup in a staging store, as [1.5 Identity, keys and local protection](05-identity.md#restore) requires under [#4035](https://github.com/freenet/freenet-core/issues/4035). The app validates support for that generation before restore writes, then runs the migration through the registered predecessor's own messages in staging. Successor readback completes before the [staged restore transaction in 1.5 Identity, keys and local protection](05-identity.md#staged-restore-transaction) activates the restored generation. CI fixtures cover every generation the release supports for backup restore, including skipped releases.
 
 For River the call moves the entries in the chat delegate's key index:
 
@@ -87,7 +91,7 @@ River re-keys its chat delegate roughly weekly. The chat delegate also holds ent
 - `signing_key:` entries. River stores Alice's signing key again from `room:<owner key>` at start, with `signing::migrate_signing_key` in [ui/src/signing.rs](https://github.com/freenet/river/blob/main/ui/src/signing.rs).
 - `room_sub:`, `room_members:` and `room_secret:` caches. The new delegate fills them again after River sends `EnsureRoomSubscription` for each room Alice owns ([subscription.rs](https://github.com/freenet/river/blob/main/delegates/chat-delegate/src/subscription.rs)).
 
-Secrets pass through the app in plain text during the move, so the app's privacy notes say so. Same-key backup and restore belongs to [1.5 Identity, keys and local protection](05-identity.md).
+Secrets pass through the app in plain text during the move, so the app's privacy notes say so. Backup packaging and restore belong to [1.5 Identity, keys and local protection](05-identity.md).
 
 We track [#4909](https://github.com/freenet/freenet-core/issues/4909). When a predecessor holds a corrupt blob, the pair never seals, so each start copies again and brings back secrets the user deleted. Registry fixtures include a predecessor with a corrupt blob.
 
@@ -114,6 +118,7 @@ An app that uses River's chat delegate resolves `river.chat-delegate` with `reso
 - Shared fixtures derive identical keys on all supported hosts, including empty parameters and recorded irregular keys. CI requires registry coverage for changed Wasm.
 - River's room contract and chat delegate migrations run on iOS and Android and keep Alice's "Skate club" room and keys, including across skipped versions.
 - A test migrates from a real old River chat delegate Wasm under Pulley on iOS and Android ([river#630](https://github.com/freenet/river/issues/630)).
+- On iOS and Android, a fresh installation containing only the latest app restores each supported predecessor generation from a backup, registers its bundled Wasm and exact parameters, and migrates its secrets to the current delegate.
 - An interrupted or failed migration keeps the predecessor's data, and the next start runs it again. The app shows its migrating state while the migration runs.
 - After a completed migration on iOS and Android, River has reclaimed the old copies, the old chat delegate key is unregistered, and the old key gets no further wake-ups.
 - Drafts and signed messages waiting to be sent survive activation and migration.

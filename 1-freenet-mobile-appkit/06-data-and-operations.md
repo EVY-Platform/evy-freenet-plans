@@ -137,7 +137,11 @@ River adds the draft and pending-message storage described in [UPSTREAM_ISSUES.m
 | Keep every saved record discoverable | Limits account for other records in the same scope and the 4,096-key listing limit ([store.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/secrets_store/store.rs)) |
 | Include draft and pending-message keys in River's export and migration index | Backup, restore and release migration preserve these new records through [1.5 Identity, keys and local protection](05-identity.md) and [1.7 Upgrades and migration](07-migration.md) |
 
-Storage tests fill the hosting budget and check which room copies Core evicts. Any release that requires a room to remain on the phone must supply and test bounded local retention ([#5041](https://github.com/freenet/freenet-core/issues/5041)).
+### Core retention and offline delivery
+
+Core owns contract retention and network propagation. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while the room state remains in Core's store. Storage tests fill the hosting budget and record which room copies the pinned Core build retains or evicts.
+
+Durable offline delivery across contract eviction belongs to separate Core work. Follow [bounded local contract retention #5041](https://github.com/freenet/freenet-core/issues/5041), the [storage design question #4651](https://github.com/freenet/freenet-core/issues/4651) and [restart demand recovery #4785](https://github.com/freenet/freenet-core/issues/4785). Their scope and status are recorded in [UPSTREAM_ISSUES.md](../UPSTREAM_ISSUES.md#core-retention-and-delivery-research). This plan adopts stronger retention and delivery guarantees when they ship in Core.
 
 ## Sending updates
 
@@ -155,9 +159,9 @@ Test Core's response timing with forwarding to a peer blocked. Core must answer 
 
 | What happens to Bob's send | Required result |
 | --- | --- |
-| His phone loses signal after joining, or Wi-Fi stays connected without internet | Core saves the message locally. After reconnecting, an independent peer reads it |
+| His phone loses signal after joining, or Wi-Fi stays connected without internet | Core saves the message locally. With the room state retained within Core's hosting budget, an independent peer reads it after reconnecting |
 | River starts without signal, before the node's first join | Keep the saved draft and test the first-join path from [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). An independent peer reads the message after joining |
-| River stops after the message reaches the locally stored room | River reads it back after restart and checks that a peer receives it after reconnecting |
+| River stops after the message reaches the locally stored room | With the room state retained within Core's hosting budget, River reads it back after restart and checks that a peer receives it after reconnecting |
 | River stops before the send result arrives | River checks the room and retries any saved signed message with the same bytes. An interrupted save leaves the last acknowledged draft save |
 | The same signed message arrives twice | The room contains one copy. River's message ID derives from its signature ([message.rs](https://github.com/freenet/river/blob/main/common/src/room_state/message.rs)) |
 | Validation or storage fails | River keeps the recoverable draft and shows the error returned through [1.2 Embedded node and mobile SDK](02-sdk.md#typed-errors) |
@@ -211,7 +215,7 @@ Run these scenarios with River's real code, room contract and chat delegate on t
 | Bob edits a draft in two sessions; storage fills up or a save fails | Draft conflicts have a defined outcome. Failed saves report an error and recovery retains the last acknowledged save |
 | River stops during draft saving, sending or cleanup | Recovery follows [Sending updates](#sending-updates). Saved signed bytes retry unchanged, the room holds one copy, and cleanup waits for outstanding saves |
 | Peer forwarding stalls | Core answers after local persistence and River reads the message in room state. Restart preserves that local result within the hosting budget |
-| Signal drops; Wi-Fi has no internet; River starts before the first join | Each send reaches an independent peer after reconnect or first join. Test the selected local-save or queued-send path and restore client subscriptions before network sends resume |
+| Signal drops; Wi-Fi has no internet; River starts before the first join | With the room state retained within Core's hosting budget, each send reaches an independent peer after reconnect or first join. Test the selected local-save or queued-send path and restore client subscriptions before network sends resume |
 | A room is absent before its first update | River reads first. `NotFound` keeps the draft and enters the defined unavailable-room or recovery outcome |
 | Settings conflict, messages repeat or the room secret changes | The [conflicting-change checks](#conflicting-changes) pass. River shows the winning edit, keeps affected drafts and checks membership and the new secret before signing again |
 | Permission is revoked, the device locks or a session expires | The host enforces [1.3 Single-application host](03-host.md) and [1.5 Identity, keys and local protection](05-identity.md). Saved drafts remain protected. Forged identities fail, and calls between delegates, private replies and Core-started runs use only their verified authority |
