@@ -2,27 +2,33 @@
 
 ## EVY's vision
 
-Imagine smartphones and the internet built by the people, for the people. We want to enable anyone to connect consumers to services, free from gatekeepers taking a cut, and compensate contributors fairly.
+EVY connects people to services and pays the people who build them. Anyone can contribute code, create a service or inspect how it works.
 
-A driver could deliver food without a middleman taking 30%. You could sell your skateboard without your data being used to target you with ads. Bringing these services together in one open platform means you can use the same identity and payment setup, instead of downloading another app, signing up and entering your details each time.
+A driver can offer food delivery directly to customers. You can sell your skateboard and share your pickup address with the buyer. Services use the same identity and payment setup, so you enter your details once.
 
-That is the vision for EVY. Its code and data are open for anyone to inspect, so people can verify how it works. Private data is readable only by the parties who need it, such as a delivery address that only the driver making the delivery can decrypt.
+EVY's code and public data are open for anyone to inspect. Private data is encrypted for the people who need it. For example, only the driver making a delivery can decrypt the delivery address.
 
-EVY starts with a simple idea: a super app on your phone that acts as your identity and your key. The app is community built, and those contributors get paid when an in-app transaction uses their functionality, giving them a reason to build useful features.
+EVY keeps your identity and keys on your phone. Contributors get paid when an in-app transaction uses their work.
 
-A server-driven UI system ensures consistent design and allows contributors and agents to quickly create applications and release them to customers in realtime instead of going through app store release cycles.
+Contributors and agents build screens with a shared server-driven UI system. Publishing a UI document updates those screens on customers' phones. Changes to the native readers ship through app store releases.
 
-The launch product is a Marketplace for buying and selling locally. It arranges pickup as signed structured terms, and it shows the exact address only to the two people meeting.
+The launch product is Marketplace for local buying and selling. Buyer and seller sign pickup terms, including the time and place. Only those two people can read the exact address.
 
-Freenet fits EVY well. It distributes applications through its peer network with verified authorship, so the community distributes each app, not a single company. Its delegates keep private data and signing keys on the device, which is the device-only privacy EVY needs.
+Freenet's peer network distributes applications and verifies who published them. Its delegates keep private data and signing keys on the device.
 
 ## Roadmap
 
-Start with River running on a reusable mobile AppKit. Then build EVY on it: a native app on iOS and Android whose screens come from EVY's server-driven UI, published as Freenet contract state. EVY then takes payments, launches Marketplace and pays contributors. At that point we can go live to real customers with an MVP. Milestone 3 (Optional extensions) builds pieces of the EVY ecosystem that we should build shortly after.
+The roadmap has three milestones:
+
+| Milestone | Result |
+| --- | --- |
+| milestone 1 (Freenet mobile AppKit) | River runs on iOS and Android with a reusable mobile SDK and host. |
+| milestone 2 (EVY on Freenet) | EVY runs on iOS and Android, reads UI documents from Freenet contracts, takes Marketplace payments and pays contributors. Real customers complete paid sales. |
+| milestone 3 (Optional extensions) | Add backup and device sync, then develop the remaining ideas as customers need them. |
 
 ### 1. Freenet mobile AppKit
 
-Package River for iOS and Android as one mobile app. River's web UI runs in an in-app WebView served by the embedded node, and developers can build custom Swift and Kotlin screens against the SDK.
+Package River as matching iOS and Android apps. River's web UI runs in an in-app WebView served by the embedded node. Developers can also build Swift and Kotlin screens with the SDK.
 
 ```mermaid
 flowchart LR
@@ -46,9 +52,16 @@ flowchart LR
 
 ### 2. EVY on Freenet
 
-Build EVY's iOS and Android apps on the AppKit from milestone 1 (Freenet mobile AppKit). Each app has native SDUI readers, released as store builds from GitHub. Every screen is an EVY UI document stored in a Freenet contract, the home page included: home is a service like any other, and it lists the other services. Publishing a new UI version updates every phone without an app release. EVY Developer, the authoring tool, is the only EVY web app and ships inside Freenet as a website container.
+Build EVY's iOS and Android apps on the AppKit from milestone 1 (Freenet mobile AppKit). GitHub produces store builds with native server-driven UI (SDUI) readers. Each screen comes from an EVY UI document stored in a Freenet contract. The home service lists the other services. Publishing a compatible UI version updates phones through Freenet. EVY Developer, the web authoring tool, ships as a Freenet website container.
 
-Home, Hello and Marketplace use the [shared EVY catalogue in 2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md#shared-evy-catalogue): common UI readers, resource adapters, purchases, messages, private-address and file interfaces, and one EVY delegate per user installation. Purchase instances hold individual sales and file instances hold individual content objects. Payment, attribution and payout services retain each operation's originating service and participant permissions.
+Home, Hello and Marketplace use the [shared EVY catalogue in 2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md#shared-evy-catalogue):
+
+- Common UI readers and resource adapters.
+- Shared interfaces for purchases, messages, private addresses and files.
+- One EVY delegate per user installation.
+- One purchase instance per sale and one file instance per content object.
+
+Payment, attribution and payout services record each operation's originating service and participant permissions.
 
 ```mermaid
 flowchart LR
@@ -60,27 +73,17 @@ flowchart LR
     Svc[EVY payment, attribution and remuneration services] --> Data
 ```
 
-The plans run in five steps:
-
-- **Proof of concept.** Alice and Bob open EVY and read "Hello EVY world" from an EVY contract.
-  - [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md)
-- **SDUI.** EVY's home page and the hello service come from their UI contracts, and Alice signs the hello guestbook.
-  - [2.2 EVY UI contracts and publishing](2-evy-on-freenet/02-ui-contracts.md)
-  - [2.3 Native SDUI readers](2-evy-on-freenet/03-readers.md)
-  - [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md)
-  - [2.5 EVY Developer on Freenet](2-evy-on-freenet/05-developer.md)
-- **Payments and Marketplace.** Bob buys Alice's skateboard for 70 dollars in Marketplace, pays in the native payment sheet and picks it up on Saturday.
-  - [2.6 Payments](2-evy-on-freenet/06-payments.md)
-  - [2.7 EVY Marketplace](2-evy-on-freenet/07-marketplace.md)
-- **Attribution and remuneration.** Carol improves Marketplace's "Create item" flow and earns part of the 0.70-dollar contributor fee.
-  - [2.8 Attribution](2-evy-on-freenet/08-attribution.md)
-  - [2.9 Remuneration and payouts](2-evy-on-freenet/09-remuneration.md)
-- **Release.** The first paid sale runs on real iOS and Android phones.
-  - [2.10 Testing and release](2-evy-on-freenet/10-testing-and-release.md)
+| Step | Result | Plans |
+| --- | --- | --- |
+| Proof of concept | Alice and Bob open EVY and read "Hello EVY world" from an EVY contract. | [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md) |
+| SDUI | The home and hello screens come from UI contracts. Alice signs the hello guestbook. | [2.2 EVY UI contracts and publishing](2-evy-on-freenet/02-ui-contracts.md), [2.3 Native SDUI readers](2-evy-on-freenet/03-readers.md), [2.4 SDUI data and actions](2-evy-on-freenet/04-data-and-actions.md), [2.5 EVY Developer on Freenet](2-evy-on-freenet/05-developer.md) |
+| Payments and Marketplace | Bob buys Alice's skateboard for 70 dollars, pays in the native payment sheet and picks it up on Saturday. | [2.6 Payments](2-evy-on-freenet/06-payments.md), [2.7 EVY Marketplace](2-evy-on-freenet/07-marketplace.md) |
+| Attribution and remuneration | Carol improves Marketplace's "Create item" flow and earns part of the 0.70-dollar contributor fee. | [2.8 Attribution](2-evy-on-freenet/08-attribution.md), [2.9 Remuneration and payouts](2-evy-on-freenet/09-remuneration.md) |
+| Release | Customers complete the first paid sale on real iOS and Android phones. | [2.10 Testing and release](2-evy-on-freenet/10-testing-and-release.md) |
 
 ### 3. Optional extensions
 
-Short plans cover work with a clear next user. Idea notes record research and wait until EVY shows the need.
+Backup and device sync have implementation plans. The other extensions have research notes and criteria for starting work.
 
 - [3.1 Automated backup](3-optional-extensions/01-backup.md)
 - [3.2 Device sync](3-optional-extensions/02-sync.md)
@@ -91,7 +94,7 @@ Short plans cover work with a clear next user. Idea notes record research and wa
 
 ## Upstream suggestions
 
-The plans need changes in Freenet Core, freenet-stdlib, freenet-migrate and River. [UPSTREAM_ISSUES.md](UPSTREAM_ISSUES.md) lists each change, the plan it unblocks and its issue, both the ones already filed and drafts for the ones still to file.
+The plans need changes in Freenet Core, freenet-stdlib, freenet-migrate and River. [Upstream issues](UPSTREAM_ISSUES.md) lists the filed issues and drafts, with the plans each change unblocks.
 
 ## Sources
 

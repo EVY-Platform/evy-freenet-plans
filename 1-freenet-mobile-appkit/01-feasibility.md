@@ -1,6 +1,6 @@
 # 1.1 Mobile feasibility and supported profiles
 
-This plan is done. It ran on 2026-09-30 on an iPhone 13 mini (iOS 27.0, 4 GB), the iOS Simulator and the Android emulator (API 37). The results live in `freenet-appkit`:
+This plan is complete. The tests ran on 2026-09-30. The runs used an iPhone 13 mini (iOS 27.0, 4 GB), the iOS Simulator and the Android emulator (API 37). `freenet-appkit` stores the results and the remaining device tests:
 
 | Document | Contents |
 | --- | --- |
@@ -14,7 +14,7 @@ This plan is done. It ran on 2026-09-30 on an iPhone 13 mini (iOS 27.0, 4 GB), t
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Created | iOS and Android demos; device measurements |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Mobile crate and iOS and Android store feasibility |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Mobile crate; iOS and Android store feasibility |
 
 ## Purpose
 
@@ -29,11 +29,11 @@ Show that River and Atlas run on iOS and Android through an embedded Core node, 
 | Custom Swift/Kotlin | Put, get, update and subscribe on the same targets. [1.2 Embedded node and mobile SDK](02-sdk.md) adds delegate calls and the per-contract request queue |
 | Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers until [1.8 Thin-peer role and cellular data budgets](08-thin-peer.md) lands |
 
-River's and Atlas's web clients use freenet-stdlib 0.8.5 and run against Core 0.2.139 (freenet-stdlib 0.12.1) with no adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/main/docs/support-matrix.md#protocol-compatibility)). The Atlas demos use Atlas main's web UI.
+River's and Atlas's web clients use freenet-stdlib 0.8.5 and run against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/main/docs/support-matrix.md#protocol-compatibility)). The Atlas demos use Atlas main's web UI.
 
 ## Support matrix
 
-Each operation matched the desktop fixtures on every device that ran it: the same bytes, the same typed errors, the same result after a timeout and callbacks in the same order ([operations](https://github.com/glesage/freenet-appkit/blob/main/docs/support-matrix.md#operations)).
+Every device that ran an operation matched the desktop fixtures for bytes, typed errors, timeout results and callback order ([operations](https://github.com/glesage/freenet-appkit/blob/main/docs/support-matrix.md#operations)).
 
 | Check | iPhone 13 mini | iOS Simulator | Android emulator |
 | --- | --- | --- | --- |
@@ -69,20 +69,18 @@ Each operation matched the desktop fixtures on every device that ran it: the sam
 | Idle | Under 1 KiB/s each way | 1.4 KiB/s up and 1.1 KiB/s down, with 1 peer |
 | Fresh start on cellular | First peer through the carrier NAT in 5.6 s | Not a real carrier |
 
-These findings pass to later plans:
-
-| Finding | Acts next |
+| Finding | Responsible plan or repository |
 | --- | --- |
-| [The node cannot start offline in network mode](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode) | freenet-core, [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [The node does not move to cellular on its own](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-does-not-move-to-cellular-on-its-own) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [The peer count stays up during an outage](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-peer-count-stays-up-during-an-outage) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [Callbacks run on the node's own threads](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#callbacks-run-on-the-nodes-own-threads) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [Phones are full peers on the public network](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#phones-are-full-peers-on-the-public-network) | [1.8 Thin-peer role and cellular data budgets](08-thin-peer.md) |
+| [Offline startup requirement](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode) | freenet-core, [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [Cellular transition requirement](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-does-not-move-to-cellular-on-its-own) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [OS network-path monitoring requirement](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-peer-count-stays-up-during-an-outage) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [Platform callback dispatch requirement](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#callbacks-run-on-the-nodes-own-threads) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [Thin-peer requirement](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#phones-are-full-peers-on-the-public-network) | [1.8 Thin-peer role and cellular data budgets](08-thin-peer.md) |
 | [Loading cached apps](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#smaller-items) first saves about 0.5 s online | [1.3 Single-application host](03-host.md) |
 
 ## Foreground lifecycle
 
-The first release runs Core only while the host is in the foreground. On every device, three stop-and-start cycles each gave a fresh session, and the node restarted in 50 ms on the iPhone and 58 ms on the emulator ([startup and lifecycle](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#startup-and-lifecycle)).
+The first iOS and Android release runs Core while the host is in the foreground. Each device passed three stop-and-start cycles with a fresh session each time. The node restarted in 50 ms on the iPhone and 58 ms on the emulator ([startup and lifecycle](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#startup-and-lifecycle)).
 
 ```mermaid
 stateDiagram-v2
@@ -96,18 +94,18 @@ stateDiagram-v2
 
 ## Message alerts
 
-Alerts cover updates that arrive while the host runs in the foreground. The host's setup and settings screens show this scope. On every device the alert tap reached the page, and the banner showed 25 ms after the page raised it on the iPhone and 12 ms on the emulator ([message alerts](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#message-alerts-and-the-bridge)).
+Alerts cover updates that arrive while the host runs in the foreground. The host's setup and settings screens show this scope. Alert taps reached the requested page on every device. The banner appeared 25 ms after the page raised it on the iPhone and 12 ms on the emulator ([message alerts](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#message-alerts-and-the-bridge)).
 
 | Situation | What happens |
 | --- | --- |
 | Bob's message arrives while Alice has River open on the members screen | River shows an alert |
 | Alice taps the alert | The host refreshes verified "Skate club" state, then opens the conversation |
 
-An alert is a hint to refresh. The screen always shows verified state. Background delivery becomes a product promise once a delivery service, its privacy policy, tested iOS and Android behavior and release approval are all in place.
+An alert triggers a refresh of verified state before the screen opens. Background delivery requires a delivery service, its privacy policy, passing iOS and Android tests and release approval.
 
 ## Distribution review
 
-The [distribution review](https://github.com/glesage/freenet-appkit/blob/main/docs/distribution-review.md) assessed both packages against App Store and Google Play policy. [1.9 Testing and release](09-testing-and-release.md) takes these results into the store submissions:
+The [distribution review](https://github.com/glesage/freenet-appkit/blob/main/docs/distribution-review.md) assessed the iOS and Android packages against App Store and Google Play policy. [1.9 Testing and release](09-testing-and-release.md) applies the results to both store submissions:
 
 | Item | Result |
 | --- | --- |
@@ -119,22 +117,22 @@ The [distribution review](https://github.com/glesage/freenet-appkit/blob/main/do
 
 ## Prototype learnings
 
-This plan built and tested the behaviors below on iOS and Android, from a clean Core main. A community prototype also runs River on Android with an in-process node ([river#319](https://github.com/freenet/river/issues/319), [river#313](https://github.com/freenet/river/pull/313)). It stages fallback gateways for an offline first start and registers a synthetic auth token so River's chat delegate accepts the app's messages.
+The iOS and Android demos tested these requirements against a clean Core main. A community prototype also runs River on Android with an in-process node ([river#319](https://github.com/freenet/river/issues/319), [river#313](https://github.com/freenet/river/pull/313)). It stages fallback gateways for an offline first start and registers a synthetic auth token so River's chat delegate accepts the app's messages.
 
-| Learning | Apply in |
+| Requirement | Apply in |
 | --- | --- |
 | Run Wasm through the Pulley interpreter on iOS and every Android ABI. Run the conformance suite (contract round trips, out-of-bounds traps, backend refusal) on every backend. | [runtime in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
-| Own one process-wide async runtime in the mobile crate and build the node inside it. Install no process-global signal or abort handlers. Stop is an explicit call. | [1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
-| Use the node's loopback WebSocket as the client API. At start the node tries the port from its last run, so the web origin and its web storage stay the same, and picks a free loopback port only when that port is taken. The node reports the port it got to the host, and the host passes that port explicitly so a persisted config never replaces it. Stop waits until the port is free again. | [start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect), [1.3 Single-application host](03-host.md#browser-and-native-hosts) |
+| Own one process-wide async runtime in the mobile crate and build the node inside it. Let the host handle process signals and aborts. Stop the node through an explicit call. | [1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
+| Use the node's loopback WebSocket as the client API. Reuse the last port to preserve the web origin and storage. If that port is taken, select a free loopback port. Report the selected port to the host and pass it explicitly ahead of persisted configuration. Stop waits for the port to become free. | [start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect), [1.3 Single-application host](03-host.md#browser-and-native-hosts) |
 | Take data, config and log directories from the host. Keep local-mode and network-mode stores apart and discard a persisted config whose data directory, mode or gateway source differs. | [storage paths in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
-| Pass each gateway override to Core's `--gateway` option as `ip:port,hex-public-key`, with an IP address so the override needs no DNS lookup. Fetch the public gateway index when network mode has no overrides. | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| Pass each gateway override to Core's `--gateway` option as `ip:port,hex-public-key`. Use an IP address to avoid a DNS lookup. Fetch the public gateway index when network mode has no overrides. | [1.2 Embedded node and mobile SDK](02-sdk.md) |
 | Wait for at least one connected peer before the first network request, then retry reads for a bounded window. | [events in what to build in 1.2 Embedded node and mobile SDK](02-sdk.md#what-to-build) |
-| Keep the WebView bridge to JSON commands and events. The Wasm client opens its own WebSocket to the loopback API. The host serves only a fixed set of bundle files, verified through a per-file SHA-256 manifest that carries a protocol version, and ignores unknown manifest keys. The bridge's message handling lives in `crates/mobile`, so iOS and Android handle every message the same way. | [1.3 Single-application host](03-host.md#browser-and-native-hosts), [archive in 1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) |
+| Use JSON commands and events in the WebView bridge. The Wasm client opens its own WebSocket to the loopback API. Serve a fixed set of bundle files and verify each file against a SHA-256 manifest. The manifest carries a protocol version; the host ignores unknown keys. Keep message handling in `crates/mobile` so iOS and Android use the same implementation. | [1.3 Single-application host](03-host.md#browser-and-native-hosts), [archive in 1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) |
 | Test concurrent requests through one node actor, a two-peer contract exchange, leak thresholds tuned to measured noise, the update key-learning fallback and binding generation in CI. | [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) |
 
 ## Runs still to do
 
-The harness runs these when the equipment is available ([not run yet](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#not-run-yet)):
+Run the remaining harness scenarios when the equipment is available ([remaining runs](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#not-run-yet)):
 
 | Run | Needs |
 | --- | --- |

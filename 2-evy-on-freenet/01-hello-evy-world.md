@@ -11,11 +11,11 @@
 
 ## Purpose
 
-This plan proves that EVY on iOS and Android reads and follows a Freenet contract through the embedded node, in the thin-peer role from [1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md).
+EVY on iOS and Android reads a Freenet contract and follows its updates through the embedded node. The node uses the thin-peer role from [1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md).
 
-- Alice opens EVY on her iPhone and Bob opens EVY on his Android phone. This plan's build opens on one native screen, the hello screen.
+- Alice opens EVY on her iPhone and Bob opens EVY on his Android phone. Each build opens on one native hello screen.
 - Each phone GETs and SUBSCRIBEs to the hello contract and shows its message, "Hello EVY world".
-- The EVY publisher runs `evyctl hello publish --message "Hello again, EVY world"`. Both screens change within 30 seconds, with no restart.
+- The EVY publisher runs `evyctl hello publish --message "Hello again, EVY world"`. Both screens change within 30 seconds, while both apps keep running.
 
 ```mermaid
 flowchart LR
@@ -33,7 +33,7 @@ A new Rust workspace in evy's `freenet/` folder starts with three crates:
 - `freenet/contracts/hello/`: the hello contract
 - `freenet/evyctl/`: the EVY publisher's CLI
 
-Freenet derives a contract key from the contract's code and its parameter bytes ([component identity in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#component-identity-and-re-keying)). The hello contract's parameters are the 32 bytes of the EVY publisher verifying key. Its state is one JSON object. The signature covers the bytes `evy.hello/1` followed by the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of `version` and `message`, so a hello signature never verifies for another EVY contract.
+Freenet derives a contract key from the contract's code and its parameter bytes ([component identity in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#component-identity-and-re-keying)). The hello contract's parameters are the 32 bytes of the EVY publisher verifying key. Its state is one JSON object. The signature covers the bytes `evy.hello/1` followed by the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of `version` and `message`. The `evy.hello/1` prefix binds the signature to the hello contract.
 
 ```jsonc
 {
@@ -54,7 +54,7 @@ The contract implements the four functions of freenet-stdlib's [contract interfa
 
 Publishers encode the signature as canonical standard padded base64, then serialize the complete signed object as RFC 8785 canonical JSON. `state_hash` is BLAKE3 of those exact complete signed state bytes, including `signature`. Ordering compares versions numerically, then the 32 hash bytes lexicographically as unsigned bytes at equal versions. The contract, greeting screen and `evyctl` use this ordering after checking identity and signature. The screen saves the exact bytes and tuple together and restores them on restart.
 
-CI in evy runs a test for each rule and runs `fdev verify-merge` on fixture states. The workspace builds against the freenet-stdlib release of the Core that the SDK pins, 0.12.1 today, because a contract built on a newer stdlib can import host functions that the pinned Core lacks ([River scope in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#river-scope)).
+CI in evy runs a test for each rule and runs `fdev verify-merge` on fixture states. The workspace uses the freenet-stdlib release matching the SDK's pinned Core, 0.12.1. This keeps contract imports within the host functions that Core provides ([River scope in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#river-scope)).
 
 ## The EVY publisher key
 
@@ -78,7 +78,7 @@ Both apps start the embedded node at launch, in network mode and the thin-peer r
 | App | The existing SwiftUI app in [`ios/`](https://github.com/EVY-Platform/evy/tree/dev/ios) | A new Kotlin and Compose app in `android/`, built with Gradle |
 | First screen | The hello screen, a native SwiftUI view | The hello screen, a native Compose screen |
 | Node and SDK | The `FreenetAppKit` Swift package | The `org.freenet.appkit` Kotlin library |
-| Minimum OS | iOS 17, the deployment target of EVY's [Xcode project](https://github.com/EVY-Platform/evy/blob/dev/ios/evy.xcodeproj/project.pbxproj), because its views use the Observation framework ([EVYState.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Data/EVYState.swift)). It sits inside the iOS 16 floor of [1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#supported-profiles) | Android 9 (API 28), from 1.1 Mobile feasibility and supported profiles. `targetSdk` 36 |
+| Minimum OS | iOS 17, the deployment target of EVY's [Xcode project](https://github.com/EVY-Platform/evy/blob/dev/ios/evy.xcodeproj/project.pbxproj), because its views use the Observation framework ([EVYState.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Data/EVYState.swift)). It meets the iOS 16 minimum in [1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#supported-profiles) | Android 9 (API 28), from 1.1 Mobile feasibility and supported profiles. `targetSdk` 36 |
 | Local network | `NSLocalNetworkUsageDescription`: "EVY connects to Freenet peers on your Wi-Fi." | `ACCESS_LOCAL_NETWORK` in builds that target API 37 or later |
 | Builds in this plan | Development build on an iPhone, and the iOS Simulator | Debug build on an Android phone, and the Android emulator |
 
@@ -116,7 +116,7 @@ Until the node first joins, Core answers a GET without subscribe from the node's
 | Situation | The hello screen shows |
 | --- | --- |
 | The node has joined | The newest message, for example "Hello EVY world" |
-| A higher `(version, state_hash)` arrives | The winning message, with no restart, including a higher hash at the same version |
+| A higher `(version, state_hash)` arrives | The winning message, while both apps keep running, including a higher hash at the same version |
 | Offline or not joined yet, with a stored copy | The stored message and "Offline. Received 10:42" |
 | Offline or not joined yet, nothing stored | "Connecting to Freenet". The message appears once the node joins |
 | The network has no copy of the contract | "The greeting is not available right now" and a Retry button |
@@ -129,7 +129,10 @@ Until the node first joins, Core answers a GET without subscribe from the node's
 1. GETs the current state through the operator node (`--node-url`) and sets `version` to one above it, or to 1 when the contract is absent.
 2. Signs the state with the EVY publisher key, serializes the complete signed object as canonical JSON and saves those exact bytes in evyctl's data folder.
 3. Sends the state to the operator node: a PUT with the contract code and parameters for version 1, an UPDATE with the whole state after that.
-4. Reads the contract back through a second node (`--readback-url`) and verifies its identity, signature and exact bytes. An exact match completes publication. A verified absent state or a lower `(version, state_hash)` allows replay of the same saved bytes; a timeout retains the pending attempt for readback and retry. A higher tuple, including a higher hash at the same version, stops the attempt and reports the winning state while retaining the evidence.
+4. Reads the contract back through a second node (`--readback-url`) and verifies its identity, signature and exact bytes. An exact match completes publication.
+   - A verified absent state or lower `(version, state_hash)` allows replay of the same saved bytes.
+   - A timeout keeps the attempt pending for readback and retry.
+   - A higher tuple, including a higher hash at the same version, stops the attempt. `evyctl` reports the winning state and retains the evidence.
 
 ```mermaid
 sequenceDiagram
@@ -151,7 +154,7 @@ sequenceDiagram
 ## Acceptance
 
 - On iOS and Android, a fresh install on a real phone opens on the hello screen and, on Wi-Fi, shows "Hello EVY world" within 5 seconds. Record the time on the iPhone, the Android phone, the iOS Simulator and the Android emulator.
-- On iOS and Android, Alice on her iPhone and Bob on his Android phone keep the hello screen open while the publisher runs `evyctl hello publish --message "Hello again, EVY world"`. Both screens show the new message within 30 seconds, with no restart. Both phones run in the thin-peer role from 1.8 Thin-peer role and cellular data budgets.
+- On iOS and Android, Alice on her iPhone and Bob on his Android phone keep the hello screen open while the publisher runs `evyctl hello publish --message "Hello again, EVY world"`. Both screens show the new message within 30 seconds, while both apps keep running. Both phones run in the thin-peer role from 1.8 Thin-peer role and cellular data budgets.
 - On iOS and Android, after one successful read, the app relaunched in Airplane Mode shows the stored message and its received time. Back online, it subscribes and shows any higher `(version, state_hash)`. A fresh install in Airplane Mode shows "Connecting to Freenet", then the greeting once the phone is online.
 - On iOS and Android, a test peer sends a hello state signed by another key and a state with a lower version. The phone's node rejects both, and the screen keeps "Hello again, EVY world".
 - Contract tests cover each rule in [the hello contract](#the-hello-contract), including equal versions with different bytes, a message over 1 KiB, a missing signature and signed objects with extra fields, noncanonical JSON or noncanonical signature encoding. `fdev verify-merge` passes on the hello contract.

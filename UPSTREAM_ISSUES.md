@@ -1,8 +1,8 @@
 # Upstream issues
 
-The plans need these changes in projects EVY does not own. Each plan's Repositories table lists the new code in Core's `crates/mobile`. The [admission table in 1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#freenet-issues-being-worked-on-that-are-required) lists the Core issues already in progress that each release checks.
+These changes in Freenet Core, freenet-stdlib, freenet-migrate and River support the plans. Mobile SDK code lives in Core's `crates/mobile`. Release checks for Core issues in progress are in [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#freenet-issues-being-worked-on-that-are-required).
 
-Core auto-closes feature pull requests that have no approved issue ([#4311](https://github.com/freenet/freenet-core/pull/4311)), and it ranks issues by what they unblock ([D4412](https://github.com/freenet/freenet-core/discussions/4412)). So each issue names the plan it unblocks, and we open a pull request only once its issue is approved.
+Each issue names the plan it unblocks. We get issue approval before opening a feature pull request, following Core's [issue approval rule](https://github.com/freenet/freenet-core/pull/4311) and [prioritization process](https://github.com/freenet/freenet-core/discussions/4412).
 
 ## Filed
 
@@ -27,7 +27,7 @@ EVY uses application-driven `migrate_delegate_secrets` with its own export and i
 
 ## Core retention and delivery research
 
-Durable offline delivery across contract eviction belongs to separate Core work. Milestone 1 (Freenet mobile AppKit) and milestone 2 (EVY on Freenet) test reconnect delivery with contract state retained within the pinned Core build's hosting budget. The milestones and [3.2 Device sync](3-optional-extensions/02-sync.md#traffic-and-lifecycle) adopt stronger retention and delivery guarantees when they ship in Core, including availability while all linked mobile nodes are stopped.
+Core work will address offline delivery after contract eviction. In milestone 1 (Freenet mobile AppKit) and milestone 2 (EVY on Freenet), reconnect tests retain contract state within the pinned Core build's hosting budget. Those milestones and [3.2 Device sync](3-optional-extensions/02-sync.md#traffic-and-lifecycle) will adopt Core's stronger retention and delivery guarantees when they ship. This includes keeping data available while all linked mobile nodes are stopped.
 
 | Thread | Scope | Status checked 2026-10-07 |
 | --- | --- | --- |
@@ -38,11 +38,11 @@ Durable offline delivery across contract eviction belongs to separate Core work.
 | [#3611 PUT forwarding acknowledgements and retries](https://github.com/freenet/freenet-core/pull/3611) | Adds hop-level forwarding acknowledgements and retries for in-flight PUT operations | Merged 2026-03-21 |
 | [#5515 Repair dropped broadcast UPDATEs](https://github.com/freenet/freenet-core/pull/5515) | Adds resynchronization for rate-limited broadcasts; [#5527](https://github.com/freenet/freenet-core/issues/5527) tracks repair latency when a throttle window suppresses another request | Merged 2026-09-02; latency follow-up open |
 
-Local retention, live subscription recovery and in-flight retries address separate parts of offline recovery. The open proposals establish the upstream threads for evaluating future Core releases. [#3626](https://github.com/freenet/freenet-core/pull/3626) defines the client PUT response as local persistence, with propagation continuing asynchronously.
+Evaluate future Core releases for local retention, subscription recovery and in-flight retries. A successful client PUT confirms local persistence; network propagation continues asynchronously, as [#3626](https://github.com/freenet/freenet-core/pull/3626) specifies.
 
 ## To file
 
-We file the Core entries first, because the River entries build on them.
+File the Core issues first. The River changes depend on them.
 
 | # | Issue | Repository | Unblocks |
 | --- | --- | --- | --- |
@@ -81,17 +81,17 @@ flowchart LR
 
 #### C1 Resolve gateway hostnames in the join loop
 
-The node resolves every gateway hostname while it builds its config. A failed DNS lookup ends the start, so a phone that opens River on the subway can't start its node. The public gateway index uses hostnames ([gateways.toml](https://github.com/freenet/web/blob/main/hugo-site/static/keys/gateways.toml)), and the node fetches it at every start.
+The node fetches the public [gateway index](https://github.com/freenet/web/blob/main/hugo-site/static/keys/gateways.toml) at startup. The index uses hostnames. To let Bob open River on the subway, Core must start the node with its local data and retry gateway DNS lookups when a network is available.
 
-We ask Core to resolve each hostname inside the join loop and retry it there, so the node starts with no network and joins once a lookup works.
+Move hostname resolution and retries into Core's join loop. The node starts offline and joins once a lookup succeeds.
 
-Sources: [node.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/node.rs) (`parse_socket_addr`), [#1119](https://github.com/freenet/freenet-core/pull/1119) added the lookup at start, and [the node cannot start offline in network mode](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode). The community Android build ships fallback gateways to work around it ([river#319](https://github.com/freenet/river/issues/319)).
+Sources: [node.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/node.rs) (`parse_socket_addr`), [#1119](https://github.com/freenet/freenet-core/pull/1119), [offline startup findings](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode) and [community mobile gateway findings](https://github.com/freenet/river/issues/319).
 
 #### C2 Accept local updates and subscriptions before the first join
 
-Until the node's first successful handshake, Core answers PUT, UPDATE and Subscribe with `PeerNotJoined`. A GET without `subscribe` reads the local copy. So once C1 lets the node start offline, River shows Bob's rooms but can't save "Skate session Saturday?" to the room or subscribe.
+Before its first network handshake, the node must read local contracts, merge local updates and record subscriptions. Bob can then open his saved River rooms offline and save "Skate session Saturday?" to a room.
 
-We ask Core to merge local updates and record subscriptions for contracts the node already stores before the first join, then send them on join.
+Core sends the saved updates and subscriptions when the node joins. Apply this to contracts the node already stores.
 
 Sources: `ensure_peer_ready` in [error.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/client_events/error.rs), its callers in [client_events.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/client_events.rs), and [#2385](https://github.com/freenet/freenet-core/pull/2385).
 
@@ -99,33 +99,33 @@ Depends on C1.
 
 #### C3 Re-read the Wasm memory address after each guest call
 
-Core reserves 256 MiB of address space for each Wasm instance, and the iPhone refused those reservations after 22 calls. Core can't use smaller reservations, because its host code keeps the memory address from before a guest call and reads through it afterwards. So iOS runs provisional limits: a new Store after 4 instances, and 2 executors.
+The mobile runtime needs smaller Wasm memory reservations. The iPhone test exhausted Core's 256 MiB reservations after 22 calls. The iOS build uses 2 executors and replaces each Store after 4 instances; the Android build uses Core's defaults. Test the memory-address fix on both platforms.
 
-We ask Core to look up each instance's memory address again after every contract and delegate call returns. Host functions already do this ([#3248](https://github.com/freenet/freenet-core/issues/3248), [#3270](https://github.com/freenet/freenet-core/pull/3270)). Each instance can then reserve only the memory it uses.
+Core must read each instance's memory address again after every contract and delegate call returns. Each instance can then reserve only the memory it uses. Follow the host-function handling in [#3248](https://github.com/freenet/freenet-core/issues/3248) and [#3270](https://github.com/freenet/freenet-core/pull/3270).
 
 Sources: [contract.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/contract.rs), the 256 MiB default from [#3990](https://github.com/freenet/freenet-core/pull/3990), [the iPhone refused Core's Wasm memory reservations](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations) and the [recommended fix](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call).
 
 #### C4 Keychain and Keystore backends for the node encryption key
 
-The node encryption key backends are a closed list: systemd, file and keyring. The keyring backend refuses only Linux, so an Android build would fall back to the keyring crate's in-memory mock store and lose every secret at each restart.
+The iOS and Android builds need persistent, platform-protected storage for the node encryption key.
 
-We ask Core to add iOS Keychain and Android Keystore backends as `KekBackendKind` variants, and make the Android build refuse the keyring backend. File it as a sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137), which already lists a hardware-backed tier.
+Add iOS Keychain and Android Keystore backends as `KekBackendKind` variants. Android must reject the keyring backend because its in-memory mock loses secrets on restart. File this as a sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137), which specifies a hardware-backed tier.
 
 Sources: [kek.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/config/kek.rs), [#4140](https://github.com/freenet/freenet-core/issues/4140) and the per-version Android settings in [Node encryption key in 1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#node-encryption-key).
 
 #### C5 Let an embedder supply the `UserInputPrompter`
 
-The node always builds its own `DashboardPrompter`, and the `user_input` module is crate-private. With no dashboard tab open, that prompter spawns `xdg-open`, which fails on iOS and Android. The phone host needs to show delegate prompts and Core's `Background` consent (`prompt_capability`) in its own trusted screens.
+The iOS and Android host must show delegate prompts and Core's `Background` consent (`prompt_capability`) in trusted native screens.
 
-We ask Core for a public `UserInputPrompter` that the embedder passes to the node, and for no browser spawn on iOS or Android.
+Expose `UserInputPrompter` as a public interface that the embedder passes to the node. Route iOS and Android prompts through that interface.
 
 Sources: [p2p_impl.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/node/p2p_impl.rs), [user_input.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/contract/user_input.rs), and [#5749](https://github.com/freenet/freenet-core/issues/5749) on prompts from runs nobody started.
 
 #### C6 Permission codes, a set call and a public API for app grants
 
-Core's grant table keys each grant by user scope, app and permission code. Today `Background` is the only code. Loopback routes list and revoke grants, but nothing sets one except Core's own prompt, and the Rust API is crate-private. The phone host stores Bob's `notifications` answer from River's first run in this table.
+Core keys each grant by user scope, app and permission code. The phone host needs to store Bob's `notifications` answer from River's first run in this table.
 
-We ask Core for a code for each app permission, starting with `notifications`, a call that sets a grant, and a public Rust API that `crates/mobile` can use.
+Add a code for each app permission, starting with `notifications`. Expose grant creation, listing and revocation through a public Rust API for `crates/mobile`.
 
 Sources: [delegate_capabilities.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/contract/delegate_capabilities.rs), [permission_prompts.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/client_api/permission_prompts.rs), [#5730](https://github.com/freenet/freenet-core/pull/5730), [#5744](https://github.com/freenet/freenet-core/pull/5744) and [#4014](https://github.com/freenet/freenet-core/issues/4014).
 
@@ -133,15 +133,15 @@ Sources: [delegate_capabilities.rs](https://github.com/freenet/freenet-core/blob
 
 `SecretsStore` keeps its keys in memory for as long as the node runs. When Alice's phone locks, the host has to wipe the node encryption key and every derived key from memory, then load them again on unlock.
 
-We ask Core for `lock` and `unlock` on `SecretsStore`, plus a test that the zeroizing buffers are wiped. Today no test checks this ([#5599](https://github.com/freenet/freenet-core/issues/5599)).
+Add `lock` and `unlock` to `SecretsStore`. Test that locking wipes the zeroizing buffers, as requested in [#5599](https://github.com/freenet/freenet-core/issues/5599).
 
 Sources: [store.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/secrets_store/store.rs) and [Locking and unlocking in 1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#locking-and-unlocking).
 
 #### C8 Thin-peer role and cellular budgets
 
-A phone joins as a full peer. It routes and hosts for others, and that costs about 60 KiB/s each way on Wi-Fi. Core caps rate per connection and per node, but not total bytes. A phone on cellular needs a role that routes nothing for others and a byte budget Core enforces.
+The phone test measured about 60 KiB/s each way on Wi-Fi while routing and hosting for other peers. A phone on cellular needs a thin-peer role and a total byte budget that Core enforces.
 
-We ask Core for a thin-peer role that uses serving full peers without routing or hosting for others, and per-day upload and download caps. The issue must answer how a thin peer pays back the full peers that serve it ([D136](https://github.com/freenet/freenet-core/discussions/136), [D137](https://github.com/freenet/freenet-core/discussions/137), [D893](https://github.com/freenet/freenet-core/discussions/893)).
+Add a thin-peer role that connects to serving full peers for the phone's own applications. Enforce per-day upload and download caps. The issue must define how a thin peer repays the full peers that serve it ([D136](https://github.com/freenet/freenet-core/discussions/136), [D137](https://github.com/freenet/freenet-core/discussions/137), [D893](https://github.com/freenet/freenet-core/discussions/893)).
 
 Sources: [phones are full peers on the public network](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#phones-are-full-peers-on-the-public-network), [D420](https://github.com/freenet/freenet-core/discussions/420) (the only maintainer statement on a limited node on a phone), and the cost issues [#5643](https://github.com/freenet/freenet-core/issues/5643), [#5707](https://github.com/freenet/freenet-core/issues/5707), [#4965](https://github.com/freenet/freenet-core/issues/4965), [#5157](https://github.com/freenet/freenet-core/issues/5157) and [#3336](https://github.com/freenet/freenet-core/issues/3336).
 
@@ -149,44 +149,71 @@ Sources: [phones are full peers on the public network](https://github.com/glesag
 
 A client UPDATE merges on the phone and then goes to the serving peer as the whole merged state. Each message Bob sends to "Skate club" costs the full room state on cellular.
 
-We ask Core to send the client's delta, computed against what the receiving peer holds, as Core's broadcasts already do.
+Send the client's delta, computed against what the receiving peer holds. Use Core's broadcast delta handling.
 
 Sources: [#4072](https://github.com/freenet/freenet-core/pull/4072) deferred the raw-delta wire format, `RequestUpdate` in [op_ctx_task.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/operations/update/op_ctx_task.rs), and [#2427](https://github.com/freenet/freenet-core/pull/2427) on why deltas must use the receiver's summary.
 
 #### C10 Stage and activate a complete app restore
 
-Core and `crates/mobile` provide isolated restore stores and a durable activation record for one app's complete data generation. The transaction stages delegate Wasm, exact registrations, secrets and declared host records, runs local migration adapters, verifies successor readback and selects the complete generation in one recoverable activation step. Staged delegates run only the restore adapters; network activity resumes after activation. Other applications retain their data under the shared node KEK. Activation also replaces the sessions of consumers whose shared namespace changes. Lost-KEK recovery creates one replacement KEK and retains each affected application's old encrypted generation in quarantine until its own recovery completes.
+Core and `crates/mobile` provide isolated restore stores and a durable activation record for one app's complete data generation. The restore transaction:
+
+1. Stages delegate Wasm, exact registrations, secrets and declared host records.
+2. Runs local migration adapters and verifies successor readback.
+3. Selects the complete generation in one recoverable activation step.
+4. Replaces sessions for consumers whose shared namespace changes.
+5. Resumes network activity after activation.
+
+Staged delegates run only the restore adapters. Other applications retain their data under the shared node key encryption key (KEK). Lost-KEK recovery creates one replacement KEK. Each affected application's previous encrypted generation stays in quarantine until that application's recovery completes.
 
 The mobile SDK exposes the transaction to Swift and Kotlin, and startup recovery selects a complete generation before opening sessions. Tests on iOS and Android inject write failures, full storage, migration failures and termination before and after activation. This work follows the [staged restore transaction in 1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#staged-restore-transaction) and uses the executable-inclusive backup capability proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035).
 
 #### C11 Scope private-data operations on a shared node
 
-Core and `crates/mobile` accept a host-authorized application ownership selection for executable-inclusive export, staged import and private-data deletion. The selection includes exact current and supported predecessor delegate namespaces and declared host-record sets. Core checks the selection before reading, writing or deleting records. Shared component access follows ownership and grants; an application releases its grant while the owning component and remaining consumers retain their data.
+The host authorizes the application data that Core and `crates/mobile` can export, stage for import or delete. Exports include delegate Wasm and exact registration parameters. The selection covers:
 
-The shared node keeps one KEK across applications. Application Forget removes selected private records, registrations and grants. Whole-node reset closes all sessions, deletes the KEK and clears the shared store. The host exposes these as separate operations with explicit coverage reports. Tests on iOS and Android export, restore and forget one application while a second keeps its records and working sessions, reject ownership substitution and verify whole-node reset. [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#shared-node-and-key-scope) and [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#forget) define these rules.
+- Exact current and supported predecessor delegate namespaces.
+- Declared host-record sets.
+
+Core checks this selection before reading, writing or deleting records. Ownership and grants control access to shared components. When an application releases its grant, the owning component and remaining consumers keep their data.
+
+The shared node keeps one KEK across applications.
+
+| Operation | Result |
+| --- | --- |
+| Application Forget | Removes selected private records, registrations and grants. |
+| Whole-node reset | Closes all sessions, deletes the KEK and clears the shared store. |
+
+The host reports which data each operation covers. iOS and Android tests export, restore and forget one application while a second keeps its records and working sessions. They also reject ownership substitution and verify whole-node reset. Follow the rules in [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#shared-node-and-key-scope) and [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#forget).
 
 #### C12 Prepare and replay signed website publications
 
-fdev exposes separate preparation and submission capabilities. Preparation takes the release directory, explicit unsigned 32-bit version, publisher key and pinned container Wasm, and returns the exact archive and complete signed container state without network submission. Submission sends saved state with the same container Wasm and parameters. The packaging CLI saves those bytes durably before sending and replays them unchanged after an uncertain result.
+fdev exposes separate preparation and submission operations:
 
-The packaging CLI owns the per-container journal, version reservation and release-job serialization defined in [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence). fdev supplies the archive and signing encoding and validates the supplied version and state. Fixtures cover preparation without submission, exact replay after termination and readback through a second node. This is proposed fdev work in Core.
+| Operation | Inputs and result |
+| --- | --- |
+| Prepare | Takes the release directory, explicit unsigned 32-bit version, publisher key and pinned container Wasm. Returns the exact archive and complete signed container state for local storage. |
+| Submit | Sends the saved state with the same container Wasm and parameters. |
+
+The packaging CLI saves those bytes durably before sending. After an uncertain result, it replays the same bytes.
+
+The packaging CLI owns the per-container journal, version reservation and release-job serialization defined in [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#publishing-and-evidence). fdev encodes the archive and signatures and validates the supplied version and state. Fixtures cover local preparation, exact replay after termination and readback through a second node. Implement this in Core's fdev.
 
 #### C13 Expose application-driven delegate migration to mobile hosts
 
 Core's `crates/mobile` runs freenet-migrate's `migrate_delegate_secrets` in Rust and exposes it to Swift and Kotlin. The app supplies its predecessor registry, walk policy and export, import and verification adapters. The host authorizes the selected application and delegate namespaces before migration starts, using the ownership rules in C11.
 
-The runner holds other calls to the successor until imported records pass readback verification. An interrupted run retains the predecessor records and resumes on the next start. Retirement follows [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#retiring-the-old-version). Backup restore runs the same adapters inside the staging transaction in C10.
+The runner holds other calls to the successor until imported records pass readback verification. After an interruption, it retains the predecessor records and resumes on the next start. Retirement follows [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#retiring-the-old-version). Backup restore runs the same adapters inside the C10 staging transaction.
 
-Fixtures on iOS and Android cover normal upgrades, skipped supported generations, interruption, failed imports, successor readback and isolation from another application's records. EVY fixtures preserve `root_seed`, derived public keys, addresses and pending signed operations. This is proposed mobile SDK work and depends on M1.
+Fixtures on iOS and Android cover normal upgrades, skipped supported generations, interruption, failed imports, successor readback and isolation from another application's records. EVY fixtures preserve `root_seed`, derived public keys, addresses and pending signed operations. Implement this in the mobile SDK after M1.
 
 ### freenet-stdlib
 
 
 #### S1 A public delegate call in the TypeScript client
 
-EVY Developer runs in a browser and keeps the service publisher key in its own delegate, so the page asks the delegate to sign each UI version. freenet-stdlib's TypeScript `FreenetWsApi` makes only `put`, `update`, `get`, `subscribe` and `disconnect` public. Its `sendRequest` is private, so a web app can't send `RegisterDelegate` or `ApplicationMessages` or read the delegate's reply.
+EVY Developer runs in a browser and keeps the service publisher key in its own delegate. The page asks the delegate to sign each UI version. This requires public delegate calls in freenet-stdlib's TypeScript `FreenetWsApi`.
 
-We ask for public calls that register a delegate and send it application messages, and that return the delegate's outbound messages.
+Add public calls for `RegisterDelegate` and `ApplicationMessages`. Return the delegate's outbound messages to the caller.
 
 Sources: [websocket-interface.ts](https://github.com/freenet/freenet-stdlib/blob/main/typescript/src/websocket-interface.ts), which already imports the delegate request and response types.
 
@@ -194,9 +221,9 @@ Sources: [websocket-interface.ts](https://github.com/freenet/freenet-stdlib/blob
 
 #### M1 Release freenet-migrate on the freenet-stdlib that Core pins
 
-freenet-migrate 0.7.0 builds on freenet-stdlib 0.8.2, and the Core that the SDK pins uses freenet-stdlib 0.12.1. EVY's app moves the EVY delegate's records with freenet-migrate's `migrate_delegate_secrets`, which `crates/mobile` runs for the Swift and Kotlin SDK, so both must build on one stdlib.
+The pinned Core uses freenet-stdlib 0.12.1. EVY moves delegate records with freenet-migrate's `migrate_delegate_secrets`, which `crates/mobile` runs for the Swift and Kotlin SDK. Release a compatible freenet-migrate version so these components build on the same stdlib.
 
-We ask for a freenet-migrate release on the freenet-stdlib that Core pins. The selected Core, stdlib and freenet-migrate versions build together in the mobile SDK, and the migration fixtures run on that exact dependency set before release. C13 exposes the runner to Swift and Kotlin.
+Build the selected Core, stdlib and freenet-migrate versions together in the mobile SDK. Run the migration fixtures on that exact dependency set before release. C13 exposes the runner to Swift and Kotlin.
 
 Sources: [Cargo.toml](https://github.com/freenet/freenet-migrate/blob/main/freenet-migrate/Cargo.toml), [stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136) and [stdlib #137](https://github.com/freenet/freenet-stdlib/pull/137).
 
@@ -204,9 +231,9 @@ Sources: [Cargo.toml](https://github.com/freenet/freenet-migrate/blob/main/freen
 
 #### R1 Ship `app_definition.json` in the release build
 
-The AppKit host and the packaging CLI read River's components, protocols and permissions from `app_definition.json` in the release archive. River's archive has no such file.
+The AppKit host and packaging CLI read River's components, protocols and permissions from `app_definition.json` in the release archive.
 
-River's release build writes `app_definition.json` as [The archive and its definition in 1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition) shows, with River's room contract, chat delegate and the `notifications` permission.
+River's release build writes `app_definition.json` with its room contract, chat delegate and `notifications` permission. Use the format in [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#the-archive-and-its-definition).
 
 #### R2 Publish with the packaging CLI and River's own container Wasm
 
@@ -226,9 +253,9 @@ Depends on C12. File together with R2.
 
 #### R4 Save drafts and pending signed messages in the chat delegate
 
-River keeps Bob's unsent draft only in the page. When River restarts, or the phone stops the node in the background, the draft is lost, and so is a signed message Core hasn't answered.
+River must retain Bob's unsent draft and pending signed messages across app restarts and background node stops.
 
-River saves the draft and the signed message in the chat delegate's store with `GetVersionedRequest` and `CasStoreRequest`, beside the send. River keeps signing in the page, and the send never waits for the delegate store, because delegate calls queue behind contract merges ([river#512](https://github.com/freenet/river/issues/512)).
+Save the draft and signed message in the chat delegate's store with `GetVersionedRequest` and `CasStoreRequest`. Keep signing in the page. Run the store call alongside the send, because delegate calls queue behind contract merges ([river#512](https://github.com/freenet/river/issues/512)).
 
 Sources: [river#345](https://github.com/freenet/river/issues/345) (CAS requests), Mail's per-device drafts delegate ([mail#56](https://github.com/freenet/mail/pull/56)) and [Sending updates in 1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates).
 

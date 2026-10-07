@@ -11,27 +11,33 @@
 
 ## Purpose
 
-This plan is an idea note. Bob enters his card in Stripe's payment sheet for each purchase, as [Paying on a phone in 2.6 Payments](../2-evy-on-freenet/06-payments.md#paying-on-a-phone) describes. The EVY delegate gives Bob one identity across EVY's services, so one saved card could serve every service.
+This plan is an idea note for saved cards and bitcoin payments. [Paying on a phone in 2.6 Payments](../2-evy-on-freenet/06-payments.md#paying-on-a-phone) has Bob enter his card for each purchase. His EVY delegate key identifies him across services, so those services could share a saved card.
 
-Stripe's payment sheet on iOS and Android shows saved cards when the server names a Stripe Customer, passes the sheet a CustomerSession client secret and sets `setup_future_usage` on the PaymentIntent ([save during payment](https://docs.stripe.com/payments/mobile/save-during-payment)). EVY's payment code creates PaymentIntents with no Customer today ([stripeGateway.ts](https://github.com/EVY-Platform/evy/blob/dev/api/src/procedures/stripeGateway.ts)).
+Saving a card during payment on iOS and Android requires three additions to EVY's [PaymentIntent creation](https://github.com/EVY-Platform/evy/blob/dev/api/src/procedures/stripeGateway.ts):
 
-A second payment method could use [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin), whose bridge publishes SPV evidence of a payment that any peer can check. Harvest embeds this evidence in each order, and the seller names the bridges it trusts ([payment.rs](https://github.com/freenet/harvest/blob/main/common/src/payment.rs)).
+- Name a Stripe Customer.
+- Pass a CustomerSession client secret to the payment sheet.
+- Set `setup_future_usage` on the PaymentIntent.
+
+Stripe's [save-during-payment flow](https://docs.stripe.com/payments/mobile/save-during-payment) then shows the saved cards in the payment sheet.
+
+Bitcoin payments could use [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin). Its bridge publishes SPV payment evidence for peers to check. Harvest embeds this evidence in each order and lets the seller name trusted bridges ([payment.rs](https://github.com/freenet/harvest/blob/main/common/src/payment.rs)).
 
 ## When this becomes a plan
 
-This plan starts when buyers ask EVY to keep their card, for example when Bob buys from Marketplace a second time and types his card again.
+Work starts when buyers ask EVY to save a card. For example, Bob may want to reuse his card for a second Marketplace purchase.
 
 | Need | What the plan must decide |
 | --- | --- |
-| Bob buys again and expects his card | Which key names Bob's Stripe Customer in `services/payment`. EVY has no sign-in, so the EVY delegate signs each request with Bob's EVY key |
-| Bob removes a card or forgets EVY | How EVY detaches the card in Stripe and deletes the Customer once no key names it |
-| Bob restores on a new phone or links his tablet | A check that [3.1 Automated backup](01-backup.md) and [3.2 Device sync](02-sync.md) bring back the EVY key that names his Customer |
-| Bob pays Alice in bitcoin | How EVY collects the 1% contributor fee of 0.70 dollars without Stripe, and which bridges the purchase contract trusts |
+| Bob buys again and expects his card | Which EVY key identifies Bob's Stripe Customer in `services/payment`. The EVY delegate signs each request with Bob's key as proof of identity |
+| Bob removes a card or forgets EVY | How EVY detaches the card in Stripe and deletes the Customer after the last key association is removed |
+| Bob restores on a new phone or links his tablet | How [3.1 Automated backup](01-backup.md) and [3.2 Device sync](02-sync.md) restore the EVY key that identifies his Customer |
+| Bob pays Alice in bitcoin | How EVY collects the 1% contributor fee of 0.70 dollars in a bitcoin purchase, and which bridges the purchase contract trusts |
 
 ## Sources
 
-| Source | What it offers |
+| Source | Relevant design |
 | --- | --- |
 | [Stripe: save payment details during an in-app payment](https://docs.stripe.com/payments/mobile/save-during-payment) | Customer, CustomerSession client secret and `setup_future_usage` for the iOS and Android payment sheet |
-| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin), [#27](https://github.com/freenet/freenet-bitcoin/issues/27) and [delegated watch keys #30](https://github.com/freenet/freenet-bitcoin/pull/30) | Bridge-signed payment claims with SPV evidence. Proofs are not yet anchored to the real chain. A background process can ask the bridge to watch an address |
+| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin), [#27](https://github.com/freenet/freenet-bitcoin/issues/27) and [delegated watch keys #30](https://github.com/freenet/freenet-bitcoin/pull/30) | Bridge-signed payment claims with SPV evidence. Real-chain anchoring is required before using these proofs for payments. A background process can ask the bridge to watch an address |
 | [Harvest payment.rs](https://github.com/freenet/harvest/blob/main/common/src/payment.rs) | Bitcoin payment proof embedded in each order, checked against the bridges the seller names |

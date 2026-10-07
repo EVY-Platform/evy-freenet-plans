@@ -10,16 +10,16 @@
 
 ## Purpose
 
-Package and publish a single defined application's web UI, contract and delegate artifacts, and host metadata. For our 1st MVP we will use River and its web UI, but custom native builds can use the SDK and their platform distribution process.
+Package and publish an application's web UI, contract and delegate artifacts, and host metadata. River's web UI is the first MVP on iOS and Android. Custom Swift and Kotlin apps use the SDK and their platform's distribution process.
 
-Freenet already builds contracts, archives a web directory, signs it and stores it in a website container. This plan adds what a mobile host needs around that base.
+Build contracts, archive the web directory, sign it and store it in a Freenet website container. Add metadata, publication evidence and installation checks for the mobile host.
 
-| Area | Freenet today | What we need |
-| --- | --- | --- |
-| Archive contents | `index.html`, application assets and `contracts/` from `fdev build` | `app_definition.json`, which names each contract and delegate Wasm file in the archive |
-| Publication | `fdev website publish` archives, stamps a version, signs and submits in one call | Validation, an increasing version, a saved signed archive before submission, a pinned container Wasm, readback through an independent node and replay of saved bytes after an uncertain result |
-| Installation | A browser opens `index.html` from the node | Install checks in the packaging CLI and the host's installation interface, release tracking, rollback, retention and component setup rules |
-| References | Container key and version | `publication_ref` and `application_content_ref` encodings that name one exact release |
+| Area | Required result |
+| --- | --- |
+| Archive | `index.html`, application assets, `contracts/` from `fdev build`, and `app_definition.json` naming every contract and delegate Wasm file |
+| Publication | Validate the archive, assign an increasing version, save the signed state, submit with pinned container Wasm, verify independent readback and replay saved bytes after an uncertain result |
+| Installation | Check releases in the packaging CLI and host; track activation, rollback, retention and component setup |
+| References | `publication_ref` and `application_content_ref` identify one exact release by container key, version and digest |
 
 ## The archive and its definition
 
@@ -36,7 +36,7 @@ app_definition.json           # This plan: host metadata, every field below
 
 River ships its two Wasm files by name, as `contracts/room_contract.wasm` and `contracts/chat_delegate.wasm`. Each component entry names its file by path.
 
-Application code loads its assets from `index.html` and coordinates concrete application requests. `app_definition.json` is new in this plan and supplies the metadata the selected host needs. River's definition shows every field, with its purpose in the comments:
+Application code loads assets from `index.html` and calls contracts and delegates. Add `app_definition.json` with the metadata the host needs. River's definition:
 
 ```jsonc
 {
@@ -74,11 +74,11 @@ Application code loads its assets from `index.html` and coordinates concrete app
 }
 ```
 
-River's [chat delegate messages](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs), its [delegate built with empty parameters](https://github.com/freenet/river/blob/main/ui/src/components/app/chat_delegate.rs#L67-L76) and its [room parameters](https://github.com/freenet/river/blob/main/common/src/room_state.rs#L527) show the component fields in real code. River defines no protocol names, so this plan assigns `river.chat/1` and the aliases `river.room` and `river.chat`. River's [pointer records](https://github.com/freenet/river/blob/main/pointer-records.toml) name the same components `river.room-contract` and `river.chat-delegate`.
+River's [chat delegate messages](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs), its [delegate built with empty parameters](https://github.com/freenet/river/blob/main/ui/src/components/app/chat_delegate.rs#L67-L76) and its [room parameters](https://github.com/freenet/river/blob/main/common/src/room_state.rs#L527) show the component fields in real code. Assign `river.chat/1` as River's protocol name and `river.room` and `river.chat` as component aliases. River's [pointer records](https://github.com/freenet/river/blob/main/pointer-records.toml) name the same components `river.room-contract` and `river.chat-delegate`.
 
 Two values outside this file identify a release.
 
-- The container identity is the full container `ContractKey`. It derives from the container Wasm and the publisher's verifying key. fdev embeds a stock container Wasm that can change between fdev versions, so the packaging CLI passes each app's pinned container Wasm with `--contract-wasm` on every publication ([dapp-builder skill](https://github.com/freenet/freenet-agent-skills/blob/main/skills/dapp-builder/references/web-container-contract.md)). For River that file is the committed [`published-contract/web_container_contract.wasm`](https://github.com/freenet/river/tree/main/published-contract), so every River release keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`. Mail and Raven rebuilt their container on each release and added a facade contract to keep one address ([mail#200](https://github.com/freenet/mail/issues/200), [raven#45](https://github.com/freenet/raven/issues/45)).
+- The container identity is the full container `ContractKey`. It derives from the container Wasm and the publisher's verifying key. fdev embeds a stock container Wasm that can change between fdev versions, so the packaging CLI passes each app's pinned container Wasm with `--contract-wasm` on every publication ([dapp-builder skill](https://github.com/freenet/freenet-agent-skills/blob/main/skills/dapp-builder/references/web-container-contract.md)). For River that file is the committed [`published-contract/web_container_contract.wasm`](https://github.com/freenet/river/tree/main/published-contract), so every River release keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`. Check container identity across releases using [mail#200](https://github.com/freenet/mail/issues/200) and [raven#45](https://github.com/freenet/raven/issues/45) as regression cases.
 - The container version is an unsigned 32-bit integer covered by the publisher signature. The packaging CLI assigns each new publication a version higher than every version it has reserved and the verified version read from the network. Unix seconds provide a starting floor, as defined under [Publishing and evidence](#publishing-and-evidence). Retries retain the prepared publication's version.
 
 A bundle carries web code, contracts and delegates. Changes to the native iOS or Android app ship as a new release through the App Store or Google Play.
@@ -98,7 +98,7 @@ The app's startup code runs these steps through host and SDK calls that the host
 
 The packaging CLI uses separate fdev preparation and submission capabilities proposed in [C12 Prepare and replay signed website publications](../UPSTREAM_ISSUES.md#c12-prepare-and-replay-signed-website-publications). Preparation accepts an explicit version, the publisher key and the pinned container Wasm, and returns the complete signed container state. Submission sends that saved state unchanged.
 
-All release jobs for one container use one publisher workspace and its durable publication journal. An exclusive per-container lock serializes preparation, submission and reconciliation across local and CI jobs. The journal and prepared states are included in publisher recovery backups. Publisher moves transfer the journal and prepared states with the key. Recovery reconciles pending attempts and the verified network version before preparing another publication.
+Use one publisher workspace and durable publication journal per container. Hold an exclusive per-container lock during preparation, submission and reconciliation across local and CI jobs. Include the journal and prepared states in publisher recovery backups. Publisher moves transfer the journal and prepared states with the key. Recovery reconciles pending attempts and the verified network version before preparing another publication.
 
 For each new publication, the CLI reserves and durably records:
 
@@ -108,7 +108,7 @@ version = max(current Unix seconds,
               highest verified network version recorded in the journal + 1)
 ```
 
-Each verified network read raises the journal's observed version floor when higher. A new, verified absent container starts with a network floor of zero. A failed lookup waits for a successful read. The allocator calculates in a wider integer and checks the result fits `1..=u32::MAX` before preparation. Version exhaustion reports a release error. Preparation preserves the pinned container's metadata and signature encoding: the four-byte big-endian version followed by the archive bytes ([website container source](https://github.com/freenet/freenet-core/blob/main/crates/website-contract/src/lib.rs)). Reserved versions remain consumed after a failed preparation or a cancelled attempt. The CLI prepares exactly one signed state for each reserved version. After termination, a reservation with no complete saved signed state is closed as an interrupted preparation; the next attempt reserves a higher version.
+Each verified network read raises the journal's observed version floor when higher. A new, verified absent container starts with a network floor of zero. A failed lookup waits for a successful read. Calculate in a wider integer and check that the result fits `1..=u32::MAX` before preparation. Version exhaustion reports a release error. Preparation preserves the pinned container's metadata and signature encoding: the four-byte big-endian version followed by the archive bytes ([website container source](https://github.com/freenet/freenet-core/blob/main/crates/website-contract/src/lib.rs)). Reserved versions remain consumed after a failed preparation or a cancelled attempt. The CLI prepares exactly one signed state for each reserved version. After termination, a reservation with no complete saved signed state is closed as an interrupted preparation; the next attempt reserves a higher version.
 
 ```mermaid
 flowchart LR
@@ -142,7 +142,7 @@ An `application_content_ref` names the code an operation ran with. Step 4 produc
 
 ## Installing a copy
 
-The installation interface is the part of the host that checks, tracks, hands over and keeps installed releases. The packaging CLI runs the checks below before publishing, and the installation interface runs them again before any archive code runs.
+The host's installation interface verifies and retains releases and hands them to activation. The packaging CLI checks each archive before publishing. The host repeats the checks before running archive code.
 
 | Check | Requirement |
 | --- | --- |
@@ -153,9 +153,9 @@ The installation interface is the part of the host that checks, tracks, hands ov
 | Metadata and components | Verify artifact hashes, supported formats, parameter encodings and application protocols |
 | Setup and permissions | Match approved setup and declared permissions |
 
-Core caps contract state at 50 MiB, and fdev checks the packed state against that limit before it sends ([#4654](https://github.com/freenet/freenet-core/pull/4654)). Core's 64 MiB WebSocket limit and the container's 100 MiB web limit sit above it, so the release tooling checks 50 MiB. This plan sets the download and memory caps from the large-record and River download values in [device limits in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits), and sets the decompression and file-count caps from River's and Atlas's archives. Step 1's size check and the file-count cap catch archives that carry stale UI Wasm builds, as Harvest's and Delta's did ([harvest#4](https://github.com/freenet/harvest/issues/4), [delta#70](https://github.com/freenet/delta/issues/70)). Each publication sends the whole archive, including assets. A separate blob-store proposal can use [freenet-git pack contracts #3985](https://github.com/freenet/freenet-core/issues/3985) as evidence.
+Core caps contract state at 50 MiB, and fdev checks the packed state against that limit before it sends ([#4654](https://github.com/freenet/freenet-core/pull/4654)). Core's 64 MiB WebSocket limit and the container's 100 MiB web limit sit above it, so the release tooling checks 50 MiB. This plan sets the download and memory caps from the large-record and River download values in [device limits in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits), and sets the decompression and file-count caps from River's and Atlas's archives. Test the size and file-count caps against archives with stale UI Wasm builds ([harvest#4](https://github.com/freenet/harvest/issues/4), [delta#70](https://github.com/freenet/delta/issues/70)). Each publication sends the whole archive, including assets. A separate blob-store proposal can use [freenet-git pack contracts #3985](https://github.com/freenet/freenet-core/issues/3985) as evidence.
 
-Core serves archive files with an `ETag` and `Last-Modified` but no `Cache-Control` header ([#5323](https://github.com/freenet/freenet-core/issues/5323)), so a file with a fixed name can mix old and new builds after a publish. Harvest gives its files content-hashed names for this reason ([harvest#193](https://github.com/freenet/harvest/pull/193)). Core's web cache is shared by every node one user runs ([#5706](https://github.com/freenet/freenet-core/issues/5706)), so each host data directory keeps its own cache.
+Keep files from one release together after publication. Content-hashed asset names provide one tested approach. Test this against Core's `ETag`, `Last-Modified` and absent `Cache-Control` headers ([#5323](https://github.com/freenet/freenet-core/issues/5323), [harvest#193](https://github.com/freenet/harvest/pull/193)). Give each host data directory its own web cache ([#5706](https://github.com/freenet/freenet-core/issues/5706)).
 
 The installation interface then takes each candidate release through these steps:
 
@@ -164,7 +164,7 @@ The installation interface then takes each candidate release through these steps
 3. Hand the verified `application_content_ref` to [activation in 1.3 Single-application host](03-host.md#activating-a-release).
 4. Keep the active copy, one backup and every release that a stored record still references, within the storage budget. If any step fails, keep a working copy and the user's saved work.
 
-It resolves these cases:
+Release handling:
 
 - A newer signed archive becomes a new candidate and goes through these steps.
 - An older publication keeps the active copy and the newest observed record.
@@ -186,7 +186,7 @@ The publisher keeps a tested backup of its signing key file, `~/.config/freenet/
 - CLI/CI rejects unsafe paths, hash mismatches, unsupported metadata, invalid parameter fixtures and releases that exceed the selected profile's limits. The install check accepts River's archive with the Wasm copies its UI embeds.
 - A failed save in step 2 stops submission. Timeout and termination fixtures replay exactly the saved signed state, archive and version after readback. Termination after reservation consumes that version. Concurrent jobs for one container serialize through the same journal. Same-version conflict and a higher network version retain evidence and require a new publication at a higher version. Step 4 issues references only after exact readback through another node.
 - A consumer verifies a `publication_ref` against the saved copy after the live container advances. A `kind: native` reference verifies against its build digest.
-- Setup can resume after termination. The app sends no message to a delegate before the node answers its registration. Changed delegates and new access pass the host's consent checks before activation.
+- Setup resumes after termination. The app waits for the delegate's registration reply before sending messages to it. Changed delegates and new access pass the host's consent checks before activation.
 - A restored backup of the publisher's key file signs a valid update to the same container.
 - The installation interface handles replayed content, older publications, same-version divergence, unsupported requirements, rollback with changed data and cleanup while a retained record still references a release.
 

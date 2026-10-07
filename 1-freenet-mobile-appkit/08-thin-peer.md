@@ -11,7 +11,7 @@
 
 ## Purpose
 
-This plan makes the phone's node a thin peer on iOS and Android, and keeps its cellular data use inside set budgets. River is the first app. When Bob reads and posts in "Skate club" on his phone:
+Run the phone's node as a thin peer on iOS and Android and enforce cellular upload and download budgets. River is the first app. When Bob reads and posts in "Skate club" on his phone:
 
 ```mermaid
 flowchart LR
@@ -23,9 +23,9 @@ flowchart LR
 ```
 
 - The phone sends and receives Bob's own traffic only. Full peers route and host for the rest of the network.
-- The phone counts every byte it sends and receives on cellular. When a budget runs out, it pauses network work, keeps Bob's drafts and shows the cap and what lets it resume.
+- Count every cellular byte sent and received. At the budget threshold, pause network work, keep Bob's drafts and show the cap and the condition for resuming.
 
-In 1.1 Mobile feasibility and supported profiles, phones on Wi-Fi ran as full peers and routed for the network ([finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#phones-are-full-peers-on-the-public-network)):
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md) measured full-peer traffic on Wi-Fi ([finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#phones-are-full-peers-on-the-public-network)):
 
 | Run | Upload | Download |
 | --- | --- | --- |
@@ -35,10 +35,10 @@ In 1.1 Mobile feasibility and supported profiles, phones on Wi-Fi ran as full pe
 | Android emulator, idle, 1 peer | 1.4 KiB/s | 1.1 KiB/s |
 | Loading River's 1.06 MB archive on the public network | 9 KiB | 1.2 MiB |
 
-The thin role fixes two problems:
+Use the thin role for these reasons:
 
-- At 60 KiB/s, one hour as a full peer uses about 210 MiB of Bob's data each way, plus the battery to move it.
-- Google Play allows an app to relay traffic for others only when relaying is the app's main purpose ([Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/16559646)). River is a chat app, so a phone that routes as a full peer puts River's Play listing at risk. A thin peer sends only its user's own traffic.
+- At 60 KiB/s, one hour of traffic uses about 210 MiB each way and consumes battery power.
+- Google Play allows an app to relay traffic for others only when relaying is the app's main purpose ([Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/16559646)). River's iOS and Android release uses the thin role to send the user's own traffic. Chat is River's main purpose.
 
 Phones run in the thin role for all testing and for the release of milestone 1 (Freenet mobile AppKit). Only development fixture profiles can run a phone as a full peer.
 
@@ -48,7 +48,7 @@ Phones run in the thin role for all testing and for the release of milestone 1 (
 | Byte limits per workload, how to count bytes and what happens at a cap | [Cellular budget contract](#cellular-budget-contract) |
 | The upstream proposal and carrier issues | [Upstream work and carrier evidence](#upstream-work-and-carrier-evidence) |
 
-This plan is proposed Core work. Its acceptance needs upstream agreement on the thin-role protocol, and device runs that pass the budgets.
+Agree the thin-role protocol with Core maintainers, implement it and pass the device budgets before accepting this plan.
 
 | Upstream source | State on 2026-10-01 |
 | --- | --- |
@@ -58,11 +58,11 @@ This plan is proposed Core work. Its acceptance needs upstream agreement on the 
 | Thin-role proposal issue | To be filed |
 | [Whitepaper peers and ring section](https://github.com/freenet/paper-1/blob/main/sections/03-primitives.tex) | Describes one peer role |
 
-Before this plan's acceptance runs, recheck these against the pinned Core build, then link the proposal issue and the accepted protocol here.
+Before acceptance runs, check the sources against the pinned Core build and record the proposal issue and accepted protocol.
 
 ## Scope and trust boundary
 
-A thin peer opens terminal connections to serving full peers for its own reads, writes and subscriptions. On-device Core retains contract verification, its copy of each subscribed contract, delegate execution, signing and protected secrets. Serving full peers handle onward routing, fallback routing, hosting and subscription roots. Treat returned state as input for local verification.
+A thin peer opens terminal connections to full peers for its own reads, writes and subscriptions. Core verifies contracts, keeps subscribed state, runs delegates, signs and protects secrets on the phone. Serving full peers handle onward routing, fallback routing, hosting and subscription roots. Treat returned state as input for local verification.
 
 Gateways keep the link of a peer that has not joined the ring ([#5656](https://github.com/freenet/freenet-core/pull/5656)). A thin peer lives on this kind of link.
 
@@ -73,7 +73,7 @@ Gateways keep the link of a peer that has not joined the ring ([#5656](https://g
 | Ring and serving-peer selection | Assign network routing/hosting to full peers. Bound serving connections, selection attempts and retries, with capacity and reachability errors. |
 | Subscription delivery | Deliver only authorized active demand down terminal edges. Define unsubscribe, resubscribe and cleanup after disconnect. |
 | Lifecycle and configuration | Persist the selected role, release downstream state and preserve thin behavior across startup and Wi-Fi/cellular changes. |
-| SDK and diagnostics | Expose negotiated role, serving state, traffic counters, exhausted budgets and actionable failure reasons. Add budget failures to the [diagnostics in 1.3 Single-application host](03-host.md#diagnostics). Detect offline and serving-peer loss from the OS network path that 1.2 Embedded node and mobile SDK watches and from the serving connection's own state, because Core's peer count stays up during an outage ([finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-peer-count-stays-up-during-an-outage)). |
+| SDK and diagnostics | Expose negotiated role, serving state, traffic counters, exhausted budgets and actionable failure reasons. Add budget failures to the [diagnostics in 1.3 Single-application host](03-host.md#diagnostics). Detect offline and serving-peer loss from the OS network path monitored by [1.2 Embedded node and mobile SDK](02-sdk.md) and the serving connection's state. Test outages that leave Core's peer count unchanged ([finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-peer-count-stays-up-during-an-outage)). |
 
 An unsupported protocol or role fails visibly and retries within the configured budget while preserving the thin role. Exhausted attempts leave a visible disconnected state and retain local work. Only explicit development-fixture profiles may request a full-peer role.
 
@@ -81,7 +81,7 @@ Specify how thin nodes reach gateways and select replacement serving peers, incl
 
 ## Cellular budget contract
 
-[1.1 Mobile feasibility and supported profiles](01-feasibility.md#startup-and-network) measured the full-peer numbers in [Purpose](#purpose). Its [harness](https://github.com/glesage/freenet-appkit/tree/main/harness) `watch` scenario and Core's `node_traffic` counters measure each workload. This plan sets the thin role's upload and download ceilings from those numbers, picks the supported carriers, devices and test durations, and enforces the ceilings. Approve them before this plan's acceptance runs.
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md#startup-and-network) measured the full-peer numbers in [Purpose](#purpose). Its [harness](https://github.com/glesage/freenet-appkit/tree/main/harness) `watch` scenario and Core's `node_traffic` counters measure each workload. Use those measurements to set thin-role upload and download ceilings. Select supported carriers, devices and test durations, then enforce the ceilings. Approve them before this plan's acceptance runs.
 
 | Workload | Fix in the test definition | Required limits and measurements |
 | --- | --- | --- |
@@ -92,11 +92,9 @@ Specify how thin nodes reach gateways and select replacement serving peers, incl
 | Traffic-accounting overhead | Counter collection, persistence, diagnostic/report export and instrumented comparison runs | Upload/download bytes added by accounting or reporting, plus CPU, memory and battery cost. |
 | Total cellular use | The app and host work, plus shared protocol overhead, over an approved period | Node-wide upload/download caps. Include retries, archive downloads and background-transition traffic. |
 
-The budgets count these Core and River costs:
-
-| Cost | What Core or River does today | Workloads that count it |
+| Cost | Traffic to measure | Workloads that count it |
 | --- | --- | --- |
-| Client UPDATE | Core forwards the full post-merge state to its peer, not the delta ([#4072](https://github.com/freenet/freenet-core/pull/4072)). Each message Bob sends to "Skate club" costs the whole room state | Active use, reconnect |
+| Client UPDATE | Core forwards the full post-merge state to its peer ([#4072](https://github.com/freenet/freenet-core/pull/4072)). Each message Bob sends to "Skate club" costs the whole room state | Active use, reconnect |
 | Update rate limit | A serving peer silently drops more than about 10 UPDATEs per second for one sender address and contract ([Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)). Phones behind one carrier NAT share that limit | Active use, reconnect |
 | Subscription lease | After Core sends Unsubscribe upstream, a GET or PUT in the previous 8 minutes keeps delivery going until that lease ends ([Ending subscriptions in 1.2 Embedded node and mobile SDK](02-sdk.md#ending-subscriptions)) | Cap enforcement reserve |
 | Contract code in transfers | PUT and GET resend contract Wasm that the receiver already holds. Behind a mobile hotspot this was over 95% of PUT bytes ([#5707](https://github.com/freenet/freenet-core/issues/5707)) | Active use, reconnect |
@@ -106,16 +104,24 @@ The budgets count these Core and River costs:
 | Protocol overhead | Interest-sync summaries were over half of outbound bytes ([#4965](https://github.com/freenet/freenet-core/issues/4965)). NeighborHosting sends the full hosted set to every peer every 5 minutes ([#5157](https://github.com/freenet/freenet-core/issues/5157)). Broadcast re-fan-out delivered each update about 18 times ([#5147](https://github.com/freenet/freenet-core/issues/5147)) | Foreground idle, total |
 | Keepalives | Every connection pings every 5 s and backs off to 60 s when pings go unanswered ([#2404](https://github.com/freenet/freenet-core/pull/2404)) | Foreground idle, total |
 
-Core already has these settings. The thin role on cellular sets them explicitly:
+Set these Core options explicitly for the thin role on cellular:
 
 | Setting | Core default | Thin role on cellular |
 | --- | --- | --- |
 | `total-bandwidth-limit` ([config.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/config.rs)) | None | Set it as the node's rate cap in bytes per second. It caps rate, so the byte budgets here still apply |
 | Send rate per connection | 10 Mbps ([#2936](https://github.com/freenet/freenet-core/pull/2936)) | Size the cap reserves from it, since it sets how fast a reserve drains |
-| `min-number-of-connections`, `max-number-of-connections` | 10 and 20 | Lower the connection count. The node still routes with these, so the thin-role proposal builds on them ([#1628](https://github.com/freenet/freenet-core/pull/1628)) |
+| `min-number-of-connections`, `max-number-of-connections` | 10 and 20 | Lower the connection count. Combine these limits with the negotiated thin role ([#1628](https://github.com/freenet/freenet-core/pull/1628)) |
 | `max-hosting-storage` | `clamp(RAM / 8, 128 MiB, 1 GiB)` | Set explicitly, as [Storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage) does. Development full-peer profiles set it too |
 
-Core's transport counters, which `crates/mobile` exposes as `node_traffic`, report upload and download bytes. Core counts sent bytes at the UDP socket and received bytes only after decryption succeeds ([#3996](https://github.com/freenet/freenet-core/pull/3996), [#4024](https://github.com/freenet/freenet-core/pull/4024)). The carrier also bills inbound packets that fail decryption. Core meters bandwidth per peer as well ([#4455](https://github.com/freenet/freenet-core/pull/4455)). The freenet-appkit harness's `watch` scenario records the counters for each workload. Count bytes at the network layer as well as application payloads. Include bootstrap traffic, framing, encryption, retransmission, failed requests, repair and shared overhead. Record each counter's measurement layer and reconcile SDK counters with iOS and Android platform counters or controlled packet traces on each supported OS. Account for other device traffic in the test setup and state the uncertainty in estimating carrier-billed usage.
+Expose Core's upload and download counters as `node_traffic` in `crates/mobile`. Core counts uploads at the UDP socket and downloads after successful decryption ([#3996](https://github.com/freenet/freenet-core/pull/3996), [#4024](https://github.com/freenet/freenet-core/pull/4024)). Carrier billing also includes packets that fail decryption. The harness's `watch` scenario records `node_traffic` for each workload. Core separately measures bandwidth per peer ([#4455](https://github.com/freenet/freenet-core/pull/4455)).
+
+For each workload:
+
+- Count network-layer bytes and application payloads.
+- Include bootstrap traffic, framing, encryption, retransmission, failed requests, repair and shared overhead.
+- Record each counter's measurement layer.
+- Reconcile SDK counters with iOS and Android platform counters or controlled packet traces on each supported OS.
+- Account for other device traffic and report uncertainty in estimated carrier-billed usage.
 
 Attribute app traffic where possible and charge shared overhead once to the total node budget.
 
@@ -142,12 +148,12 @@ These upstream changes lower every budget:
 
 | Change | State |
 | --- | --- |
-| Compress every peer message with zstd ([#3336](https://github.com/freenet/freenet-core/issues/3336)) | We proposed it on 2026-09-29. Rollout can wait for each peer's minimum version |
+| Compress every peer message with zstd ([#3336](https://github.com/freenet/freenet-core/issues/3336)) | Proposal filed 2026-09-29. Gate rollout on each peer's minimum version |
 | Send a code hash first and the Wasm only when the receiver lacks it ([#5707](https://github.com/freenet/freenet-core/issues/5707)) | Open proposal |
-| Send client UPDATEs as deltas | Core deferred the raw-delta wire format in [#4072](https://github.com/freenet/freenet-core/pull/4072). No issue yet |
+| Send client UPDATEs as deltas | Define a raw-delta wire proposal using [#4072](https://github.com/freenet/freenet-core/pull/4072) as context |
 | Cut summary and interest-sync traffic ([#5203](https://github.com/freenet/freenet-core/pull/5203), [#5109](https://github.com/freenet/freenet-core/pull/5109)) | Draft PRs under Core's bandwidth tracking issue [#5153](https://github.com/freenet/freenet-core/issues/5153) |
 
-Supported carrier paths need direct transport or an implemented fallback proof. Core's direct transport is encrypted UDP with hole punching ([#2211](https://github.com/freenet/freenet-core/pull/2211)).
+Prove that each supported carrier path works through direct transport or an implemented fallback. Core's direct transport is encrypted UDP with hole punching ([#2211](https://github.com/freenet/freenet-core/pull/2211)).
 
 | Source | State | What it means for phones |
 | --- | --- | --- |
@@ -161,7 +167,7 @@ Supported carrier paths need direct transport or an implemented fallback proof. 
 | [Duplicate-packet acknowledgements and receive timers #5803](https://github.com/freenet/freenet-core/pull/5803) | Shipped in [Core 0.2.142](https://github.com/freenet/freenet-core/releases/tag/v0.2.142) | Re-acknowledges duplicate packets and preserves receive timers across cancellation. Test dropped acknowledgements, duplicate packets and interrupted receives on the pinned build |
 | [Wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951), [state after suspend #4153](https://github.com/freenet/freenet-core/issues/4153) | Open | Resume regression cases |
 
-Run the carrier-NAT and serving-peer-loss cases on freenet-test-network's Docker NAT simulation as well as on carriers. Check its stdlib pin against the pinned Core first. Issue status and discussion notes are research evidence, while pinned builds and device runs establish release support.
+Run the carrier-NAT and serving-peer-loss cases on freenet-test-network's Docker NAT simulation as well as on carriers. Check its stdlib pin against the pinned Core first. Use pinned builds and device runs to establish release support. Keep issue status and discussion notes as research evidence.
 
 ## Acceptance
 

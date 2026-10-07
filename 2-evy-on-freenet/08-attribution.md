@@ -10,7 +10,7 @@
 
 ## Purpose
 
-This plan credits the people who improve an EVY service. Two kinds of work count: a UI proposal drafted in EVY Developer, and code merged into `evy`. The attribution service (`services/attribution` in evy, TypeScript on Bun with Postgres like [`services/marketplace`](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/package.json)) turns each piece of accepted work into attribution units for one capability of the service.
+The attribution service credits accepted UI proposals from EVY Developer and code merged into `evy`. Each acceptance earns units for a service capability. Implement `services/attribution` in evy with TypeScript on Bun and Postgres, following [`services/marketplace`](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/package.json).
 
 - Carol moves the "Listing dimensions" row of Marketplace's "Create item" flow from the "Create listing" page to the "Describe item" page ([service_sdui.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/services/service_sdui.json)). The service publisher publishes her proposal as Marketplace UI version 2, and Carol earns 6.8 units for `marketplace.item.create`.
 - Dan opens a pull request to evy that makes Marketplace's contract accept a pickup request only at a time Alice offered. It merges, and Dan earns 4.25 units for `marketplace.item.buy`.
@@ -19,7 +19,7 @@ Units decide each contributor's part of the 1% contributor fee that [Fees and se
 
 ## Contributor keys
 
-Carol's contributor key is an Ed25519 key in the EVY Developer delegate on her own node, from [The EVY Developer bundle in 2.5 EVY Developer on Freenet](05-developer.md#the-evy-developer-bundle). The page asks the delegate to sign and never holds the private key. A web app in Core's shell reaches only its own node ([client_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/client_api.rs)) and can open new tabs ([#5100](https://github.com/freenet/freenet-core/pull/5100)), so EVY Developer sends each signed statement to the attribution service by opening the service's contributor page in a new tab.
+Carol's contributor key is an Ed25519 key in the EVY Developer delegate on her own node, from [The EVY Developer bundle in 2.5 EVY Developer on Freenet](05-developer.md#the-evy-developer-bundle). The page asks the delegate to sign; the private key stays in the delegate. A web app in Core's shell reaches only its own node ([client_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/client_api.rs)) and can open new tabs ([#5100](https://github.com/freenet/freenet-core/pull/5100)), so EVY Developer sends each signed statement to the attribution service by opening the service's contributor page in a new tab.
 
 | Action | In EVY Developer | At the attribution service |
 | --- | --- | --- |
@@ -38,14 +38,16 @@ Carol's contributor key is an Ed25519 key in the EVY Developer delegate on her o
 
 ## Service policy
 
-Each EVY service has a **UI proposal contract**, built from `freenet/contracts/ui_proposal/` in evy. Its parameters are those of the service's UI contract in [The UI contract in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-contract): the service publisher's verifying key and the service ID. Its state holds the service policy, the registered contributor keys, the open UI proposals, their review records and the attribution snapshots. The EVY Developer bundle gains its Wasm as `evy.ui_proposal`, and `types/freenet/contract-keys.json` gains its code hash under `code.ui_proposal`. EVY Developer derives each service's UI proposal contract key from it, as it derives UI contract keys in [The home service in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-home-service).
+Each EVY service has a UI proposal contract, built from `freenet/contracts/ui_proposal/` in evy. Its parameters are those of the service's UI contract in [The UI contract in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-contract): the service publisher's verifying key and the service ID. Its state holds the service policy, registered contributor keys, open UI proposals, review records and attribution snapshots.
+
+The EVY Developer bundle gains its Wasm as `evy.ui_proposal`, and `types/freenet/contract-keys.json` gains its code hash under `code.ui_proposal`. EVY Developer derives each service's UI proposal contract key from it, as it derives UI contract keys in [The home service in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-home-service).
 
 The service publisher signs each policy version in EVY Developer with `SignServiceRecord`. For Marketplace the key is the EVY publisher key from [The EVY publisher key in 2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key). Policy version 1 PUTs the contract. Setup archives the service's current signed UI document and confirms its readback before enabling attribution-backed publication and payouts.
 
 - The contract keeps the highest policy version signed by the key in its parameters.
 - Each record is signed over its own prefix, such as `evy.ui-proposal/1`, and its RFC 8785 canonical JSON, as hello states are.
 - A new version applies to work accepted after it, and each acceptance records the version it used.
-- From this plan on, the payment service takes the fee rate from the service policy's `fee_rate_bp`, 100 basis points (1%) for Marketplace, and checks each purchase's `fee_cents` against it, rounded half up as in [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts). A service with no policy, such as `hello`, keeps the 1% fee of 2.6 Payments.
+- The payment service takes the fee rate from the service policy's `fee_rate_bp`, 100 basis points (1%) for Marketplace, and checks each purchase's `fee_cents` against it, rounded half up as in [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts). A service with no policy, such as `hello`, keeps the 1% fee of 2.6 Payments.
 
 ```jsonc
 {
@@ -111,13 +113,13 @@ flowchart LR
 
 | Step | Who | Rule |
 | --- | --- | --- |
-| 1. Draft | Carol | Opens Marketplace as [Opening a service in 2.5 EVY Developer on Freenet](05-developer.md#opening-a-service) describes. Without the publisher key, EVY Developer opens it in proposal mode: she edits a draft, and Publish becomes Propose. She moves the "Listing dimensions" row to the "Describe item" page |
+| 1. Draft | Carol | Opens Marketplace as [Opening a service in 2.5 EVY Developer on Freenet](05-developer.md#opening-a-service) describes. Without the publisher key, EVY Developer opens it in proposal mode. Carol edits a draft and uses Propose. She moves the "Listing dimensions" row to the "Describe item" page |
 | 2. Preview | Carol | Checks the change on the EVY test build on iOS and Android, as [Previewing on a phone in 2.5 EVY Developer on Freenet](05-developer.md#previewing-on-a-phone) describes |
-| 3. Propose | Carol | Picks `marketplace.item.create` and size 8. EVY Developer assembles and validates the document as [Publishing from EVY Developer in 2.5 EVY Developer on Freenet](05-developer.md#publishing-from-evy-developer) does. `SignContribution` signs a UI proposal: each changed flow whole (here "Create item", about 17 KB), the version it starts from (1), the capabilities and contributors with shares that total 10,000, and the size. EVY Developer sends it as an UPDATE<br>--> Produces the UI proposal |
+| 3. Propose | Carol | Picks `marketplace.item.create` and size 8. EVY Developer assembles and validates the document as [Publishing from EVY Developer in 2.5 EVY Developer on Freenet](05-developer.md#publishing-from-evy-developer) does. `SignContribution` signs the complete changed flows (here "Create item", about 17 KB), base version 1, capability IDs, contributor shares totaling 10,000 and size 8. EVY Developer sends it as an UPDATE<br>Returns the signed UI proposal |
 | 4. Size | Validator | Signs a size estimate in EVY Developer |
 | 5. Review | Service publisher | A reviewer from the policy opens the proposal beside version 1, previews it on iOS and Android and signs an approval. A rejection closes the proposal |
 | 6. Publish | Service publisher | Builds the next document from the live version with the proposal's flows in place, archives its signed bytes and waits for the receipt, then publishes Marketplace UI version 2 and confirms readback, as [Publishing a UI version in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#publishing-a-ui-version) describes. Signs an acceptance record naming the proposal, version 2 and the document's digest |
-| 7. Link | Attribution service | Uses version 2's archived bytes, verifies the publication confirmation and acceptance digest, and records the acceptance<br>--> Produces Carol's acceptance and units |
+| 7. Link | Attribution service | Uses version 2's archived bytes, verifies the publication confirmation and acceptance digest, and records the acceptance<br>Records Carol's acceptance and units |
 
 - The contract caps its state at 512 KiB, as the UI contract does. It accepts a proposal only from a registered contributor key, with one open proposal per key. The attribution service writes the registered keys, signed with `attribution_key`.
 - It accepts an acceptance record only when the service publisher key signed it, and a [snapshot](#attribution-units) only when `attribution_key` signed it.
@@ -145,9 +147,9 @@ EVY-Size: 5
 | 1. Check | EVY GitHub App | Checks that the author's GitHub account is linked to a contributor key, the capability is in Marketplace's policy and the size is in `sizes`. Sets the required check "EVY attribution" to pending |
 | 2. Review | Reviewer | Approves the pull request on GitHub from a linked account on the policy's `reviewers` list |
 | 3. Size | Validator | Comments `/evy size 5` from a linked account on the `validators` list |
-| 4. Confirm eligibility | Attribution service | Validates the review, size, contributor shares and policy. Saves an eligibility record for the exact head commit and contribution metadata, and marks the check passed<br>--> Produces eligibility to merge |
+| 4. Confirm eligibility | Attribution service | Validates the review, size, contributor shares and policy. Saves an eligibility record for the exact head commit and contribution metadata, and marks the check passed<br>Records eligibility to merge |
 | 5. Merge | Maintainer | Merges the eligible head into the configured evy target branch. GitHub branch protection requires the passed check for that head |
-| 6. Accept merged work | Attribution service | Verifies the merge through GitHub's API, matches the merged PR's head to the eligible head and checks the contribution against the policy in force at acceptance. Commits the acceptance and units together, recording repository ID, PR number, reviewed head, merge commit, merge time and acceptance time<br>--> Produces Dan's acceptance and units for the first Marketplace UI version published after this verified acceptance |
+| 6. Accept merged work | Attribution service | Verifies the merge through GitHub's API, matches the merged PR's head to the eligible head and checks the contribution against the policy in force at acceptance. Commits the acceptance and units together, recording repository ID, PR number, reviewed head, merge commit, merge time and acceptance time<br>Records Dan's acceptance and units for the first Marketplace UI version published after this verified acceptance |
 
 - The author holds all contributor shares. Shared work lists each contributor's share in the description, and each listed contributor confirms with a `/evy confirm` comment from their linked account.
 - Reviews, size estimates and share confirmations are bound to the eligible head and contribution metadata. A new commit or a change to that metadata sets the check back to pending until the approvals cover the new values.
@@ -159,18 +161,18 @@ Postgres allows one initial code acceptance per repository ID and PR number. Rep
 
 ## Attribution units
 
-The attribution service splits each accepted size by the policy's `role_split_bp` and stores units as integer ten-thousandths of a size point. If the first validator's estimate differs from the proposed size, a second validator picks one of the two. The validator part goes in equal parts to the validators whose estimate equals the accepted size. The same reviewer and validator sign both examples, and each first estimate matched.
+The attribution service splits each accepted size by the policy's `role_split_bp` and stores units as integer ten-thousandths of a size point. If the first validator's estimate differs from the proposed size, a second validator picks one of the two. The validator part goes in equal parts to the validators whose estimate equals the accepted size. In both examples, the same reviewer approves the work and the same validator confirms its proposed size.
 
 | Acceptance | Capability | Size | Contributor | Reviewer | Validator |
 | --- | --- | ---: | ---: | ---: | ---: |
 | Carol's UI proposal | `marketplace.item.create` | 8 | Carol 6.8 (68,000) | 0.8 (8,000) | 0.4 (4,000) |
 | Dan's pull request | `marketplace.item.buy` | 5 | Dan 4.25 (42,500) | 0.5 (5,000) | 0.25 (2,500) |
 
-For each published UI document identity, the attribution service signs a **snapshot** with `attribution_key`, saves its immutable bucket copy, then writes it to the service's UI proposal contract and makes it available to remuneration. EVY Developer shows Carol her units and anyone can check them.
+For each published UI document identity, the attribution service signs a snapshot with `attribution_key`, saves its immutable bucket copy, then writes it to the service's UI proposal contract and makes it available to remuneration. EVY Developer shows Carol her units and anyone can check them.
 
 - A snapshot identifies the archived service, UI version and document digest. It lists the units per capability and `ActorId` of every acceptance that counts in that version, and the policy version in force when the version was published.
 - A UI proposal counts from the version that published it. A pull request counts from the first UI version published after its merge is verified and its acceptance is committed. Snapshots take units from committed acceptances.
-- A signed snapshot never changes. Marketplace version 2's snapshot holds both rows above, because Dan's pull request merged and its acceptance was verified and committed before version 2. A delayed merge verification contributes to a later version's snapshot.
+- Signed snapshots are immutable. Marketplace version 2's snapshot includes Carol's UI proposal and Dan's pull request. Dan's merge verification and acceptance committed before version 2. A delayed merge verification contributes to a later version's snapshot.
 
 | Challenge | Opened by | Resolved when |
 | --- | --- | --- |

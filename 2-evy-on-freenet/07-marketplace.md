@@ -9,13 +9,13 @@
 
 ## Purpose
 
-EVY's Marketplace lets people buy and sell locally ([EVY-Platform/evy](https://github.com/EVY-Platform/evy), [data models](https://github.com/EVY-Platform/evy/blob/dev/docs/services/marketplace/data.md)). This plan clones it onto Freenet. Its data moves to contracts in evy's `freenet/` workspace, its flows are published to the `marketplace` UI contract, and its purchases use [2.6 Payments](06-payments.md). The evy repo stays the reference for every Marketplace detail.
+EVY's Marketplace lets people buy and sell locally ([EVY-Platform/evy](https://github.com/EVY-Platform/evy), [data models](https://github.com/EVY-Platform/evy/blob/dev/docs/services/marketplace/data.md)). This plan runs Marketplace on Freenet. Contracts in evy's `freenet/` workspace store its data. The `marketplace` UI contract stores its flows, and purchases use [2.6 Payments](06-payments.md). The evy repository defines Marketplace's schemas and behavior.
 
-Marketplace joins the home page as EVY has it today. A new home version adds `marketplace` to `services`, so the app finds Marketplace's UI contract with no app release, as [The home service in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-home-service) describes.
+A new home version adds Marketplace's search and tabs and adds `marketplace` to `services`. The installed iOS and Android apps derive Marketplace's UI contract key from that entry, as [The home service in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-home-service) describes.
 
 ## What is cloned
 
-| EVY Marketplace today | Where it lives on Freenet |
+| Marketplace component | Storage or implementation |
 | --- | --- |
 | Items, `marketplace.items` ([item.schema.json](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/src/schema/item.schema.json)) | The items contract from [The purchase contract in 2.6 Payments](06-payments.md#the-purchase-contract), with service ID `marketplace` and EVY's item schema |
 | Lookups: `selling_reasons`, `conditions`, `durations` and `areas` ([lookup.schema.json](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/src/schema/lookup.schema.json)) | One lookups contract, signed by the EVY publisher key from [2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key) and seeded from [service_data.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/services/service_data.json). The EVY publisher updates it with `evyctl lookups publish --service marketplace <file>` |
@@ -23,7 +23,7 @@ Marketplace joins the home page as EVY has it today. A new home version adds `ma
 | Requests and replies between buyer and seller, `evy.messages` ([purchase.ts](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/src/purchase.ts)) | The shared message adapter projects signed messages from the common purchase contract in [2.6 Payments](06-payments.md#shared-purchase-interface) |
 | Payment calls and `item_payment_intents` ([payments.ts](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/src/payments.ts)) | `services/payment` from 2.6 Payments |
 | Pickup address, `evy.addresses` | The shared address adapter projects the private field of Alice's `accept` message after her EVY delegate seals it to the purchase participants and their reader decrypts it in the verified purchase context |
-| Photos, `evy.files` named in `photo_ids` | The shared file adapter reads one immutable photo contract per content hash, see below |
+| Photos, `evy.files` named in `photo_ids` | The shared file adapter reads one immutable photo contract per content hash |
 | "View Item" flow (page "Item details") and "Create item" flow (pages "Create listing", "Describe item", "Pickup and delivery" and "Payment options") ([service_sdui.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/services/service_sdui.json)) | The `marketplace` UI contract, published with `evyctl ui publish` ([Publishing a UI version in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#publishing-a-ui-version)) |
 | Item search, the "For you", "From you" and "Scheduled" tabs and the "Sell something" button on EVY's SDUI home page ([evy_sdui.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/evy/evy_sdui.json)) | The same rows in the `home` document. Search results and "Sell something" open Marketplace's "View Item" and "Create item" flows by flow UUID, and Marketplace's flows return to the home flow the same way |
 | Checks on items and messages ([validation.ts](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/src/validation.ts), purchase.ts) | Checks in the items and purchase contracts ([Service rules in 2.4 SDUI data and actions](04-data-and-actions.md#service-rules)) |
@@ -43,7 +43,7 @@ These adapters are registered in [Shared EVY catalogue in 2.4 SDUI data and acti
 
 ### Converting the existing flows
 
-| Existing flow behavior | Shared resource binding |
+| Flow | Shared resource binding |
 | --- | --- |
 | Request pickup creates an initial `evy.messages` record | Create `evy.purchases` with the item reference and pickup request data. The adapter creates the signed purchase and its initial `pending` message and saves the returned purchase key for the flow |
 | Accept, reject, cancel, pay and handover actions | Create messages with the selected `purchase_key` and parent message ID. Select messages within that purchase |
@@ -53,13 +53,13 @@ These adapters are registered in [Shared EVY catalogue in 2.4 SDUI data and acti
 
 The converted `home` and `marketplace` documents ship together with their adapter bindings. The validator checks each action's payload against its operation schema, including purchase routing fields.
 
-EVY's iOS app uploads each photo as an `evy.files` record in 256 KiB chunks and keeps the JPEG in its file cache ([EVYFileRPC.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Data/API/EVYFileRPC.swift), [EVYFileCache.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Data/EVYFileCache.swift), [seed-files](https://github.com/EVY-Platform/evy/tree/dev/scripts/fixtures/services/seed-files)). On Freenet each photo is its own photo contract: the parameter is the JPEG's BLAKE3 hash and the state is the JPEG, which the phone keeps under 1 MiB so peers can fetch it from a phone behind NAT ([#5643](https://github.com/freenet/freenet-core/issues/5643)). `photo_ids` holds the photo contract keys.
+Each photo has an immutable contract. Its parameter is the JPEG's BLAKE3 hash; its state is the JPEG. The iOS and Android apps keep each photo below 1 MiB so peers can fetch it from a phone behind NAT ([#5643](https://github.com/freenet/freenet-core/issues/5643)). `photo_ids` holds the contract keys, and each phone caches the JPEG. Use [EVYFileRPC.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Data/API/EVYFileRPC.swift) and [EVYFileCache.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Data/EVYFileCache.swift) for the iOS file adapter and cache, with matching Android behavior. [seed-files](https://github.com/EVY-Platform/evy/tree/dev/scripts/fixtures/services/seed-files) supplies fixtures.
 
 ## Item availability
 
 The SwiftUI and Compose readers load each candidate listing's `purchases` references and read their purchase contracts. They verify the supported purchase code, contract parameters and signed records, and check that the purchase names this listing's service, item ID and seller. Home search, item details and the seller and buyer tabs use the same derived availability.
 
-The reader applies the first matching row:
+The reader uses the first matching availability rule.
 
 | Verified purchase evidence | Derived availability | Reader behavior |
 | --- | --- | --- |
@@ -81,7 +81,7 @@ Alice sells her skateboard on her iPhone and Bob buys it on his Android phone.
 | --- | --- | --- | --- | --- |
 | 1 | Alice | Lists the skateboard in "Create item" for 70 dollars, with photos and Saturday pickup times | None | `available` |
 | 2 | Bob | Finds it in search, opens "Item details" and taps "Request 10:00" for Saturday | `pending` | `available` |
-| 3 | Alice | Taps "Accept" in "For you". Her message carries the pickup address, which only Bob can read | `accept` | `pickup_pending` |
+| 3 | Alice | Taps "Accept" in "For you". Her message carries the pickup address sealed to Alice and Bob | `accept` | `pickup_pending` |
 | 4 | Bob | At the pickup on Saturday, taps "Item received" and pays 70.00 dollars in Stripe's payment sheet | `transaction` | `pickup_pending` |
 | 5 | Alice | Taps "Confirm" in "Item given". The payment service captures the payment | `transaction_completed` | `sold` |
 
@@ -91,13 +91,12 @@ Readers that receive the verified completed purchase hide the skateboard from av
 
 - On iOS and Android, Home and Marketplace read the same purchase, message and file instances through the shared bindings. Both expose the same decrypted pickup address to Alice and Bob. Substituting another service, purchase, message or recipient in the address context fails decryption or permission checks.
 - On iOS and Android, Bob and Carol request the same item. Each buyer sees their own purchase and messages; Alice sees both requests. Acceptance and payment target the selected purchase. Home's derived availability agrees with Marketplace. Alice's address exists before either request, survives backup restore and delegate migration, and only each intended recipient decrypts their purchase's address copy.
-
-- On iOS and Android, after the home version that adds `marketplace`, the home page shows item search, the three tabs and "Sell something", with no app update. A search result opens "View Item" and "Sell something" opens "Create item" from the `marketplace` UI contract.
+- On iOS and Android, after the home version that adds `marketplace`, the home page shows item search, the three tabs and "Sell something", in the installed apps. A search result opens "View Item" and "Sell something" opens "Create item" from the `marketplace` UI contract.
 - On iOS and Android, the skateboard sale passes with Alice on iOS and Bob on Android, then with the platforms swapped. Both phones show `available`, `pickup_pending` and `sold` at the same steps, and an independent peer reads the same item and purchase.
 - On iOS and Android, terminate Alice's app after her `transaction_completed` message reaches the purchase contract and before capture finishes. The payment service completes capture, and Bob's reader and a third reader derive `sold` and hide the listing from available-item search. The item record keeps the same revision during capture.
 - Shared SwiftUI and Compose fixtures cover multiple linked purchases, a declined card awaiting retry, cancellation, sale, refund and unavailable purchase state. A sold purchase takes precedence over an unresolved reference. An unresolved reference with no known reservation or completed sale shows "Availability unknown" and enables a new request after refresh resolves it as `available`.
 - On iOS and Android, cleanup removes a terminally canceled purchase reference and retains a captured sale reference through seller edits and partial or full refunds. A partial refund keeps `sold` with its refunded amount; a full buyer refund shows `refunded`. Both readers keep the completed listing closed. A purchase with the wrong supported code, seller, service or item ID fails link validation.
 - On iOS and Android, the skateboard's photos show on Bob's phone, read from their photo contracts.
 - `evyctl ui publish` accepts Marketplace's two flows and the new home version against EVY's schemas, including every `navigate` between them.
-- The items contract rejects an item not signed by its seller and a price of 0, as EVY's item schema does today. A photo contract rejects bytes that do not match its hash.
+- The items contract rejects an item not signed by its seller and a price of 0, following EVY's item schema. A photo contract rejects bytes that do not match its hash.
 - Only Alice's and Bob's phones can read the pickup address.

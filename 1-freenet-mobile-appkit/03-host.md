@@ -11,9 +11,9 @@
 
 ## Purpose
 
-Run admitted applications through authorized sessions on a shared Freenet node. Own the core host bridge, caller admission, basic session authority, release activation, base authorization, storage ownership and diagnostic redaction.
+Run each admitted application in an authorized session on a shared Freenet node. The host verifies callers, grants access, activates releases, records data ownership and removes private data from diagnostics.
 
-The first mobile route is River's web UI in a WebView served by the embedded node. Custom Swift/Kotlin applications use the same SDK from [1.2 Embedded node and mobile SDK](02-sdk.md).
+The first mobile route is River's web UI in a WebView served by the embedded node. Custom Swift applications on iOS and Kotlin applications on Android use the same SDK from [1.2 Embedded node and mobile SDK](02-sdk.md).
 
 ## Who controls what
 
@@ -23,7 +23,7 @@ The host owns a node installation with one node store and one node encryption ke
 
 EVY's iOS and Android hosts each run one node for all EVY services, including Home, Hello and Marketplace. All those services share the installation's KEK and the EVY delegate. Service changes, UI publication and opening another EVY flow retain that node and key. The EVY store and test installations each have their own node store and KEK.
 
-The EVY delegate stores one root seed in its encrypted records and derives service and purchase signing keys from it, as [The EVY delegate in 2.4 SDUI data and actions](../2-evy-on-freenet/04-data-and-actions.md#the-evy-delegate) defines. The shared node KEK protects those records; signing operations use the delegate's service or purchase identity.
+The EVY delegate stores one root seed in its encrypted records and derives service and purchase signing keys from it, as [The EVY delegate in 2.4 SDUI data and actions](../2-evy-on-freenet/04-data-and-actions.md#the-evy-delegate) defines. The shared node KEK encrypts those records. The delegate signs with the identity for the service or purchase.
 
 | Scope | Key and storage rule |
 | --- | --- |
@@ -43,7 +43,7 @@ The host supplies a verified application ownership selection to the backup, rest
 | Core | Enforce authenticated client access and attest the immediate caller to delegates |
 | Delegate | Apply its policy to the attested caller and protect its secret namespace |
 
-Delegates have broken that last rule in practice. An identity delegate authorized any calling web app ([raven#64](https://github.com/freenet/raven/pull/64)), and Ghostkeys took the attested app identity as enough to export and delete keys ([ghostkeys#28](https://github.com/freenet/ghostkeys/pull/28)).
+Test each delegate's caller policy with unauthorized web apps and with export or delete requests. Use [raven#64](https://github.com/freenet/raven/pull/64) and [ghostkeys#28](https://github.com/freenet/ghostkeys/pull/28) as regression cases.
 
 Core's device-node delegate secret store uses the full delegate key as its namespace. [1.5 Identity, keys and local protection](05-identity.md#protected-keys-and-records) owns key and record protection.
 
@@ -51,7 +51,7 @@ In the hosted source profile, the per-user secret context derives from a shell-m
 
 ## Trusted calls
 
-Some calls act with the app's authority. Examples are registering River's chat delegate and asking it to sign Alice's invitation of Carol. The host sends each of these calls to Core over a trusted path tied to:
+Bind privileged calls, such as registering River's chat delegate or signing Alice's invitation of Carol, to a trusted host path. Each call carries:
 
 - the verified app (River), by its full application container identity
 - the exact release it runs, by the verified release reference supplied at installation
@@ -67,7 +67,7 @@ The host supplies the [caller hooks in 1.2 Embedded node and mobile SDK](02-sdk.
 
 The host routes each response only to its authorized requester and discards expired-session callbacks. Core's web-app attestation identifies a contract, while user, installation and session bindings require the trusted host path.
 
-The trusted path covers calls over the node's local WebSocket port. Core mints a token for any contract ID to any loopback client. A client that sends no Origin header gets full API access ([#3011](https://github.com/freenet/freenet-core/pull/3011), [client API exposure](https://github.com/freenet/freenet-core/blob/main/docs/client-api-exposure.md)). So another app on the same phone can connect to that port and claim to be River. [Session admission #5264](https://github.com/freenet/freenet-core/issues/5264) tracks the Core change that rejects its calls, and the [admission table](#freenet-issues-being-worked-on-that-are-required) holds its release check.
+Authenticate calls over the node's local WebSocket port, including loopback clients that omit the Origin header ([#3011](https://github.com/freenet/freenet-core/pull/3011), [client API exposure](https://github.com/freenet/freenet-core/blob/main/docs/client-api-exposure.md)). Bind tokens to verified callers and reject another app claiming to be River. Implement [Session admission #5264](https://github.com/freenet/freenet-core/issues/5264) and pass the [admission release check](#freenet-issues-being-worked-on-that-are-required).
 
 ## Browser and native hosts
 
@@ -79,7 +79,7 @@ The trusted path covers calls over the node's local WebSocket port. Core mints a
 
 [1.1 Mobile feasibility and supported profiles](01-feasibility.md) confirmed that River's and Atlas's web UIs run in WKWebView and Android WebView, served by the embedded node from their pinned website containers ([device results](https://github.com/glesage/freenet-appkit/blob/main/docs/device-results.md#river-and-atlas-in-the-webview)).
 
-The host must:
+Host requirements:
 
 - Keep node credentials and privileged bridge methods in trusted code, and authenticate each caller, including loopback and alternate API paths.
 - Bind frames, WebView messages and native calls to the verified session, and validate message source, navigation and target before forwarding requests.
@@ -122,7 +122,7 @@ The host runs a release only after installation has verified it and supplied its
 
 - Activate a release only at a session boundary. Each session runs one release and its selected component and protocol versions.
 - Create a fresh session generation for each activated release.
-- Clear the WebView cache for the app at that boundary. Core's web responses carry an `ETag` but no `Cache-Control` header, so an open WebView keeps running the old build ([#5323](https://github.com/freenet/freenet-core/issues/5323)). A cached old River UI keeps writing to a room contract's old key after a re-key ([river#580](https://github.com/freenet/river/issues/580)).
+- Clear the WebView cache for the app at that boundary. Use the verified release's files despite Core's cache headers ([#5323](https://github.com/freenet/freenet-core/issues/5323)). Test that River writes to the selected room key after a re-key ([river#580](https://github.com/freenet/river/issues/580)).
 - Reject callbacks from older session generations.
 - Keep the previous release active when activation is interrupted.
 
@@ -140,11 +140,11 @@ When Alice opens River on the subway with no signal:
 
 Online, loading the stored container first saves about 0.5 s on the public network ([cached-app finding in 1.1 Mobile feasibility and supported profiles](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#smaller-items)).
 
-While the node joins, Core answers a page request it cannot serve from the store with its connecting page, and that page sends the WebView to the dashboard. So an invite link Bob opens during node start can lose its target ([#5745](https://github.com/freenet/freenet-core/issues/5745)). [#5750](https://github.com/freenet/freenet-core/pull/5750) keeps the link's URL.
+Keep an invite link's URL while Core joins and serves its connecting page. Once the container is available, open Bob's invite at its intended target. Test [#5745](https://github.com/freenet/freenet-core/issues/5745) with the fix in [#5750](https://github.com/freenet/freenet-core/pull/5750).
 
 When the user leaves the app, the host ends the session. When the user reopens it, the host creates a new session with fresh authority.
 
-Core's token for River's page stays valid until it goes unused for 24 hours, and it survives a disconnect ([#1976](https://github.com/freenet/freenet-core/pull/1976)). So the host's session generation ends River's authority. After a node restart, Core closes the WebSocket with code 4401 and the shell reloads River's frame ([#4781](https://github.com/freenet/freenet-core/pull/4781)). River also reloads its own frame on `AUTH_TOKEN_INVALID`, which races the shell's reload ([river#522](https://github.com/freenet/river/issues/522)).
+End River's authority through the host session generation. Core's page token can survive a disconnect and remain valid until it goes unused for 24 hours ([#1976](https://github.com/freenet/freenet-core/pull/1976)). After a node restart, Core closes the WebSocket with code 4401 and the shell reloads River's frame ([#4781](https://github.com/freenet/freenet-core/pull/4781)). River also reloads its own frame on `AUTH_TOKEN_INVALID`, which races the shell's reload ([river#522](https://github.com/freenet/river/issues/522)).
 
 ## Base authorization and device access
 
@@ -154,7 +154,7 @@ A grant is the user's stored answer to one permission for one app. The host stor
 - Core lists and revokes grants over loopback HTTP: `GET /permission/grants`, `POST /permission/grants/revoke` and the `/permission/apps` page ([#5744](https://github.com/freenet/freenet-core/pull/5744)).
 - Core writes a grant only when the user answers its own prompt, and its Rust grant functions are `pub(crate)`.
 
-This plan needs Core to add a code for each permission, a call that sets a grant and a public API that `crates/mobile` uses to get, set, revoke and list grants.
+Add a Core code for each permission and a public API for `crates/mobile` to get, set, revoke and list grants.
 
 | Field | River example |
 | --- | --- |
@@ -182,10 +182,10 @@ On iOS and Android, River's `app_definition.json` declares `notifications`:
 3. River posts a `notification` for a new message in "Skate club". The host shows a native alert when Bob allowed notifications. After a denial, River's alerts stay in-app.
 4. Bob changes his answer in the host's permission screen and in the matching iOS or Android system setting.
 
-Atlas declares no permissions, so running Atlas never raises a prompt. In a browser, Core's shell keeps its own timing, as in [Shell-bridge messages](#shell-bridge-messages).
+Atlas starts without a permission prompt because its definition requests no permissions. In a browser, Core's shell keeps its own timing, as in [Shell-bridge messages](#shell-bridge-messages).
 
 - Requests for undeclared permissions fail.
-- For a permission asked when the UI needs it or at first use, a stored denial answers later requests for 7 days, Core's cool-off, so app code gets one prompt per cool-off. The user can change the answer in the host's permission screen.
+- For permissions requested by the UI or at first use, return a stored denial for 7 days. Core's cool-off allows one prompt per 7-day interval. The user can change the answer in the host's permission screen.
 - A first-run denial of `notifications` stays until Bob changes it in the host's permission screen. River's `notification_enable_prompt` never asks again.
 - Core denies a prompt that nobody answers within 60 seconds and stores nothing ([#3811](https://github.com/freenet/freenet-core/pull/3811)). When the first-run prompt gets no answer, the host asks again the next time Bob runs River.
 - After the trusted prompt, the host asks for the matching iOS or Android system permission if the phone lacks it.
@@ -207,11 +207,13 @@ When an app registers a delegate whose manifest lists startup runs or wake-ups, 
 
 Manifests can also declare wake-ups ([#5747](https://github.com/freenet/freenet-core/pull/5747)). Core fires a wake-up only while the app holds the `Background` grant. On iOS and Android, wake-ups and other background work run only while the SDK lifecycle keeps the node running.
 
-Core always builds its own `DashboardPrompter` (`p2p_impl.rs`), and its `user_input` module is `pub(crate)`. With no dashboard tab open, that prompter spawns `xdg-open` on iOS and Android. This plan needs Core to let an embedder supply the `UserInputPrompter` and never spawn a browser on iOS or Android. The mobile host's prompter shows delegate prompts in trusted native screens. Browser hosts use Core's own prompt. Runs that nobody started, such as contract notification runs, lifecycle runs and wake-ups, can also raise prompts ([#5749](https://github.com/freenet/freenet-core/issues/5749)). The mobile prompter shows these at once in the same trusted screen. The run carries no caller, so the prompt names the app that Core binds to the delegate. On iOS and Android these runs happen only while the node runs, so the app is open when the prompt appears.
+Expose `UserInputPrompter` to embedders through Core's `user_input` module. Use it in place of `DashboardPrompter` in `p2p_impl.rs` for iOS and Android. Mobile delegate prompts use native screens exclusively. The host shows each prompt in trusted native UI. Browser hosts use Core's own prompt.
+
+Contract notifications, lifecycle runs and wake-ups can also raise prompts ([#5749](https://github.com/freenet/freenet-core/issues/5749)). Show those prompts at once in the same trusted native screen. Identify the app that Core binds to the delegate because these runs have no caller. On iOS and Android, the node runs in the foreground, so the app is open when the prompt appears.
 
 ## Diagnostics
 
-Expose per-app connection state, subscription demand, last observation time, pending-operation counts, storage use, verified release, grants and typed failures. Exported reports redact keys, message bodies, session tokens, private references and private records by default. Harvest logged delegate replies with conversation keys and backup secrets ([harvest#94](https://github.com/freenet/harvest/issues/94)), and River logged the WebSocket URL's query string ([river#700](https://github.com/freenet/river/pull/700)).
+Expose per-app connection state, subscription demand, last observation time, pending-operation counts, storage use, verified release, grants and typed failures. Exported reports redact keys, message bodies, session tokens, private references and private records by default. Test redaction of delegate replies, conversation keys, backup secrets and WebSocket query strings using [harvest#94](https://github.com/freenet/harvest/issues/94) and [river#700](https://github.com/freenet/river/pull/700).
 
 ## Acceptance
 
@@ -239,4 +241,4 @@ Expose per-app connection state, subscription demand, last observation time, pen
 | iOS | EVY embeds one node shared by all its services. Authorized installed apps from one developer team may share a node store in an App Group container and its KEK through an entitled Keychain access group. One foreground host owns the node at a time and closes the store and releases locks before suspension | A foreground app switch through universal links, carrying one request and one reply. Admission and ownership checks apply to each caller |
 | Android | EVY embeds one node shared by all its services. A node-owning app may offer a permission-protected bound service to authorized installed apps. That owner holds the store and Keystore-protected KEK | An intent with a result, or calls to the bound service, with admitted caller identity and application scope |
 
-Shared-node acceptance runs on iOS and Android verify that every admitted application uses the same node and KEK, while each private-data operation follows its ownership selection. Backing up, restoring or forgetting one application preserves unrelated applications' records, grants and working sessions. Restoring an owned shared component coordinates the affected consumers' session replacement through [Staged restore transaction in 1.5 Identity, keys and local protection](05-identity.md#staged-restore-transaction). Whole-node reset closes all sessions and removes the KEK once.
+On iOS and Android, verify that admitted applications share one node and KEK. Check each private-data operation against its ownership selection. Backing up, restoring or forgetting one application preserves unrelated applications' records, grants and working sessions. Restoring an owned shared component coordinates the affected consumers' session replacement through [Staged restore transaction in 1.5 Identity, keys and local protection](05-identity.md#staged-restore-transaction). Whole-node reset closes all sessions and removes the KEK once.

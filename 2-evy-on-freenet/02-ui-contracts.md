@@ -10,9 +10,9 @@
 
 ## Purpose
 
-This plan stores each EVY service's screens in one Freenet contract per service, the UI contract. The service publisher signs each new version of the whole document, and every phone that follows the contract gets it.
+Each EVY service stores its screens in one Freenet UI contract. The service publisher signs each version of the complete document. Subscribed iOS and Android apps receive each update.
 
-The EVY publisher publishes the hello service's first UI version: a flow "Hello" with one page, holding a heading row and a text row "Hello EVY world". It also publishes EVY's home page as a service, `home`, with one button that opens Hello. Alice's iPhone and Bob's Android phone read version 1 with GET and SUBSCRIBE, and version 2 reaches both with no restart.
+The EVY publisher publishes the hello service's first UI version: a flow "Hello" with one page, holding a heading row and a text row "Hello EVY world". It also publishes EVY's home page as a service, `home`, with one button that opens Hello. Alice's iPhone and Bob's Android phone read version 1 with GET and SUBSCRIBE, and version 2 reaches both while both apps keep running.
 
 ```mermaid
 flowchart LR
@@ -24,14 +24,14 @@ flowchart LR
 
 ## The UI document
 
-EVY's API stores screens today as flat `flows`, `pages` and `rows` records ([DATA_EVY_Flow, DATA_EVY_Page and DATA_EVY_Row in data.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/data.md)), and its clients assemble them into the nested `UI_Flow` shape ([sdui.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/sdui.md)). The UI document holds that nested shape directly. Each flow is valid against [evy.schema.json](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/evy.schema.json) and the row schemas in [definitions/](https://github.com/EVY-Platform/evy/tree/dev/types/schema/sdui/definitions), unchanged.
+The UI document contains nested `UI_Flow` objects from [sdui.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/sdui.md). Each flow must pass the existing [evy.schema.json](https://github.com/EVY-Platform/evy/blob/dev/types/schema/sdui/evy.schema.json) and row schemas in [definitions/](https://github.com/EVY-Platform/evy/tree/dev/types/schema/sdui/definitions) unchanged. Flow, page and row fields follow [data.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/data.md).
 
 - The publisher edits `service` and `flows` in a file in evy, for example `freenet/ui/hello.json`. `evyctl` adds `version`, `schema_version`, `min_reader_version` and `signature`.
 - The first flow is the service's entry flow. The app opens on the entry flow of the `home` service, as [The home service](#the-home-service) describes.
 - An exact UI document is named by its UI contract key, service, version and `state_hash`, for example hello version 2 with the hash of its complete signed state.
 - The `resources` field is added by [2.4 SDUI data and actions](04-data-and-actions.md). Each binding declares a versioned adapter from the shared EVY catalogue and its source context. Different services can bind the same purchase, messages or files through those shared interfaces.
 
-The signature covers the bytes `evy.ui/1` followed by the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of every other field. Publishers encode the 64-byte Ed25519 signature as standard padded base64, then serialize the complete signed object as RFC 8785 canonical JSON. These complete bytes form the submitted state, saved copy and archive entry. The example below is formatted for reading. The hello service's first UI version, about 600 bytes:
+The signature covers the bytes `evy.ui/1` followed by the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of every other field. Publishers encode the 64-byte Ed25519 signature as standard padded base64, then serialize the complete signed object as RFC 8785 canonical JSON. The submitted state, saved copy and archive entry use these exact bytes. The hello service's first UI version is about 600 bytes:
 
 ```jsonc
 {
@@ -106,14 +106,14 @@ The contract checks the envelope and the signature. `evyctl` checks the flows wi
 | The hello service's document | About 600 bytes |
 | Marketplace's two flows in [service_sdui.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/services/service_sdui.json), "View Item" and "Create item" | 69,264 bytes |
 | Core's limit for any contract state ([installing a copy in 1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#installing-a-copy)) | 50 MiB |
-| A state of 1 MiB or more put by a node behind NAT cannot be fetched cold ([upstream work and carrier evidence in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence)) | 1 MiB |
+| Cold fetching a state published by a node behind NAT requires a state smaller than 1 MiB ([upstream work and carrier evidence in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence)) | 1 MiB |
 | Each new version reaches every subscribed phone as the whole document ([cellular budget contract in 1.8 Thin-peer role and cellular data budgets](../1-freenet-mobile-appkit/08-thin-peer.md#cellular-budget-contract)) | One document per publish |
 
 The cap is 512 KiB. It is about 7 times Marketplace's flows, half the 1 MiB NAT limit, and the most one publish costs each subscribed phone. `scripts/validate-ui-document.ts` and the contract both check it.
 
 ### The home service
 
-EVY's iOS app opens today on its home flow, `f267c629-2594-4770-8cec-d5324ebb4058` ([ContentView.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/ContentView.swift), [evy_sdui.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/evy/evy_sdui.json)). This plan publishes that home page as a service, `home`, with its own UI contract like every other service. The app opens on the first page of the home document's first flow.
+Publish EVY's home page as the `home` service, with its own UI contract. EVY on iOS and Android opens on the first page of that document's first flow, `f267c629-2594-4770-8cec-d5324ebb4058` ([ContentView.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/ContentView.swift), [evy_sdui.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/evy/evy_sdui.json)).
 
 The home document has one more field, `services`, which lists every other service the app can open. The app pins two values in `types/freenet/contract-keys.json`, the file from [pinned keys in 2.1 Hello EVY world](01-hello-evy-world.md#pinned-keys):
 
@@ -122,7 +122,7 @@ The home document has one more field, `services`, which lists every other servic
 | `ui.home` | The home UI contract key |
 | `code.ui` | The UI contract's code hash. With a publisher key from `services` and the service ID, it gives that service's UI contract key |
 
-So a new service needs a new home version, and no app release. Home version 1 holds one button that opens the hello service:
+Publishing a new home version makes a new service available to the installed iOS and Android apps. Home version 1 holds one button that opens the hello service:
 
 ```jsonc
 {
@@ -135,11 +135,11 @@ So a new service needs a new home version, and no app release. Home version 1 ho
   },
   "flows": [                                                 // EVY's home flow
     {
-      "id": "f267c629-2594-4770-8cec-d5324ebb4058",          // the home flow UUID EVY uses today
+      "id": "f267c629-2594-4770-8cec-d5324ebb4058",          // the home flow UUID
       "name": "Home",                                        // entry flow: the app opens on it
       "pages": [
         {
-          "id": "55e427ac-263c-441f-9673-f60627b1baea",      // the home page UUID EVY uses today
+          "id": "55e427ac-263c-441f-9673-f60627b1baea",      // the home page UUID
           "name": "Home",                                    // developer-facing page name
           "title": "Home",                                   // shown in the navigation bar
           "rows": [
@@ -163,7 +163,7 @@ So a new service needs a new home version, and no app release. Home version 1 ho
 }
 ```
 
-A `navigate` names a flow and page by UUID, as EVY's [actions](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/actions.md) do today, so a button in one service can open a flow in another. `scripts/validate-ui-document.ts` checks each `navigate` target against the documents in `freenet/ui/` and checks that every `services` entry is a service ID with a 32-byte key.
+A `navigate` names a flow and page by UUID, following EVY's [actions](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/actions.md), so a button in one service can open a flow in another. `scripts/validate-ui-document.ts` checks each `navigate` target against the documents in `freenet/ui/` and checks that every `services` entry is a service ID with a 32-byte key.
 
 ## Publishing a UI version
 
@@ -171,12 +171,12 @@ The EVY publisher runs `evyctl ui publish --service hello --key evy-publisher fr
 
 | Step | What `evyctl` does |
 | --- | --- |
-| 1. Validate | Runs the new script `scripts/validate-ui-document.ts` with Bun, against the schemas at tag `reader-v<N>`, where N is `--min-reader-version`, by default the highest tag. The script holds every document check: `service` equals `--service`, EVY's `validateUiFlow` ([validators.ts](https://github.com/EVY-Platform/evy/blob/dev/types/validators.ts)) on each flow for the schemas, each row type's triggers and every action expression, unique flow, page and row IDs, every `show` target is a row in the document, and the signed state fits in 512 KiB.<br>--> Produces the validated document, or errors that name the JSON path |
+| 1. Validate | Runs the new script `scripts/validate-ui-document.ts` with Bun, against the schemas at tag `reader-v<N>`, where N is `--min-reader-version`, by default the highest tag. The script checks `service` equals `--service`, EVY's `validateUiFlow` ([validators.ts](https://github.com/EVY-Platform/evy/blob/dev/types/validators.ts)) on each flow for the schemas, each row type's triggers and every action expression, unique flow, page and row IDs, every `show` target is a row in the document, and the signed state fits in 512 KiB.<br>Returns the validated document or errors naming the JSON path |
 | 2. Number | GETs the UI contract through the EVY operator node. Sets `version` to one above the network's version, or to 1 when the contract is absent. Sets `schema_version` and `min_reader_version` from `types/schema/sdui/version.json` at the tag |
-| 3. Sign | Signs with the service publisher key, encodes the complete signed object as canonical JSON and saves those exact bytes in evyctl's data folder.<br>--> Produces the signed state |
+| 3. Sign | Signs with the service publisher key, encodes the complete signed object as canonical JSON and saves those exact bytes in evyctl's data folder.<br>Returns the signed state |
 | 4. Archive | For a service using attribution, submits the exact signed bytes to the archive and waits for a verified durable receipt, as [Archiving before publication in 2.8 Attribution](08-attribution.md#archiving-before-publication) requires. Saves the receipt with the pending publication |
 | 5. Update | Sends the saved state to the operator node: a PUT with the UI contract code and parameters for version 1, an UPDATE with the whole state after that. The operator node stays subscribed |
-| 6. Read back | GETs the contract through a second node and verifies its identity, service and signature. Exact saved bytes confirm publication. A verified absent state or a lower `(version, state_hash)` allows replay of the saved bytes; a timeout keeps the publication pending for readback and retry. A higher tuple, including a higher hash at the same version, stops the attempt and reports the winning document. Retains both documents as evidence. For a service using attribution, exact readback permits the publisher-signed publication confirmation naming the saved document and its evidence.<br>--> Produces the published UI document identity, for example hello version 2 and its `state_hash` |
+| 6. Read back | GETs the contract through a second node and verifies its identity, service and signature. Exact saved bytes confirm publication. A verified absent state or a lower `(version, state_hash)` allows replay of the saved bytes; a timeout keeps the publication pending for readback and retry. A higher tuple, including a higher hash at the same version, stops the attempt and reports the winning document. Retains both documents as evidence. For a service using attribution, exact readback permits the publisher-signed publication confirmation naming the saved document and its evidence.<br>Returns the published UI document identity, for example hello version 2 and its `state_hash` |
 
 For a service using attribution, archive confirmation precedes each PUT or UPDATE of a new signed document. An archive failure leaves the signed publication pending, and retry resumes with the same bytes and receipt. Publication resumes once the archive returns a valid receipt for those bytes.
 
@@ -213,7 +213,7 @@ Bob's Android build has reader version 1. The publisher publishes a new hello ve
 - `evyctl ui publish --service hello --key evy-publisher freenet/ui/hello.json` publishes hello version 1, and the readback through a second node returns the same signed bytes. The next publish gives version 2.
 - `evyctl ui publish --service home --key evy-publisher freenet/ui/home.json` publishes home version 1. `evyctl keys` writes `ui.home` and `code.ui`, and the hello UI contract key derived from `code.ui`, `services.hello` and `hello` equals the key that `evyctl ui publish` reports for hello.
 - Validation stops before signing for a home document whose `navigate` names a flow in no document in `freenet/ui/`.
-- On iOS and Android, an XCTest and an Android instrumented test on real phones GET and SUBSCRIBE to the hello UI contract by the key derived from the home document, receive version 1, and receive version 2 with no restart.
+- On iOS and Android, an XCTest and an Android instrumented test on real phones GET and SUBSCRIBE to the hello UI contract by the key derived from the home document, receive version 1, and receive version 2 while both apps keep running.
 - Validation stops before signing for fixtures with a row missing `visible`, an unknown row type, a malformed action expression, a `show` of a row outside the document, a duplicate row ID, a `service` other than `--service` and a state over 512 KiB. Each error names the JSON path.
 - In an isolated test network, Marketplace's two flows from service_sdui.json validate, publish as a test document and read back intact.
 - Contract tests cover each rule in [the UI contract](#the-ui-contract), including a wrong service ID, a lower version, equal versions with different bytes, an extra top-level field and a state over 512 KiB. Shared Rust, TypeScript, Swift and Kotlin vectors hash the complete signed bytes and compare identical 32-byte tuples. Fixtures with added whitespace, reordered fields or an alternative base64 signature encoding fail canonical-state validation; publisher output matches the canonical bytes. Equal-version peers exchange the higher-hash state through summaries and deltas. `fdev verify-merge` passes on the UI contract.

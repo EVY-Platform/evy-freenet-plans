@@ -11,7 +11,7 @@
 
 ## Purpose
 
-This plan saves River's drafts and pending signed messages, records when read responses arrive, and tests recovery on iOS and Android.
+Save River's drafts and pending signed messages, record when read responses arrive, and test recovery on iOS and Android.
 
 Bob types "Skate session Saturday?" in the "Skate club" room:
 
@@ -31,11 +31,13 @@ Test River's web UI and a native SDK fixture on iOS and Android after outages, r
 
 ## How a send works
 
-- **River:** Reads the room, signs the message, saves recovery records and shows the result.
-- **Host:** Checks River's session, permission and room target; routes private replies.
-- **SDK:** Passes requests to Core and matches each reply to its request.
-- **Chat delegate:** Stores the draft and pending message; checks who may read or change them.
-- **Room contract:** Checks the message signature and merges the message into room state.
+| Part | Responsibility |
+| --- | --- |
+| River | Read the room, sign the message, save recovery records and show the result |
+| Host | Check River's session, permission and room target, and route private replies |
+| SDK | Pass requests to Core and match each reply to its request |
+| Chat delegate | Store the draft and pending message, and check who may read or change them |
+| Room contract | Check the signature and merge the message into room state |
 
 SDK operations and host checks follow [1.2 Embedded node and mobile SDK](02-sdk.md) and [1.3 Single-application host](03-host.md).
 
@@ -83,9 +85,11 @@ The test verifies the delegate's signature, then tests River's [local signing fa
 
 ### Work supplied by other plans
 
-- **[1.2 Embedded node and mobile SDK](02-sdk.md):** Delegate calls from Swift on iOS and Kotlin on Android, reply matching, errors and safe transfer of message data.
-- **[1.3 Single-application host](03-host.md#trusted-calls):** Checks on the app, user, installation, permissions and session; private replies reach authorized sessions.
-- **[1.4 Application bundles](04-bundles.md#the-archive-and-its-definition):** Names River's message format `river.chat/1` and sets the versions each release supports.
+| Plan | Work supplied |
+| --- | --- |
+| [1.2 Embedded node and mobile SDK](02-sdk.md) | Swift on iOS and Kotlin on Android delegate calls, reply matching, errors and safe transfer of message data |
+| [1.3 Single-application host](03-host.md#trusted-calls) | Checks on the app, user, installation, permissions and session; private reply routing |
+| [1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) | River's `river.chat/1` message format and supported versions for each release |
 
 ### Checks before release
 
@@ -101,7 +105,7 @@ The test verifies the delegate's signature, then tests River's [local signing fa
 
 ## Reads and local data
 
-Core supplies contract reads, subscriptions and the delegate's private store. This plan adds response arrival times and River's saved drafts and signed messages waiting to be sent.
+Use Core's contract reads, subscriptions and delegate private store. Record response arrival times and save River's drafts and signed messages waiting to be sent.
 
 ### Bob opens "Skate club"
 
@@ -139,15 +143,15 @@ River adds the draft and pending-message storage described in [UPSTREAM_ISSUES.m
 
 ### Core retention and offline delivery
 
-Core owns contract retention and network propagation. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while the room state remains in Core's store. Storage tests fill the hosting budget and record which room copies the pinned Core build retains or evicts.
+Core retains contract state and sends it to peers. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while the room state remains in Core's store. Storage tests fill the hosting budget and record which room copies the pinned Core build retains or evicts.
 
-Durable offline delivery across contract eviction belongs to separate Core work. Follow [bounded local contract retention #5041](https://github.com/freenet/freenet-core/issues/5041), the [storage design question #4651](https://github.com/freenet/freenet-core/issues/4651) and [restart demand recovery #4785](https://github.com/freenet/freenet-core/issues/4785). Their scope and status are recorded in [UPSTREAM_ISSUES.md](../UPSTREAM_ISSUES.md#core-retention-and-delivery-research). This plan adopts stronger retention and delivery guarantees when they ship in Core.
+Durable offline delivery across contract eviction belongs to separate Core work. Follow [bounded local contract retention #5041](https://github.com/freenet/freenet-core/issues/5041), the [storage design question #4651](https://github.com/freenet/freenet-core/issues/4651) and [restart demand recovery #4785](https://github.com/freenet/freenet-core/issues/4785). [UPSTREAM_ISSUES.md](../UPSTREAM_ISSUES.md#core-retention-and-delivery-research) records the requirements and status. This plan adopts stronger retention and delivery guarantees when they ship in Core.
 
 ## Sending updates
 
 This plan adds interrupted-send recovery on iOS and Android. River saves the draft and signed message alongside its existing send, under [Save drafts and pending signed messages in the chat delegate](../UPSTREAM_ISSUES.md#r4-save-drafts-and-pending-signed-messages-in-the-chat-delegate).
 
-River tracks saves, local room state and delivery separately:
+Track saves, local room state and delivery independently:
 
 | Result | What it confirms |
 | --- | --- |
@@ -171,9 +175,9 @@ Test the save completion, version checks and cleanup order in [How a send works]
 ### Preparing and restoring a room
 
 - Subscribe to each room Bob uses. Restore client subscriptions on every start and reconnect. Test River's reconnect flow, which submits the saved room with `Put { subscribe: true }` and resumes sends after the PUT reply ([river#561](https://github.com/freenet/river/issues/561), [#4785](https://github.com/freenet/freenet-core/issues/4785)). Room retention follows the storage budget in [1.2 Embedded node and mobile SDK](02-sdk.md#storage).
-- Read a room absent from the node before updating it. If Core returns `NotFound`, keep the draft and report the room unavailable. An owner with a saved copy can use [Lost network state](#lost-network-state). Test this first-send case ([#5724](https://github.com/freenet/freenet-core/issues/5724), [Harvest's first-message fix](https://github.com/freenet/harvest/pull/126)).
+- Read a room absent from the node before updating it. If Core returns `NotFound`, keep the draft and report the room unavailable. An owner with a saved copy uses [Lost network state](#lost-network-state). Test this first-send case ([#5724](https://github.com/freenet/freenet-core/issues/5724), [Harvest's first-message fix](https://github.com/freenet/harvest/pull/126)).
 - Test the selected first-join path from [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). Core builds with [local updates before the first join](../UPSTREAM_ISSUES.md#c2-accept-local-updates-and-subscriptions-before-the-first-join) must save the message before joining and share it on join. Releases using the SDK queue must keep acknowledged drafts and submit queued sends on join.
-- After reopening or release activation, read saved drafts and pending messages from the delegate and read each room from the node. Record recovery only after those reads complete.
+- After reopening or release activation, read saved drafts and pending messages from the delegate and read each room from the node. Confirm recovery after those reads complete.
 
 Test reconnect delivery through Core's [state comparison](https://github.com/freenet/freenet-core/blob/main/crates/core/src/ring/interest.rs). Cellular traffic follows [1.8 Thin-peer role and cellular data budgets](08-thin-peer.md); update rate limits follow [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm).
 
@@ -187,14 +191,14 @@ Test reconnect delivery through Core's [state comparison](https://github.com/fre
 
 ## Lost network state
 
-This plan tests River's existing recovery flow when remote peers lose a room and Alice's phone still holds a copy. Use an isolated test network with fixed gateways and no live-network peers ([#5552](https://github.com/freenet/freenet-core/issues/5552)). Keep Alice's copy while removing the remote copies.
+Test River's recovery flow when remote peers lose a room and Alice's phone still holds a copy. Use an isolated test network with fixed gateways and no live-network peers ([#5552](https://github.com/freenet/freenet-core/issues/5552)). Keep Alice's copy while removing the remote copies.
 
 1. Run River's owner-room subscription request and confirm that the subscription took.
 2. Remove the remote copies of "Skate club" and exercise River's failed-subscription recovery.
 3. River submits Alice's saved copy to the same room contract.
 4. An independent peer reads the restored room. Record the recovery time.
 
-River already requests owner-room subscriptions through `EnsureRoomSubscription` ([river#235](https://github.com/freenet/river/pull/235), [river#276](https://github.com/freenet/river/pull/276)). Core supplies [network interest](https://github.com/freenet/freenet-core/pull/5615) and [subscription restoration after restart](https://github.com/freenet/freenet-core/pull/5728). River's [re-PUT handler](https://github.com/freenet/river/blob/main/ui/src/components/app/freenet_api/response_handler/subscribe_response.rs) waits 20 seconds before submitting the saved copy. Treat that wait as a retry delay; establish remote loss through the controlled test setup.
+River requests owner-room subscriptions through `EnsureRoomSubscription` ([river#235](https://github.com/freenet/river/pull/235), [river#276](https://github.com/freenet/river/pull/276)). Core supplies [network interest](https://github.com/freenet/freenet-core/pull/5615) and [subscription restoration after restart](https://github.com/freenet/freenet-core/pull/5728). River's [re-PUT handler](https://github.com/freenet/river/blob/main/ui/src/components/app/freenet_api/response_handler/subscribe_response.rs) waits 20 seconds before submitting the saved copy. Use the controlled test setup to establish remote loss. The 20-second wait is a retry delay.
 
 | Condition | Required check |
 | --- | --- |

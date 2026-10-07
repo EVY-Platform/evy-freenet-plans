@@ -10,9 +10,15 @@
 
 ## Purpose
 
-This plan pays contributors when a purchase completes. Bob buys Alice's skateboard for 70 dollars in Marketplace, and [2.6 Payments](06-payments.md) collects the 1% contributor fee of 0.70 dollars. When Alice confirms the handover and the payment service captures the payment, the remuneration service (`services/remuneration` in evy, TypeScript on Bun with Postgres) splits the 0.70 dollars among the contributors to the Marketplace UI version Bob used, keeps their balances and pays them through Stripe Connect. This plan also runs backups, restore drills and key custody for the payment, attribution and remuneration services.
+The remuneration service pays contributors after a completed purchase. Bob buys Alice's skateboard for 70 dollars, and [2.6 Payments](06-payments.md) collects the 1% contributor fee of 0.70 dollars. After handover and capture, the service splits that fee among contributors to the Marketplace UI version Bob used. It tracks balances and pays contributors through Stripe Connect.
 
-This plan adds `ui_version` and `ui_digest` to the purchase record in [The purchase contract in 2.6 Payments](06-payments.md#the-purchase-contract). When Bob asks to buy, the SwiftUI or Compose reader from [2.3 Native SDUI readers](03-readers.md#reading-a-ui-contract) writes the version of the Marketplace UI document it drew into the `purchase` object, here `"ui_version": 2`, and its 32-byte BLAKE3 digest as `ui_digest`. The digest uses the exact complete signed bytes retained for that flow. Bob's buyer key signs both with the other `purchase` fields. The purchase contract accepts a version of 1 or more and a base58-encoded 32-byte digest.
+Implement `services/remuneration` in evy with TypeScript on Bun and Postgres. Set up backups, restore drills and key custody for the payment, attribution and remuneration services.
+
+Add `ui_version` and `ui_digest` to [the purchase record in 2.6 Payments](06-payments.md#the-purchase-contract). When Bob asks to buy, the iOS SwiftUI or Android Compose reader from [2.3 Native SDUI readers](03-readers.md#reading-a-ui-contract) records the Marketplace document it drew:
+
+- `ui_version` is its version, here 2. The contract accepts integers of 1 or more.
+- `ui_digest` is the 32-byte BLAKE3 hash of the exact complete signed bytes retained for the flow, encoded in base58.
+- Bob's buyer key signs both fields with the rest of `purchase`.
 
 The shared purchase interface retains the originating service and its purchase-flow document, as [Shared purchase interface in 2.6 Payments](06-payments.md#shared-purchase-interface) requires. Home opens Marketplace's purchase flow to create this purchase. Later displays or participant actions in another EVY application retain the signed service, version and digest used for the original allocation.
 
@@ -42,7 +48,7 @@ sequenceDiagram
 | 3. Check payment | Remuneration service | Verifies [the payment record in 2.6 Payments](06-payments.md#the-payment-record) and its `signer_certificate` from the EVY publisher key. Checks the original captured amount and fee, current `refunded_cents` and `fee_refunded_cents` against the payment service's reconciled Stripe evidence |
 | 4. Check completion | Remuneration service | Verifies Alice's retained `transaction_completed` message and successful capture evidence. A completed purchase can currently be `sold` or fully `refunded`. If a refund is the first observed state, capture history and the payment service's saved Stripe evidence establish completion. The service ID comes from the purchase's `resource`, `marketplace.items` |
 | 5. Find the version | Remuneration service | Uses the service, `ui_version` and `ui_digest` to fetch the archived document, publication evidence and signed snapshot from [Archiving before publication in 2.8 Attribution](08-attribution.md#archiving-before-publication). Verifies the document signature and digest, the snapshot's matching identity and the version's publication before the purchase started. An unresolved archive or snapshot leaves the allocation pending verification |
-| 6. Commit | Remuneration service | Writes the original gross allocations and reversals for the latest verified `fee_refunded_cents` in one database transaction before making any balance payable. A first observation after a refund reconstructs the original allocations from the original fee and archived snapshot, then applies the refund in that same commit.<br>--> Produces one original allocation per capability and recipient, with cumulative reversal entries |
+| 6. Commit | Remuneration service | Writes the original gross allocations and reversals for the latest verified `fee_refunded_cents` in one database transaction before making any balance payable. A first observation after a refund reconstructs the original allocations from the original fee and archived snapshot, then applies the refund in that same commit.<br>Records one original allocation per capability and recipient, with cumulative reversal entries |
 
 The ledger allows one allocation per purchase, capability and recipient, so repeated notifications and racing workers produce one result. A fake sale between two people who work together pays contributors at most that sale's own fee, and the seller pays that fee.
 
@@ -50,7 +56,7 @@ The ledger allows one allocation per purchase, capability and recipient, so repe
 
 The service works in integer cents and splits the fee in two rounds. It uses the units in the snapshot and the weights of the policy version the snapshot names, from [Service policy in 2.8 Attribution](08-attribution.md#service-policy).
 
-1. Across capabilities by `weight_bp`. A capability with no units in the snapshot gets no share, and the other capabilities split the fee by their weights. If the snapshot holds no units at all, the fee stays in EVY's balance as unassigned.
+1. Across capabilities by `weight_bp`. Only capabilities with units receive a share; their weights divide the fee. If every capability has zero units, EVY holds the fee as unassigned.
 2. Within each capability, across recipients by their units.
 
 Both rounds use the largest remainder rule. Each recipient first gets the whole cents of their exact share. The leftover cents then go one each to the largest fractional parts, and the lower `ActorId` breaks a tie.
@@ -120,15 +126,22 @@ A 35.00-dollar refund of Bob's purchase returns 35 cents of its contributor fee:
 
 ## Operating the services
 
-Today evy's [`docker-compose.prod.yml`](https://github.com/EVY-Platform/evy/blob/dev/docker-compose.prod.yml) runs one `postgres:16` container with no volume or backup. Each service gets its own database on a named volume. [pgBackRest](https://pgbackrest.org/) archives the write-ahead log with PostgreSQL `archive_timeout = 60`, takes a daily full backup and writes both, encrypted, to an S3-compatible bucket in a second region. The bucket keeps 30 days of point-in-time restore and one monthly full backup for the retention period set before launch.
+Configure [`docker-compose.prod.yml`](https://github.com/EVY-Platform/evy/blob/dev/docker-compose.prod.yml) with `postgres:16` and one database per service on a named volume. [pgBackRest](https://pgbackrest.org/) provides encrypted backups to an S3-compatible bucket in a second region.
+
+- Archive the write-ahead log with PostgreSQL `archive_timeout = 60`.
+- Take a daily full backup.
+- Keep 30 days of point-in-time recovery data.
+- Keep one monthly full backup for the retention period agreed before launch.
 
 | Service | Backs up | Recovery point | Recovery time |
 | --- | --- | --- | --- |
-| Payment | Stripe charge, refund and fee object IDs, confirmed cumulative refund totals, the webhook inbox, every signed payment record revision and the outbox to purchase contracts and remuneration | 1 minute | 2 hours, because Bob can't pay while it is down |
+| Payment | Stripe charge, refund and fee object IDs, confirmed cumulative refund totals, the webhook inbox, every signed payment record revision and the outbox to purchase contracts and remuneration | 1 minute | 2 hours, to restore checkout |
 | Attribution | Contributor keys, `ActorId`s and GitHub links, policy versions, proposals and reviews, code eligibility records, verified merge evidence, acceptances, challenges, the saved bytes of every UI version and the snapshots | 1 minute | 24 hours |
 | Remuneration | Original allocations, refund-rounding rule versions, applied cumulative fee totals, balances, payouts, reversal links and the transfer outbox | 1 minute | 24 hours |
 
-The attribution archive keeps immutable copies of acknowledged signed UI documents, their receipts, publication evidence and signed snapshots in the second-region bucket, as [Archiving before publication in 2.8 Attribution](08-attribution.md#archiving-before-publication) requires. Archive objects have their own retention policy and remain available for every purchase and ledger entry that references them. These objects survive the database's recovery window and retain the evidence for purchases using earlier UI versions. Recovery verifies their signatures and digests and rebuilds their database index. Other work lost inside the recovery point comes back from Stripe, which [lists events for 30 days](https://docs.stripe.com/api/events/list), and from the signed records in purchase and UI proposal contracts.
+The attribution archive keeps immutable copies of acknowledged signed UI documents, their receipts, publication evidence and signed snapshots in the second-region bucket, as [Archiving before publication in 2.8 Attribution](08-attribution.md#archiving-before-publication) requires. Archive objects have their own retention policy and remain available for every purchase and ledger entry that references them. These objects survive the database's recovery window and retain the evidence for purchases using earlier UI versions. Recovery verifies their signatures and digests and rebuilds their database index.
+
+Recover other work lost inside the recovery point from Stripe, which [lists events for 30 days](https://docs.stripe.com/api/events/list), and from the signed records in purchase and UI proposal contracts.
 
 The operator runs a restore drill before the first live payment, after each schema or key change and every 3 months. The first drill uses a Stripe test-mode sale of the skateboard.
 
@@ -138,17 +151,17 @@ The operator runs a restore drill before the first live payment, after each sche
 | 2. Totals | Sum the ledgers | Totals match those recorded at the restore point |
 | 3. Archive and purchase | Verify and reindex immutable UI archive objects newer than the database restore point. Recompute Bob's purchase from version 2's exact signed bytes and matching digest and snapshot after Marketplace has moved to version 3 | The acknowledged archive entries are recovered, and Bob's allocation is Carol 24, Dan 36, reviewer 7, validator 3 |
 | 4. Stripe | Apply Stripe events newer than the restore point through the webhook inbox | Every charge, application fee, refund, transfer and payout matches one record |
-| 5. Replay | Run every outbox twice | No second charge, allocation or payout |
+| 5. Replay | Run every outbox twice | Each charge, allocation and payout appears once |
 | 6. Freenet | Send the latest signed payment record for Bob's purchase again with the same bytes | The purchase contract accepts it or already holds it |
 | 7. Record | Write down the recovery point and time reached | Both meet the targets |
 
-A record without a match stays on hold, and Stripe write access stays off until the operator decides each held record. Each service signing key lives in a cloud key service that signs on request, so no host sees the private key.
+Keep unmatched records on hold. Restore Stripe write access after the operator resolves each held record. A cloud key service holds each service signing key and signs on request; hosts receive signatures only.
 
 | Key | Service | Used for | Rotation | If it leaks |
 | --- | --- | --- | --- | --- |
 | Payment service key | Payment | Payment records in purchase contracts | Yearly and after a leak, with a new certificate from the EVY publisher key, as [The payment record in 2.6 Payments](06-payments.md#the-payment-record) describes | Pause checkout and record signing, then certify a new key. The remuneration service credits only records that match the payment service's database |
 | Attribution service key | Attribution | Snapshots | Yearly and after a leak. The service publisher signs a policy version with the new `attribution_key` | Pause snapshots, rotate and re-sign the snapshots since the leak |
-| Stripe restricted keys and webhook secret | Payment (charges, refunds), remuneration (transfers) | Stripe API calls with only the permissions each service uses, and webhook checks | [Roll the key](https://docs.stripe.com/keys#rolling-keys), which keeps the old one working for up to 7 days. [Roll the webhook secret](https://docs.stripe.com/webhooks), with up to 24 hours of overlap | Roll at once with no overlap |
+| Stripe restricted keys and webhook secret | Payment (charges, refunds), remuneration (transfers) | Stripe API calls with only the permissions each service uses, and webhook checks | [Roll the key](https://docs.stripe.com/keys#rolling-keys), which keeps the old one working for up to 7 days. [Roll the webhook secret](https://docs.stripe.com/webhooks), with up to 24 hours of overlap | Roll immediately with zero overlap |
 | Backup key | All | pgBackRest encryption | After each operator change | Start a new pgBackRest repository under a new key, take a full backup and remove the old repository |
 
 ## Acceptance
@@ -162,4 +175,4 @@ A record without a match stays on hold, and Stripe write access stays off until 
 - Partial refunds before and after payout reverse only the current fee total. For every `R` from 0 through 70, the cumulative rounding fixture reverses exactly `R` cents, each allocation's reversal increases monotonically and stays within its original credit, and `R = 70` reproduces the original allocations. One refund and several refunds reaching the same total give the same result.
 - Duplicate and reordered notifications, a restart and racing workers retain one set of cumulative reversals. A fee-only refund changes the ledger while purchase status stays `sold`. A purchase first observed after a partial or full refund reconstructs its gross allocation and current reversal atomically, including the unassigned-fee case.
 - A full refund after payout leaves the total negative balances in the example, and the next credits pay them off.
-- The restore drill meets every recovery point and time, reproduces Bob's allocation from the saved version 2 bytes, and its replay creates no second charge, allocation or payout.
+- The restore drill meets every recovery point and time, reproduces Bob's allocation from the saved version 2 bytes, and replay retains one charge, allocation and payout.

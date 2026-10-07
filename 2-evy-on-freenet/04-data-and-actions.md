@@ -12,7 +12,7 @@
 
 ## Purpose
 
-This plan connects EVY's data bindings and actions to Freenet contracts and to one EVY delegate on the phone. The hello service gets a guestbook:
+EVY on iOS and Android resolves data bindings and actions through Freenet contracts and one local EVY delegate. The hello service gets a guestbook:
 
 - The EVY publisher publishes hello version 4. Its "Hello" page gains a "Guestbook" button, and a new "Guestbook" page binds the resource `hello.greetings`.
 - Alice types "Hi from Alice" on her iPhone and taps "Sign". The SwiftUI reader asks the EVY delegate to sign the entry and sends it to the guestbook contract.
@@ -38,7 +38,7 @@ This plan adds `resources` to [The UI document in 2.2 EVY UI contracts and publi
 
 ### Shared EVY catalogue
 
-Home, Hello and Marketplace use common EVY components. Each shared resource has one wire schema, contract implementation where needed, parameter encoding, signing rules and reader adapter. Contract instances hold individual purchases or files, or bounded collections. Applications reference the same instance when they use the same data.
+Home, Hello and Marketplace share EVY components. Each shared resource has one wire schema, contract implementation where needed, parameter encoding, signing rules and reader adapter. Contract instances hold individual purchases or files, or bounded collections. Applications reference the same instance when they use the same data.
 
 | Component | Shared interface and storage | Owning plan |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ Home, Hello and Marketplace use common EVY components. Each shared resource has 
 | Earnings and payouts | Allocations, balances, reversals and payouts, retaining the originating service and purchase identity | [2.9 Remuneration and payouts](09-remuneration.md) |
 | Backup and device sync | Export, restore and synchronization of the EVY delegate's data across services | [3.1 Automated backup](../3-optional-extensions/01-backup.md), [3.2 Device sync](../3-optional-extensions/02-sync.md) |
 
-The catalogue lives in `freenet/common/resources.json`, with the wire schemas and shared fixtures beside it. It records each adapter's version, supported contract code hashes, parameter codec, operations, signing scopes and minimum reader version. The guestbook uses the collection adapter in this plan. Purchases and purchase messages ship with [2.6 Payments](06-payments.md); addresses and photos ship with [2.7 EVY Marketplace](07-marketplace.md). Reputation, live collaboration and saved payment methods follow their optional extension plans. Outside applications adopt these interfaces through [3.6 EVY services for Freenet apps](../3-optional-extensions/06-shared-services.md).
+The catalogue lives in `freenet/common/resources.json`, with the wire schemas and shared fixtures beside it. It records each adapter's version, supported contract code hashes, parameter codec, operations, signing scopes and minimum reader version. The guestbook uses the collection adapter in this plan. Purchases and purchase messages ship with [2.6 Payments](06-payments.md); addresses and photos ship with [2.7 EVY Marketplace](07-marketplace.md). Reputation, live collaboration and saved payment methods follow [3.3 Peer reputation](../3-optional-extensions/03-reputation.md), [3.4 Live authoring collaboration](../3-optional-extensions/04-collaboration.md) and [3.5 Saved payment methods](../3-optional-extensions/05-payment-methods.md). Outside applications adopt these interfaces through [3.6 EVY services for Freenet apps](../3-optional-extensions/06-shared-services.md).
 
 ### Resource bindings
 
@@ -161,10 +161,12 @@ The EVY delegate, alias `evy.delegate`, holds the user's EVY keys for every EVY 
 | `addresses/<id>` | The user's private address-book record, with its UUID and revision. Shared EVY applications use this local store; a purchase carries its own sealed copy |
 | `pending/<service>/<id>` | A signed operation with its adapter, target contract key, exact parameters, signing scope and operation ID, for replay with the same bytes; see [Offline writes](#offline-writes) |
 
-- **Keys.** HKDF-SHA256 over `root_seed` with the info `evy/hello/signing` gives Alice's hello Ed25519 signing key, and `evy/hello/encryption` her hello X25519 key. Each service sees different keys, so two services cannot link Alice by her key. A message may add a `scope`, such as a record ID, for keys used in that scope only, with the info `evy/<service>/<scope>/signing`. Only public keys leave the delegate.
-- **Storage.** Core keeps the secrets in the node's encrypted delegate store from [What the key protects in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#what-the-key-protects). The backup file from [App-specific export and import in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#app-specific-export-and-import) carries `root_seed`, so a restore brings back the same keys.
-- **Callers.** The delegate answers EVY's own native calls, which arrive over the trusted path in [Trusted calls in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#trusted-calls). It refuses a message whose `MessageOrigin` is a web app or another delegate ([delegate_interface.rs](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs)).
-- **Private fields.** A resource's `private` list names fields that only chosen people may read. The reader sends them in `Seal`, and the delegate encrypts them to the author and to each X25519 key in the record's `readers` list, with HPKE ([RFC 9180](https://www.rfc-editor.org/rfc/rfc9180), X25519, HKDF-SHA256 and ChaCha20-Poly1305). The record carries them in `sealed`. On a reader's phone, `Open` decrypts what was sealed to that user.
+| Rule | Implementation |
+| --- | --- |
+| Service keys | HKDF-SHA256 over `root_seed` with info `evy/hello/signing` derives Alice's hello Ed25519 key; `evy/hello/encryption` derives her hello X25519 key. Each service has distinct keys to prevent linking Alice across services by her key. An optional `scope`, such as a record ID, uses info `evy/<service>/<scope>/signing`. Only public keys leave the delegate |
+| Secret storage | Core stores secrets in the encrypted delegate store from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#what-the-key-protects). The [app-specific backup in 1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#app-specific-export-and-import) includes `root_seed`, so restoring it restores the same keys |
+| Authorized callers | The delegate accepts EVY's native calls over the [trusted path in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#trusted-calls). It rejects a web app or another delegate as `MessageOrigin` ([delegate_interface.rs](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs)) |
+| Private fields | The resource's `private` list names fields for selected readers. The reader sends them in `Seal`; the delegate encrypts them to the author and each X25519 key in `readers`, using HPKE ([RFC 9180](https://www.rfc-editor.org/rfc/rfc9180), X25519, HKDF-SHA256 and ChaCha20-Poly1305). The record stores ciphertext in `sealed`. `Open` decrypts fields sealed to the local user |
 
 Messages are JSON, with schemas in `freenet/common/`:
 
@@ -180,7 +182,14 @@ Messages are JSON, with schemas in `freenet/common/`:
 | `Open { service, scope?, resource, context, sealed }` | The fields, or `NotSealedForYou` | Drawing private fields in their verified source context |
 | `ExportRecords {}`, `ImportRecords { records }`, `DeleteRecords {}` | Records, per-record results, done | [Updating the EVY delegate](#updating-the-evy-delegate) |
 
-`context` carries the adapter version, operation ID, target contract key and exact parameters, plus the verified source item or purchase and actor role. For `SignOperation`, `kind` selects a supported catalogue operation. The handler checks parameter derivation, service and actor binding, required source signatures and the permitted signing domain. Purchase creation returns the signed initial purchase, `pending` message and reference operation under one saved creation context. Message signing returns a delta for that purchase. Operation IDs distinguish pending work across resources; replies retain the same target and scope for transport and retries. `ClearPending` evidence identifies the verified target state and the adapter's completion condition; collection evidence includes the record ID, revision and signed-record hash.
+`context` carries the adapter version, operation ID, target contract key and exact parameters, plus the verified source item or purchase and actor role. For `SignOperation`, `kind` selects a supported catalogue operation. The handler checks parameter derivation, service and actor binding, required source signatures and the permitted signing domain.
+
+| Operation | Result |
+| --- | --- |
+| Purchase creation | Signed initial purchase, `pending` message and reference operation under one saved creation context |
+| Message signing | Delta for that purchase |
+| Transport and retry | Operation IDs distinguish pending work across resources; replies keep the target and scope |
+| `ClearPending` | Evidence identifies the verified target state and adapter completion condition. Collection evidence includes record ID, revision and signed-record hash |
 
 `ExportRecords` and `ImportRecords` include the address book with the root seed and pending operations. Backup, staged restore and delegate migration preserve those records. The address adapter keeps owner-editable rows separate from received purchase copies, so an address-book edit leaves the signed purchase's sealed copy intact.
 
@@ -188,16 +197,16 @@ Messages are JSON, with schemas in `freenet/common/`:
 
 While a page that binds `hello.greetings` is open, the reader holds one subscription handle on the guestbook contract, from a GET with subscribe set ([Ending subscriptions in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#ending-subscriptions)). Before the node's first join, the GET reads the node's stored copy, as for UI contracts in [Reading a UI contract in 2.3 Native SDUI readers](03-readers.md#reading-a-ui-contract). The collection adapter decodes `records` into the resource's collection and writes them to its record store, `EVYDataStore` on iOS and the Room database from [The Compose reader in 2.3 Native SDUI readers](03-readers.md#the-compose-reader) on Android. Other adapters use the projections in [Resource operations and permissions](#resource-operations-and-permissions). Each update notification refreshes the affected source's rows.
 
-| Binding | EVY today | In this plan |
-| --- | --- | --- |
-| Collections such as `{hello.greetings}` and `{evy.purchases}` | `sync` with a cursor fills the public and private stores ([EVY+Sync.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Core/EVY+Sync.swift)) | Rows projected by the declared resource adapter from verified source state |
-| `$datum`, `sort`, `filter`, `findFirst`, `count` | Run over synced rows ([methods.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/methods.md)) | The same code over the decoded records |
-| `owns(resource, id)` | The records the device created or holds privately ([EVY+Ownership.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Core/EVY+Ownership.swift)) | The adapter's ownership predicate for that verified source context, using service or purchase-scoped keys from `GetPublicKeys` |
-| Public and private rows | Row `visibility` picks a store ([data.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/data.md#visibility)) | Contract state is public. Fields in the resource's `private` list are sealed |
+| Binding | Reader behavior |
+| --- | --- |
+| Collections such as `{hello.greetings}` and `{evy.purchases}` | The declared adapter projects verified source state into rows in the reader's store ([EVY+Sync.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Core/EVY+Sync.swift)) |
+| `$datum`, `sort`, `filter`, `findFirst`, `count` | Run over the projected records ([methods.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/methods.md)) |
+| `owns(resource, id)` | Uses the adapter's predicate for the verified source context and service or purchase-scoped keys from `GetPublicKeys` ([EVY+Ownership.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Core/EVY+Ownership.swift)) |
+| Public and private rows | Contract state is public. The delegate seals fields in the resource's `private` list. Row visibility follows [data.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/data.md#visibility) |
 
 ## Actions
 
-The action runner keeps EVY's order rules ([sdui.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/sdui.md#sequencing)). As today, `create` and `update` write the reader's store at once and send in the background ([EVY+Mutations.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Core/EVY+Mutations.swift)), so the next action runs without waiting.
+The action runner follows EVY's [sequencing rules](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/sdui.md#sequencing). `create` and `update` write the reader's store immediately and send in the background ([EVY+Mutations.swift](https://github.com/EVY-Platform/evy/blob/dev/ios/evy/Core/EVY+Mutations.swift)). The next action runs while the write is pending.
 
 | Action ([actions.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/actions.md)) | What it does on Freenet |
 | --- | --- |
@@ -209,13 +218,13 @@ The action runner keeps EVY's order rules ([sdui.md](https://github.com/EVY-Plat
 
 ## Service rules
 
-Today EVY's API gateway calls a service's `before_create` and `after_create` hooks around each create of an enrolled resource ([hooks.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/hooks.md)). On Freenet each rule moves to the place that can enforce it:
+Contracts enforce record rules. Service nodes perform work that needs an external system, such as creating a payment intent ([hooks.md](https://github.com/EVY-Platform/evy/blob/dev/docs/evy/hooks.md)).
 
-| EVY today | In this plan |
+| Work | Implementation |
 | --- | --- |
-| `before_create` checks the payload and can veto it with a reason | The resource's contract checks every record on every peer, in `validate_state` and `update_state`. The guestbook's checks are the rules in [The guestbook contract](#the-guestbook-contract) |
-| A veto returns the reason, and EVY core writes a `request_failed` message | The writer's own node refuses the UPDATE, and the SDK returns the refusal as a typed error ([Typed errors in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#typed-errors)). The reader shows the reason in EVY's error alert |
-| `after_create` runs server work after the write, such as Marketplace calling `payment_intent` | The EVY service that owns the work runs its own Freenet node, subscribes to the resource's contract with freenet-stdlib's TypeScript client and acts on each new record. Results it writes back are records signed by the service's own key. The hello service has no such work |
+| Validate a record | The resource contract checks every record on every peer in `validate_state` and `update_state`. The guestbook follows [The guestbook contract](#the-guestbook-contract) |
+| Report a refused write | The writer's node rejects the UPDATE. The SDK returns a [typed error from 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#typed-errors), and the reader shows its reason in EVY's error alert |
+| Run external work after a write | The service runs its own Freenet node, subscribes to the resource contract with freenet-stdlib's TypeScript client and acts on each new record. It signs result records with its own key. Hello needs record validation only |
 
 ## Offline writes
 
@@ -232,16 +241,16 @@ This plan uses the pinned Core build's retention and propagation behavior. Recon
 
 ## Updating the EVY delegate
 
-A new build of the EVY delegate has a new key, and Alice's records stay under the old key until the app moves them. EVY follows [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import):
+A new EVY delegate build has a new key. The iOS and Android apps move Alice's records from the predecessor to the new delegate. EVY follows [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import):
 
 | Step | Who | What happens |
 | --- | --- | --- |
 | 1. Record | evy CI | `freenet/delegates/evy/legacy.toml` lists every earlier code hash. `freenet-migrate-build` generates the lineage, and CI fails when the Wasm changes without a new row ([Predecessor registry in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#predecessor-registry)) |
-| 2. Move | The app, on the first start of the new build | Registers the new delegate and runs freenet-migrate's `migrate_delegate_secrets` with `NewestSnapshotWins`. It reads each old delegate with `ExportRecords` and writes through `ImportRecords`. The app sends the new delegate no other message until the move ends, so it never makes a second `root_seed`. The app shows a native "Updating EVY" screen meanwhile |
+| 2. Move | The app, on the first start of the new build | Registers the new delegate and runs freenet-migrate's `migrate_delegate_secrets` with `NewestSnapshotWins`. It reads each old delegate with `ExportRecords` and writes through `ImportRecords`. The app waits for the move to finish before sending other messages to the new delegate. This preserves the existing `root_seed`. The app shows a native "Updating EVY" screen meanwhile |
 | 3. Verify and retry | The app | Reads back the imported records and verifies the root seed, derived public keys, addresses and pending signed operations. A failed or interrupted move runs again on the next start; predecessor records stay until verification completes |
 | 4. Retire | The app | Sends `DeleteRecords` to the old delegate, then unregisters its key ([Retiring the old version in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#retiring-the-old-version)) |
 
-The application-driven migration has these release requirements:
+Release requires compatible libraries, a mobile SDK interface and passing migration fixtures.
 
 | Requirement | Work and evidence |
 | --- | --- |
@@ -251,14 +260,13 @@ The application-driven migration has these release requirements:
 
 During backup restore, these adapters run in the staging store defined by [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#staged-restore-transaction). The staged current delegate receives the restored `root_seed` through `ImportRecords` before other app messages. EVY opens services and submits pending records after the complete restored generation becomes active.
 
-[Core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) is tracked as [future Core migration work in Upstream issues](../UPSTREAM_ISSUES.md#future-core-migration-work). EVY will evaluate it when the provenance checks and secret-deposit path are implemented and tested. The application-driven migration above supplies the release path for this plan.
+[Core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) is tracked as [future Core migration work in Upstream issues](../UPSTREAM_ISSUES.md#future-core-migration-work). EVY will evaluate it when the provenance checks and secret-deposit path are implemented and tested. This plan releases with application-driven migration.
 
 ## Acceptance
 
 - Shared fixtures run in the iOS and Android readers for collection, purchase, message, address and file adapters as their owning plans ship. Home and Marketplace project the same referenced purchase, route each operation to the same instance and retain its originating service and UI attribution identity.
 - Fixtures reject unknown adapter versions, unsupported code hashes, missing or cyclic binding dependencies, substituted purchase contexts and signing with another service or purchase's key. Participant ownership and permission checks agree across iOS and Android.
 - Updates to one purchase refresh only its projected rows. Both readers deduplicate handles for the same instance across views and release them after the last consumer closes. An interrupted dynamic operation resumes with its saved target, parameters, scope and signed bytes.
-
 - On iOS and Android, Alice writes "Hi from Alice" in the guestbook on her iPhone, and Bob's Android phone shows it within 30 seconds. Bob replies "Hi Alice, from Bob", and Alice sees it. Each entry's `author` is the writer's hello key.
 - On iOS and Android, Alice edits her entry and Bob sees the new revision. A change to Alice's entry from Bob's phone, an empty message and a 281-character message are each refused on the writer's phone, and the reader shows the reason.
 - On iOS and Android, each case in [Offline writes](#offline-writes) passes, and the guestbook holds one copy of each entry. When the EVY publisher removes an entry with `evyctl record remove`, both phones drop it.

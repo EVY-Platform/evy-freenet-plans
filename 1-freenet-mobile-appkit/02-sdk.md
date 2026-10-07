@@ -10,7 +10,7 @@
 
 ## Purpose
 
-Manage embedded Core, transport, lifecycle and platform bindings. The app supplies storage paths while core verifies contract state and executes delegates on the device.
+Start and stop embedded Core, manage its connections and expose its operations to Swift on iOS and Kotlin on Android. The app supplies storage paths. Core verifies contract state and runs delegates on the device.
 
 ## What to build
 
@@ -26,15 +26,15 @@ Manage embedded Core, transport, lifecycle and platform bindings. The app suppli
 | Stage and activate a restore | Expose the [staged restore transaction in 1.5 Identity, keys and local protection](05-identity.md#staged-restore-transaction) to Swift and Kotlin. Isolate imported code, registrations, secrets and host records; recover the selected complete generation before opening sessions. |
 | Shared-node private-data operations | Expose host-authorized ownership selections for export, restore and Forget. Keep the installation's single KEK active for other consumers; whole-node reset has its own host-owned operation, as [1.3 Single-application host](03-host.md#shared-node-and-key-scope) specifies |
 | Permission requests | Pass the app's request for a declared permission to the [policy hook](#caller-hooks) and return granted, denied or unavailable, under the [permission rules in 1.3 Single-application host](03-host.md#asking-for-a-permission). |
-| Events and cancellation | Include SDK request and session identity, [typed errors](#typed-errors) and submission uncertainty. Hand every callback from the node runtime's threads to the platform's expected executor ([callback threads finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#callbacks-run-on-the-nodes-own-threads)), and reject expired-session callbacks. |
+| Events and cancellation | Include SDK request and session identity, [typed errors](#typed-errors) and submission uncertainty. Dispatch every callback from the node runtime's threads to the platform's expected executor ([callback threads finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#callbacks-run-on-the-nodes-own-threads)), and reject expired-session callbacks. |
 
-[UniFFI](https://mozilla.github.io/uniffi-rs/latest/) generates the Swift and Kotlin bindings from it, delivering every operation in the table above, plus build scripts for iOS and Android.
+[UniFFI](https://mozilla.github.io/uniffi-rs/latest/) generates Swift and Kotlin bindings for these operations. Include build scripts for iOS and Android.
 
-Core sends telemetry by default ([#2466](https://github.com/freenet/freenet-core/pull/2466)) so the SDK must set `telemetry-enabled = false` and keep `otel-telemetry-enabled` off. Core saves both in `config.toml` ([#5512](https://github.com/freenet/freenet-core/pull/5512)), so the SDK sets them on every start.
+Disable Core's default telemetry ([#2466](https://github.com/freenet/freenet-core/pull/2466)) by setting `telemetry-enabled = false` and keeping `otel-telemetry-enabled` off. Core saves both in `config.toml` ([#5512](https://github.com/freenet/freenet-core/pull/5512)), so the SDK sets them on every start.
 
 #### Matching replies to requests
 
-The SDK assigns each request its own ID, session and connection generation. Contract success replies identify the response type and contract, while some errors carry neither a request ID nor a structured contract key ([#5724](https://github.com/freenet/freenet-core/issues/5724)). The SDK therefore allows one request awaiting a reply per client connection and queues all further requests on that connection, across contract keys, request types and app sessions. For example, an UPDATE to "Skate club" waits while a PUT to another room awaits its reply.
+The SDK assigns each request its own ID, session and connection generation. Contract success replies identify the response type and contract, while some errors carry neither a request ID nor a structured contract key ([#5724](https://github.com/freenet/freenet-core/issues/5724)). Allow one request awaiting a reply per client connection. Queue further requests on that connection across contract keys, request types and app sessions. For example, an UPDATE to "Skate club" waits while a PUT to another room awaits its reply.
 
 | Event | What the SDK does |
 | --- | --- |
@@ -45,7 +45,7 @@ The SDK assigns each request its own ID, session and connection generation. Cont
 | Connection reset | Reports the submitted request as uncertain, rejects callbacks from the previous connection generation, and restores subscriptions through the new connection's queue. Requests still queued retain their unsubmitted state. |
 | Unclassifiable reply | Reports the submitted request as uncertain and resets the connection before sending the next request. |
 
-Core's request timeout is 60 seconds ([#3442](https://github.com/freenet/freenet-core/pull/3442)). If a terminal reply or Core timeout error is still absent after a bounded window longer than 60 seconds, the SDK resets the connection. This covers dropped replies under load ([stdlib #105](https://github.com/freenet/freenet-stdlib/pull/105)). It uses structured response fields for matching and the connection's request slot for errors with no key.
+Core's request timeout is 60 seconds ([#3442](https://github.com/freenet/freenet-core/pull/3442)). Set a bounded reply window longer than 60 seconds. Reset the connection if that window ends before a terminal reply or Core timeout error arrives. This covers dropped replies under load ([stdlib #105](https://github.com/freenet/freenet-stdlib/pull/105)). It uses structured response fields for matching and the connection's request slot for errors with no key.
 
 Parallel requests on one connection require the pinned Core and stdlib to carry the client's request ID through every success and error reply for the request types involved. [stdlib #106](https://github.com/freenet/freenet-stdlib/issues/106) tracks request IDs. Conformance fixtures verify this coverage before the SDK enables parallel requests; subscription updates continue flowing in both modes.
 
@@ -60,9 +60,14 @@ Subscribe returns a handle. The SDK counts handles per session and contract, and
 | Closes the conversation | 1 | Keeps the subscription |
 | Leaves the room list | 0 | Ends the subscription |
 
-Releasing handles in one session leaves other sessions' subscriptions open. Core allows 500 subscriptions per client connection and returns a typed error past that ([#5391](https://github.com/freenet/freenet-core/pull/5391)). The SDK subscribes once per contract on each connection, however many handles it holds.
+Releasing handles in one session leaves other sessions' subscriptions open. Core allows 500 subscriptions per client connection and returns a typed error past that ([#5391](https://github.com/freenet/freenet-core/pull/5391)). The SDK subscribes once per contract on each connection and shares that subscription between handles.
 
-Freenet stdlib plans a client Unsubscribe request ([stdlib wire-format pins #95](https://github.com/freenet/freenet-stdlib/pull/95)). Until the pinned stdlib has it, a subscription lasts as long as its client connection ([disconnect unsubscribe test #4691](https://github.com/freenet/freenet-core/issues/4691)). So the SDK ends a subscription by closing that connection. Once the pinned stdlib has Unsubscribe, the SDK sends it instead.
+Select subscription release behavior from the pinned stdlib's capabilities ([stdlib wire-format pins #95](https://github.com/freenet/freenet-stdlib/pull/95)):
+
+| Pinned client API | Release operation |
+| --- | --- |
+| Supports Unsubscribe | Send Unsubscribe |
+| Subscription lifetime follows the connection | Close the client connection ([disconnect unsubscribe test #4691](https://github.com/freenet/freenet-core/issues/4691)) |
 
 When the connection closes, Core sends Unsubscribe upstream ([#3143](https://github.com/freenet/freenet-core/pull/3143)). A GET or PUT on the contract in the previous 8 minutes keeps the network subscription alive until that lease ends, so updates can keep reaching the phone for up to 8 minutes ([#4738](https://github.com/freenet/freenet-core/issues/4738)).
 
@@ -81,11 +86,11 @@ The SDK returns each Core failure as a typed error that the app can act on.
 | The node has not joined yet | `PeerNotJoined` for UPDATE, PUT and Subscribe ([#2385](https://github.com/freenet/freenet-core/pull/2385)) | Not yet joined. See [Start, stop and reconnect](#start-stop-and-reconnect) |
 | Peers require a newer Core than the app ships | The handshake fails with "too old for remote's min_compatible", and Core sets its public version-mismatch flag (`freenet::transport::has_version_mismatch`) | Update the app. The app tells the user to install the new store build |
 
-Desktop Core binaries exit with code 42 to update themselves. The SDK never exits the process.
+The host alone controls process termination. For a version mismatch, return "update the app" and keep the host process running.
 
 #### Caller hooks
 
-The code that embeds the SDK supplies two hooks. The SDK calls each one and acts on its answer.
+The embedder supplies authority and policy hooks. The SDK applies their decisions.
 
 | Hook | When the SDK calls it | What the SDK does with the answer |
 | --- | --- | --- |
@@ -107,28 +112,30 @@ sequenceDiagram
 
 #### Packaging
 
-- **iOS:** XCFramework in the Swift package
-- **Android:** AAR in the Kotlin library, for each selected processor type (ABI)
+| Platform | Package |
+| --- | --- |
+| iOS | XCFramework in the Swift package |
+| Android | AAR in the Kotlin library for each selected processor type (ABI) |
 
 #### Running Wasm
 
-The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). No release build maps executable memory, so iOS builds fit the App Store rules and Android builds fit Google Play's interpreter exception ([distribution review](https://github.com/glesage/freenet-appkit/blob/main/docs/distribution-review.md)). Both platforms run one backend and the same test fixtures.
+The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). iOS and Android release builds use interpreted execution with data-only memory mappings. This supports iOS App Store distribution and Android Google Play's interpreter exception ([distribution review](https://github.com/glesage/freenet-appkit/blob/main/docs/distribution-review.md)). Both platforms run one backend and the same test fixtures.
 
 Wasmtime tests and maintains the Pulley interpreter, but its iOS and Android builds need platform-specific testing and maintenance ([Wasmtime support tiers](https://docs.wasmtime.dev/stability-tiers.html)). We run the appkit conformance suite on iOS and every supported Android ABI using the Wasmtime version resolved in the selected Core commit's `Cargo.lock`. The results record that Core commit and Wasmtime version. This check runs for the initial selected build and repeats whenever the resolved Wasmtime version changes. Release requires passing results for the version actually included in the build. We also validate 32-bit ARM Android support ourselves.
 
 | Limit | Core default | Mobile |
 | --- | --- | --- |
-| Memory per Wasm instance | 256 MiB ([#3990](https://github.com/freenet/freenet-core/pull/3990)) | same as core (usage measured in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) showed ~1 MiB so this will be overkill but at least same as core) |
-| Concurrent Wasm executors | One per CPU core, from 1 to 16 (`FREENET_RUNTIME_POOL_SIZE`) | iOS: 2.<br>Android: same as core |
-| Store replacement | After 500 instances, after 4 hours, or when retired instance memory reaches `clamp(RAM / 8 / executors, 4 MiB, 256 MiB)` ([#5324](https://github.com/freenet/freenet-core/pull/5324)) | iOS: after 4 instances.<br>Android: same as core |
-| State per contract | 50 MiB | same as core |
+| Memory per Wasm instance | 256 MiB ([#3990](https://github.com/freenet/freenet-core/pull/3990)) | 256 MiB. River and Atlas used about 1 MiB in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) |
+| Concurrent Wasm executors | One per CPU core, from 1 to 16 (`FREENET_RUNTIME_POOL_SIZE`) | iOS: 2.<br>Android: Same as Core |
+| Store replacement | After 500 instances, after 4 hours, or when retired instance memory reaches `clamp(RAM / 8 / executors, 4 MiB, 256 MiB)` ([#5324](https://github.com/freenet/freenet-core/pull/5324)) | iOS: after 4 instances.<br>Android: Same as Core |
+| State per contract | 50 MiB | Same as Core |
 | Compiled module cache in memory | `clamp(RAM / 8, 64 MiB, 4 GiB)`, read from physical RAM, which gives a 4 GB phone 512 MiB ([#4452](https://github.com/freenet/freenet-core/pull/4452)) | An explicit size, set with `--module-cache-budget-bytes` |
-| Compile cache on disk | `clamp(RAM / 8, 128 MiB, 512 MiB)` in the data folder, within the hosting disk budget ([#5328](https://github.com/freenet/freenet-core/pull/5328)) | Same as core, bounded by the hosting disk budget in [Storage](#storage) |
+| Compile cache on disk | `clamp(RAM / 8, 128 MiB, 512 MiB)` in the data folder, within the hosting disk budget ([#5328](https://github.com/freenet/freenet-core/pull/5328)) | Same as Core, bounded by the hosting disk budget in [Storage](#storage) |
 | Wasm execution time | 5 seconds of wall-clock time, including time spent in host calls such as secret reads ([#5593](https://github.com/freenet/freenet-core/pull/5593), [#5594](https://github.com/freenet/freenet-core/issues/5594)) | 5 seconds of wall-clock time |
 
-The iPhone refused the 23rd reservation of address space ([reservation finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations)) so it must run 2 executors and replaces each Store after 4 instances. Core already looks up the memory address again inside each host function ([#3248](https://github.com/freenet/freenet-core/issues/3248)). Once Core also does it after each contract and delegate call, each instance reserves only the memory it uses, and iOS uses Core's default executors and Store replacement ([memory address recommendation](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call)).
+Set iOS to 2 executors and replace each Store after 4 instances. Android uses the Core defaults above. These limits account for the iPhone's refusal of the 23rd address-space reservation ([reservation finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations)). Core already looks up the memory address again inside each host function ([#3248](https://github.com/freenet/freenet-core/issues/3248)). When Core adds this lookup after each contract and delegate call, each instance will reserve only the memory it uses. Then test iOS and Android with Core's default executors and Store replacement. After passing tests, use those defaults on iOS and Android ([memory address recommendation](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call)).
 
-The host enforces per-app limits for concurrent requests, response size and delegate event frequency. Each phone applies about 21 local updates per second, 45 ms each, on every device that 1.1 Mobile feasibility and supported profiles measured ([local update finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#a-local-update-takes-about-45-ms)). A serving peer accepts about 10 UPDATEs per second for one contract from one sender address and silently drops the rest ([#4285](https://github.com/freenet/freenet-core/pull/4285)). The dropped updates reach peers later through Core's state summary comparison. Phones behind one carrier NAT share a sender address, so they share that limit.
+The host enforces per-app limits for concurrent requests, response size and delegate event frequency. [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measured about 21 local updates per second, 45 ms each, on every tested device ([local update finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#a-local-update-takes-about-45-ms)). A serving peer accepts about 10 UPDATEs per second for one contract from one sender address and silently drops the rest ([#4285](https://github.com/freenet/freenet-core/pull/4285)). The dropped updates reach peers later through Core's state summary comparison. Phones behind one carrier NAT share a sender address, so they share that limit.
 
 Core's on-disk compile cache keys each compiled module by its Wasm bytes and the engine config, so an engine update recompiles it ([#3476](https://github.com/freenet/freenet-core/pull/3476)). The SDK keeps that cache on. Check that timeouts, memory limits, cancellation and shutdown return the same bytes and errors on phones as on desktop.
 
@@ -145,11 +152,11 @@ One coordinator owns each node store and its KEK. EVY services use the same inst
 | Hosted state (`max-hosting-storage`) | `clamp(RAM / 8, 128 MiB, 1 GiB)` | Set explicitly. The iPhone's stores used 6.1 MiB in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) |
 | Hosting disk (`hosting-disk-pct`) | 50% of the disk space available to Freenet, up to 32 GiB | Set explicitly. Core's disk count leaves out redb free space and the web-app cache until [#5033](https://github.com/freenet/freenet-core/pull/5033) lands, so the setting leaves room for both |
 | Log folder (`FREENET_LOG_DIR_MAX_BYTES`) | 512 MiB ([#5404](https://github.com/freenet/freenet-core/pull/5404)) | Set explicitly. The iPhone wrote 3.2 MiB of logs |
-| Secret snapshots (`FREENET_DISABLE_SECRET_SNAPSHOTS`) | Up to about 62 versions and 3 MiB per secret, kept for up to 2 years ([secrets at rest](https://github.com/freenet/freenet-core/blob/main/docs/secrets-at-rest.md)) | Off. Phones have no snapshot restore, and the export in [1.5 Identity, keys and local protection](05-identity.md#app-specific-export-and-import) covers recovery |
+| Secret snapshots (`FREENET_DISABLE_SECRET_SNAPSHOTS`) | Up to about 62 versions and 3 MiB per secret, kept for up to 2 years ([secrets at rest](https://github.com/freenet/freenet-core/blob/main/docs/secrets-at-rest.md)) | Off. Use the export in [1.5 Identity, keys and local protection](05-identity.md#app-specific-export-and-import) for recovery |
 
 #### Start, stop and reconnect
 
-One coordinator runs every start, reconnect and stop, so two never overlap.
+One coordinator serializes start, reconnect and stop.
 
 ```mermaid
 stateDiagram-v2
@@ -166,7 +173,7 @@ stateDiagram-v2
 
 On stop, the SDK drops callbacks and releases the port, runtime and store locks ([store lock #4401](https://github.com/freenet/freenet-core/issues/4401)). Test killing the app in every state.
 
-Core leaves process exits to the embedder. A poisoned redb store or a fatal listener exit returns errors and does not end the process ([#4604](https://github.com/freenet/freenet-core/issues/4604)). The coordinator detects both, stops the node and starts it again on the same port.
+Core returns errors for a poisoned redb store or a fatal listener exit. The host process keeps running ([#4604](https://github.com/freenet/freenet-core/issues/4604)). The coordinator detects both, stops the node and starts it again on the same port.
 
 The SDK watches the phone's network path with `NWPathMonitor` on iOS and `ConnectivityManager` network callbacks on Android. It tells the app whether the phone is online from that path, because Core keeps reporting its peers during an outage ([peer count finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-peer-count-stays-up-during-an-outage)). Core has no connectivity status for clients ([#2967](https://github.com/freenet/freenet-core/issues/2967)).
 
@@ -178,13 +185,20 @@ When Alice's phone moves from Wi-Fi to cellular, the SDK:
 4. Fetches the latest room state.
 5. Hands control back to River. Core sends the room's peers any messages Alice sent while offline.
 
-When Alice opens River with no signal, the node starts and River shows her stored "Skate club" messages. This needs a Core change ([offline start finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode)):
+When Alice opens River with no signal, start the node and show her stored "Skate club" messages. Implement the required Core changes ([offline start finding](https://github.com/glesage/freenet-appkit/blob/main/docs/findings.md#the-node-cannot-start-offline-in-network-mode)):
 
-- Core resolves each gateway hostname once at startup, and a failed lookup stops the start (`NodeConfig::new` in [node.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/node.rs)). The [public gateway index](https://github.com/freenet/web/blob/main/hugo-site/static/keys/gateways.toml) lists hostnames, and Core fetches it at every start.
-- The Core change resolves each hostname in the join loop, just before the loop tries that gateway, and the loop's backoff retries until the network returns.
-- The same change builds the fallback DNS resolver (hickory-resolver) only after an online lookup fails, and Android builds leave out its `system-config` feature.
+- Move gateway hostname resolution from `NodeConfig::new` into the join loop ([node.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/node.rs)). Resolve each hostname just before trying that gateway and retry with backoff when the network returns.
+- Fetch the [public gateway index](https://github.com/freenet/web/blob/main/hugo-site/static/keys/gateways.toml), which lists hostnames, at each start without blocking offline startup.
+- Build the fallback DNS resolver (hickory-resolver) after an online lookup fails. Android builds exclude its `system-config` feature.
 
-Until the node first joins, Core answers UPDATE, PUT and Subscribe with `PeerNotJoined` and serves only reads without a subscription from the phone's copy ([#2385](https://github.com/freenet/freenet-core/pull/2385)). This plan needs Core to accept local UPDATE and Subscribe for stored contracts before the first join and send them on join. Until the pinned Core does, the SDK holds Alice's message and her "Skate club" subscription until the first join, and River keeps her draft.
+Support first-join behavior according to the pinned Core build ([#2385](https://github.com/freenet/freenet-core/pull/2385)):
+
+| Core capability | SDK and River behavior |
+| --- | --- |
+| Local UPDATE and Subscribe before joining | Save updates to stored contracts locally, subscribe and send them on join |
+| `PeerNotJoined` for UPDATE, PUT and Subscribe | Queue Alice's message and her "Skate club" subscription until the first join. River keeps her draft and reads the phone's stored copy without subscribing |
+
+Add local UPDATE and Subscribe before joining to Core as part of this plan.
 
 #### Local network access
 

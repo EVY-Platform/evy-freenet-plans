@@ -10,7 +10,7 @@
 
 ## Purpose
 
-This plan sets the rules apps follow to carry their state and private records across upgrades. It owns component keys, predecessor registries, contract carry-forward, delegate secret migration and retiring old versions.
+Carry application state and private records across upgrades. Define component keys, record supported predecessors, migrate contract state and delegate secrets, and retire predecessor versions after verification.
 
 The [installation interface in 1.4 Application bundles](04-bundles.md#installing-a-copy) verifies a release and [1.3 Single-application host](03-host.md#activating-a-release) activates it. Each app runs its own migrations with freenet-migrate when the new release first starts, and runs them again on the next start if they fail. The latest freenet-migrate release is 0.7.0.
 
@@ -21,7 +21,7 @@ The [installation interface in 1.4 Application bundles](04-bundles.md#installing
 | Harvest | [migrate.rs](https://github.com/freenet/harvest/blob/main/ui/src/migrate.rs) for contracts, [delegate_migrate.rs](https://github.com/freenet/harvest/blob/main/ui/src/delegate_migrate.rs) for the delegate | 0.6 |
 | Atlas | The publisher's CLI, [main.rs](https://github.com/freenet/atlas/blob/main/cli/src/main.rs) and [migration.rs](https://github.com/freenet/atlas/blob/main/cli/src/migration.rs) | 0.6 |
 
-The app keeps the old version's data until the new copy is proven complete, so a failed migration loses nothing. It then retires the old version as in [Retiring the old version](#retiring-the-old-version). While a migration runs, the app shows a migrating state, as River's room list does with `RoomListDisplay::Migrating` ([delta#52](https://github.com/freenet/delta/issues/52), [delta#53](https://github.com/freenet/delta/pull/53)). Data the publisher owns, such as the Atlas index, is migrated by the publisher's CLI before the release is published.
+Keep predecessor data until successor readback proves the migration complete. It then retires the old version as in [Retiring the old version](#retiring-the-old-version). While a migration runs, the app shows a migrating state, as River's room list does with `RoomListDisplay::Migrating` ([delta#52](https://github.com/freenet/delta/issues/52), [delta#53](https://github.com/freenet/delta/pull/53)). The publisher's CLI migrates publisher-owned data, such as the Atlas index, before publishing the release.
 
 ## Component identity and re-keying
 
@@ -37,7 +37,7 @@ Sources: [River FREENET.md](https://github.com/freenet/river/blob/main/FREENET.m
 
 ### Predecessor registry
 
-A new Wasm build gives a component a new key. When River ships a new room contract, Alice's "Skate club" room gets a new key, and its state stays under the old key. The predecessor registry lists every earlier version of a component. The app's new release uses it to work out the old keys and find that state.
+A new Wasm build gives a component a new key. When River ships a new room contract, Alice's "Skate club" room gets a new key, and its state stays under the old key. The predecessor registry lists earlier component versions. The new release derives their keys and locates their state.
 
 River keeps one registry per component. Each is a TOML file, oldest version first. The current key comes from the Wasm in the bundle, so the registry lists only earlier versions.
 
@@ -53,14 +53,14 @@ River keeps one registry per component. Each is a TOML file, oldest version firs
 | 3. Probe | App | When the new release [first starts](#purpose), work out each old key from the entry's code hash and the room's exact parameter bytes, then probe newest first. For "Skate club" the parameters are `ChatRoomParametersV1 { owner }` with Alice's verifying key. Keep those bytes unchanged, because re-encoded parameters produce a different key. Core answers a probe of an unregistered delegate key with a typed `DelegateError::Missing` ([#5729](https://github.com/freenet/freenet-core/pull/5729)), so the app can tell "not registered" apart from "no answer". |
 | 4. Carry forward | App | Move the state the probe finds into the new contract. freenet-migrate's `migrate_contract` runs steps 3 and 4, as Atlas's CLI does. Harvest runs the same steps through freenet-migrate's `ProbeDriver`. The app's [walk policy](#walk-policies) decides whether the new contract gets the newest copy or all copies merged. Delegate secrets move as in [Delegate secret export and import](#delegate-secret-export-and-import). |
 
-Two kinds of entry need their own handling:
+Handle these registry cases:
 
-- In a row marked `irregular_key = true`, the key doesn't match BLAKE3 of the code hash. The app probes the recorded `delegate_key`. River's V1 chat delegate is the only such row.
-- River's delegate registry has no V4 to V6 rows, because messages from those delegates don't deserialize in the current runtime ([river#204](https://github.com/freenet/river/issues/204)). Users whose data sits only under those keys rejoin their rooms by invite. Registry fixtures include this gap.
+- For `irregular_key = true`, probe the recorded `delegate_key` in place of the BLAKE3-derived key. River's V1 chat delegate uses this entry.
+- Users with data only in River delegate versions V4 to V6 rejoin their rooms by invite. The registry covers versions whose messages the current runtime can deserialize ([river#204](https://github.com/freenet/river/issues/204)). Include V4 to V6 recovery in the registry fixtures.
 
 #### Walk policies
 
-Each app names the policy its migration walk uses. Under the default policies, a predecessor that doesn't answer stops the walk.
+Declare each app's migration walk policy. The default policies stop at an unresponsive predecessor.
 
 | Policy | Part | What the walk does | Trade-off | Used by |
 | --- | --- | --- | --- | --- |
@@ -72,7 +72,7 @@ Each app names the policy its migration walk uses. Under the default policies, a
 
 ### Delegate secret export and import
 
-Apps move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River, Delta and Harvest do. It reads each predecessor through the app's own messages, writes through the successor's own handler, and marks each migrated pair done after verification. EVY uses its `ExportRecords` and `ImportRecords` adapters through the proposed Swift and Kotlin interface in [C13 in Upstream issues](../UPSTREAM_ISSUES.md#c13-expose-application-driven-delegate-migration-to-mobile-hosts). The SDK builds against the compatible Core, stdlib and freenet-migrate dependency set required by [M1 in Upstream issues](../UPSTREAM_ISSUES.md#m1-release-freenet-migrate-on-the-freenet-stdlib-that-core-pins).
+Move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River, Delta and Harvest do. Read through each predecessor's messages and write through the successor's handler. Mark the pair complete after verification. EVY uses its `ExportRecords` and `ImportRecords` adapters through the proposed Swift and Kotlin interface in [C13 in Upstream issues](../UPSTREAM_ISSUES.md#c13-expose-application-driven-delegate-migration-to-mobile-hosts). The SDK builds against the compatible Core, stdlib and freenet-migrate dependency set required by [M1 in Upstream issues](../UPSTREAM_ISSUES.md#m1-release-freenet-migrate-on-the-freenet-stdlib-that-core-pins).
 
 Core-assisted migration is a future improvement tracked under [RFC #5255 in Upstream issues](../UPSTREAM_ISSUES.md#future-core-migration-work). Adoption will include tests for delegate provenance, secret transfer and preservation of the app's records.
 
@@ -86,18 +86,18 @@ For River the call moves the entries in the chat delegate's key index:
 | `rooms_meta` | Her current room, notification settings and room order | `ROOMS_META_KEY` in the same file, `RoomsMeta` in `room_data.rs` |
 | `outbound_dms` | Her outbound DMs | `OUTBOUND_DMS_STORAGE_KEY` in [common/src/chat_delegate.rs](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs#L15) |
 
-River re-keys its chat delegate roughly weekly. The chat delegate also holds entries outside the key index, and the migration doesn't move them:
+River re-keys its chat delegate roughly weekly. Rebuild entries outside the migration key index on startup:
 
 - `signing_key:` entries. River stores Alice's signing key again from `room:<owner key>` at start, with `signing::migrate_signing_key` in [ui/src/signing.rs](https://github.com/freenet/river/blob/main/ui/src/signing.rs).
 - `room_sub:`, `room_members:` and `room_secret:` caches. The new delegate fills them again after River sends `EnsureRoomSubscription` for each room Alice owns ([subscription.rs](https://github.com/freenet/river/blob/main/delegates/chat-delegate/src/subscription.rs)).
 
-Secrets pass through the app in plain text during the move, so the app's privacy notes say so. Backup packaging and restore belong to [1.5 Identity, keys and local protection](05-identity.md).
+Disclose in the app's privacy notes that secrets pass through application code as plaintext during migration. Backup packaging and restore belong to [1.5 Identity, keys and local protection](05-identity.md).
 
-We track [#4909](https://github.com/freenet/freenet-core/issues/4909). When a predecessor holds a corrupt blob, the pair never seals, so each start copies again and brings back secrets the user deleted. Registry fixtures include a predecessor with a corrupt blob.
+Include a predecessor with a corrupt blob in the registry fixtures ([#4909](https://github.com/freenet/freenet-core/issues/4909)). Verify that completion waits for a valid migration and that retries preserve the user's deletions.
 
 ### Retiring the old version
 
-River copies every room into each of its 27 delegate generations. A hosted node counts a user's secrets across every delegate that holds them, and one user's copies filled the 4 MiB per-user quota ([river#586](https://github.com/freenet/river/issues/586)). Each old delegate also stays registered, so it keeps getting `NodeStarted` runs and wake-ups ([#5747](https://github.com/freenet/freenet-core/pull/5747) review item S8).
+Reclaim predecessor copies to stay within the hosted node's 4 MiB per-user quota. Test River's 27 delegate generations as the workload ([river#586](https://github.com/freenet/river/issues/586)). Unregister each retired delegate to stop its `NodeStarted` runs and wake-ups ([#5747](https://github.com/freenet/freenet-core/pull/5747) review item S8).
 
 Once a migration completes, the app retires each old delegate version in this order:
 
@@ -109,15 +109,15 @@ Once a migration completes, the app retires each old delegate version in this or
 
 ### Pointer records
 
-A pointer record lets other apps find a component's current code hash after its key changes. It is a contract at a fixed address, signed by the publisher ([#5194](https://github.com/freenet/freenet-core/issues/5194), built in [freenet-migrate#9](https://github.com/freenet/freenet-migrate/pull/9)). River publishes `river.room-contract` and `river.chat-delegate` and re-signs them whenever either component changes key ([pointer-records.toml](https://github.com/freenet/river/blob/main/pointer-records.toml)). River's CI runs `check-pointer-freshness`. Its checks that no record vanishes and that versions only rise don't run in `--ci` mode ([river#677](https://github.com/freenet/river/issues/677)).
+A pointer record lets other apps find a component's current code hash after its key changes. It is a contract at a fixed address, signed by the publisher ([#5194](https://github.com/freenet/freenet-core/issues/5194), built in [freenet-migrate#9](https://github.com/freenet/freenet-migrate/pull/9)). River publishes `river.room-contract` and `river.chat-delegate` and re-signs them whenever either component changes key ([pointer-records.toml](https://github.com/freenet/river/blob/main/pointer-records.toml)). Run `check-pointer-freshness` in CI and enforce both record retention and increasing versions in `--ci` mode ([river#677](https://github.com/freenet/river/issues/677)).
 
-An app that uses River's chat delegate resolves `river.chat-delegate` with `resolve_app_pointer` and saves the returned floor, so an older record can't roll the key back. Only the `NeverPublished` outcome lets the app use a key built into its code ([freenet-migrate#33](https://github.com/freenet/freenet-migrate/issues/33)). A pointer only finds code ([river#695](https://github.com/freenet/river/issues/695)). Data under the old key still moves through the app's own migration.
+Resolve `river.chat-delegate` with `resolve_app_pointer` and save the returned version floor to reject rollback. Only the `NeverPublished` outcome lets the app use a key built into its code ([freenet-migrate#33](https://github.com/freenet/freenet-migrate/issues/33)). Use the pointer to find code ([river#695](https://github.com/freenet/river/issues/695)). Migrate data under the predecessor key through the app's own adapters.
 
 ## Acceptance
 
 - Shared fixtures derive identical keys on all supported hosts, including empty parameters and recorded irregular keys. CI requires registry coverage for changed Wasm.
 - River's room contract and chat delegate migrations run on iOS and Android and keep Alice's "Skate club" room and keys, including across skipped versions.
-- A test migrates from a real old River chat delegate Wasm under Pulley on iOS and Android ([river#630](https://github.com/freenet/river/issues/630)).
+- A test migrates from a real predecessor River chat delegate Wasm under Pulley on iOS and Android ([river#630](https://github.com/freenet/river/issues/630)).
 - On iOS and Android, a fresh installation containing only the latest app restores each supported predecessor generation from a backup, registers its bundled Wasm and exact parameters, and migrates its secrets to the current delegate.
 - An interrupted or failed migration keeps the predecessor's data, and the next start runs it again. The app shows its migrating state while the migration runs.
 - After a completed migration on iOS and Android, River has reclaimed the old copies, the old chat delegate key is unregistered, and the old key gets no further wake-ups.
