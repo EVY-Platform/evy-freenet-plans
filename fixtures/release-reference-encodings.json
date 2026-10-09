@@ -1,0 +1,22 @@
+{
+  "fixture_kind": "encoding-only/1",
+  "test_seed_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "publisher_key_base58": "FAe4sisG95oZ42w7buUn5qEE4TAnfTTFPiguZUHmhiF",
+  "signing_domain_utf8": "evy.ui/1",
+  "unsigned_canonical_utf8": "{\"service\":\"evy\",\"version\":1}",
+  "signature_base64": "H16M/sdLuuwbSuNpbeJscxMi79HfJjO7MqQWHkmL/A1ArGnoRmB0z2n+qJJhHXx+3jofF4Dtu/FI+qkortINBg==",
+  "complete_signed_bytes_utf8": "{\"service\":\"evy\",\"signature\":\"H16M/sdLuuwbSuNpbeJscxMi79HfJjO7MqQWHkmL/A1ArGnoRmB0z2n+qJJhHXx+3jofF4Dtu/FI+qkortINBg==\",\"version\":1}",
+  "state_hash_hex": "9cff90eea68d35da0a9e06f0b627b6cc8342fcd248361291cd0dec92582f792a",
+  "application_content_ref": {
+    "format": "evy-ui/1",
+    "application_key": "7AWybYjMDx4et5rR2YVLwAXGzf6hq9A3eLzcMzkgPdqR",
+    "version": 1,
+    "digest": "BZrdEy9bFxPuuhnbUe7LmMccU9WwSzpeVVLYaJqv2wQd"
+  },
+  "purchase_identity": {
+    "application_key": "7AWybYjMDx4et5rR2YVLwAXGzf6hq9A3eLzcMzkgPdqR",
+    "ui_version": 1,
+    "ui_digest": "BZrdEy9bFxPuuhnbUe7LmMccU9WwSzpeVVLYaJqv2wQd"
+  },
+  "sha256_signed_bytes_base58": "4dRxCJjGsR9QKL3xMRpf26VUybSCKTNtMedRjftitzfC"
+}

@@ -4,16 +4,14 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Stripe customers in `services/payment`; saved cards in the iOS and Android payment sheet. A bitcoin payment record in the purchase contract |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Stripe customers in `services/payment`; saved cards in the iOS and Android payment sheet. |
 | [stripe-ios](https://github.com/stripe/stripe-ios), [stripe-android](https://github.com/stripe/stripe-android) | Used | Payment sheet with saved cards |
-| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) | Used | Bitcoin payment evidence |
-| [harvest](https://github.com/freenet/harvest) | Used | Bitcoin payment proof in orders |
 
 ## Purpose
 
-This plan is an idea note for saved cards and bitcoin payments. [Paying on a phone in 2.6 Payments](../2-evy-on-freenet/06-payments.md#paying-on-a-phone) has Bob enter his card for each purchase. His EVY delegate key identifies him across services, so those services could share a saved card.
+This plan is an idea note for saved cards. [Paying on a phone in 2.6 Payments](../2-evy-on-freenet/06-payments.md#paying-on-a-phone) has Bob enter his card for each purchase. A dedicated user payment key can authenticate his Stripe Customer inside EVY for the features he enables.
 
-Saving a card during payment on iOS and Android requires three additions to EVY's [PaymentIntent creation](https://github.com/EVY-Platform/evy/blob/dev/api/src/procedures/stripeGateway.ts):
+Saving a card during payment on iOS and Android requires three additions to EVY's [PaymentIntent creation](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/procedures/stripeGateway.ts):
 
 - Name a Stripe Customer.
 - Pass a CustomerSession client secret to the payment sheet.
@@ -21,7 +19,17 @@ Saving a card during payment on iOS and Android requires three additions to EVY'
 
 Stripe's [save-during-payment flow](https://docs.stripe.com/payments/mobile/save-during-payment) then shows the saved cards in the payment sheet.
 
-Bitcoin payments could use [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin). Its bridge publishes SPV payment evidence for peers to check. Harvest embeds this evidence in each order and lets the seller name trusted bridges ([payment.rs](https://github.com/freenet/harvest/blob/main/common/src/payment.rs)).
+### Customer identity
+
+A reusable customer profile lets Bob use a saved card across selected features; consent explains the resulting link between those purchases. Define profile recovery and revocation alongside that consent, and verify them with iOS and Android identity/recovery fixtures.
+
+When Bob opts in, the EVY delegate creates a random Ed25519 payment-customer key and stores it under `payments/customer/<profile_id>`. The payment service associates its public key with Bob's Stripe Customer. The delegate's `DelegateKey` identifies the code and parameter namespace that holds this secret; the customer key identifies Bob to the payment service. Feature and purchase-scoped keys retain their roles from [The EVY delegate in 2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#the-evy-delegate).
+
+The implementation plan defines `profile_id` as a random UUID created once at opt-in, with one active customer profile per EVY identity. The delegate owns its customer key and consent feature list; the payment backend maps `(application_key, profile_id, customer_public_key)` to one Stripe Customer and verifies key possession before restoring access. Backups and sync preserve the ID, key and consent version. Rotation preserves that association through signed old-to-new proof; revocation and remote cleanup name the same profile. Additional profiles require an explicit product decision and migration/consent fixtures.
+
+A request carries a short-lived payment-service challenge, audience, requested operation, EVY application identity, originating feature and purchase context. The delegate checks the trusted caller, Bob's enabled EVY features and the verified purchase context, then signs with the customer key. The payment service verifies that signature and separately verifies the purchase's buyer authorization before returning customer-session access. Repeated or expired challenges follow the service's idempotency and expiry rules.
+
+The opt-in screen explains that the payment service can link purchases using this customer profile across the selected EVY features. Bob controls that feature list. The feature extends `ExportRecords` and `ImportRecords`, manual backup, [3.1 Automated backup](01-backup.md) and [3.2 Device sync](02-sync.md) to preserve the customer key and feature choices. Key rotation requires a signed old-to-new association or an explicit account-recovery process; the implementation plan defines how that process verifies Bob and retires the previous key.
 
 ## When this becomes a plan
 
@@ -29,15 +37,10 @@ Work starts when buyers ask EVY to save a card. For example, Bob may want to reu
 
 | Need | What the plan must decide |
 | --- | --- |
-| Bob buys again and expects his card | Which EVY key identifies Bob's Stripe Customer in `services/payment`. The EVY delegate signs each request with Bob's key as proof of identity |
-| Bob removes a card or forgets EVY | How EVY detaches the card in Stripe and deletes the Customer after the last key association is removed |
-| Bob restores on a new phone or links his tablet | How [3.1 Automated backup](01-backup.md) and [3.2 Device sync](02-sync.md) restore the EVY key that identifies his Customer |
-| Bob pays Alice in bitcoin | How EVY collects the 1% contributor fee of 0.70 dollars in a bitcoin purchase, and which bridges the purchase contract trusts |
+| Bob buys again and expects his card | A customer-key challenge proves access to his profile, and purchase-scoped authorization proves permission for this payment. Tests cover substituted customers, application identity, features and purchase contexts |
+| Bob removes a card or forgets EVY | Define detaching a Stripe payment method, closing the customer profile and local Forget as distinct actions. Record remote cleanup acknowledgements and retry pending cleanup before reporting it complete |
+| Bob restores on a new phone or links his tablet | Preserve the customer key and consent records through manual backup, [3.1 Automated backup](01-backup.md) and [3.2 Device sync](02-sync.md); verify that the same profile returns after restore and that retired customer keys fail authentication |
 
 ## Sources
 
-| Source | Relevant design |
-| --- | --- |
-| [Stripe: save payment details during an in-app payment](https://docs.stripe.com/payments/mobile/save-during-payment) | Customer, CustomerSession client secret and `setup_future_usage` for the iOS and Android payment sheet |
-| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin), [#27](https://github.com/freenet/freenet-bitcoin/issues/27) and [delegated watch keys #30](https://github.com/freenet/freenet-bitcoin/pull/30) | Bridge-signed payment claims with SPV evidence. Real-chain anchoring is required before using these proofs for payments. A background process can ask the bridge to watch an address |
-| [Harvest payment.rs](https://github.com/freenet/harvest/blob/main/common/src/payment.rs) | Bitcoin payment proof embedded in each order, checked against the bridges the seller names |
+- [Stripe: save payment details during an in-app payment](https://docs.stripe.com/payments/mobile/save-during-payment): Customer, CustomerSession client secret and `setup_future_usage` for the iOS and Android payment sheet

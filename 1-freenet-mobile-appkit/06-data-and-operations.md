@@ -16,11 +16,11 @@ Save River's drafts and pending signed messages, record when read responses arri
 Bob types "Skate session Saturday?" in the "Skate club" room:
 
 1. River saves his draft and confirms when storage finishes.
-2. Bob taps send. River reads the room, [signs the message locally](https://github.com/freenet/river/blob/main/ui/src/signing.rs) and submits it. Alongside the send, River saves the signed message for a possible retry.
+2. Bob taps send. River reads the room, [signs the message locally](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/signing.rs) and submits it. Alongside the send, River saves the signed message for a possible retry.
 3. After Core saves the room, River checks that its state contains the message.
 4. After an interruption, River recovers the last acknowledged draft or pending message. Reconnect tests check that an independent peer receives the message.
 
-Test River's web UI and a native SDK fixture on iOS and Android after outages, restarts and release changes.
+Test River's web UI through its direct WebSocket session adapter and a native SDK fixture on iOS and Android after outages, restarts and release changes. Both use the [application transport adapter in 1.2 Embedded node and mobile SDK](02-sdk.md#application-connections).
 
 | Deliverable | Section |
 | --- | --- |
@@ -35,7 +35,7 @@ Test River's web UI and a native SDK fixture on iOS and Android after outages, r
 | --- | --- |
 | River | Read the room, sign the message, save recovery records and show the result |
 | Host | Check River's session, permission and room target, and route private replies |
-| SDK | Pass requests to Core and match each reply to its request |
+| Application transport adapter | Queue requests and match replies to the current connection under [1.2 Embedded node and mobile SDK](02-sdk.md#application-connections). The host supplies caller authority. |
 | Chat delegate | Store the draft and pending message, and check who may read or change them |
 | Room contract | Check the signature and merge the message into room state |
 
@@ -44,7 +44,7 @@ SDK operations and host checks follow [1.2 Embedded node and mobile SDK](02-sdk.
 ```mermaid
 sequenceDiagram
     participant River
-    participant Core as Core through host and SDK
+    participant Core as Core through the application connection
     participant Delegate as Chat delegate
     River->>Core: Read room
     Core-->>River: Room state
@@ -75,13 +75,13 @@ Core and stdlib supply delegate messaging. This plan tests River's existing invi
 
 ### Alice invites Carol
 
-Alice invites Carol to "Skate club" through River's [chat delegate](https://github.com/freenet/river/blob/main/common/src/chat_delegate.rs):
+Alice invites Carol to "Skate club" through River's [chat delegate](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/common/src/chat_delegate.rs):
 
 1. River sends Carol's membership details, the room key and a request ID to the delegate.
 2. The delegate returns a 64-byte signature with the same request ID.
-3. River checks the signature against Alice's public key and combines it with Carol's membership details into a [signed membership record](https://github.com/freenet/river/blob/main/common/src/room_state/member.rs).
+3. River checks the signature against Alice's public key and combines it with Carol's membership details into a [signed membership record](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/common/src/room_state/member.rs).
 
-The test verifies the delegate's signature, then tests River's [local signing fallback](https://github.com/freenet/river/blob/main/ui/src/signing.rs) after a failed call or signature check. River defines its message format and signs chat messages in its own code.
+The test verifies the delegate's signature, then tests River's [local signing fallback](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/signing.rs) after a failed call or signature check. River defines its message format and signs chat messages in its own code.
 
 ### Work supplied by other plans
 
@@ -96,7 +96,7 @@ The test verifies the delegate's signature, then tests River's [local signing fa
 | Test | Required result |
 | --- | --- |
 | Message compatibility | Exact request and reply bytes, request IDs, signing inputs and error strings match River's format. A separate test checks its existing `SignMessage` request |
-| Invalid messages | Changed content under a reused request ID, unknown handles, malformed replies and values outside number or size limits produce errors. Include oversized results and delegate context under the release's [stdlib limits](https://github.com/freenet/freenet-stdlib/blob/main/rust/src/delegate_interface.rs) |
+| Invalid messages | Changed content under a reused request ID, unknown handles, malformed replies and values outside number or size limits produce errors. Include oversized results and delegate context under the release's [stdlib limits](https://github.com/freenet/freenet-stdlib/blob/fca0848b78b12942f77422309bb07f76108940d6/rust/src/delegate_interface.rs) |
 | Failed calls | Missing signing keys, unsupported requests and delegate errors reach the app as defined errors |
 | Caller permissions | The host checks the app, user, installation, permission and session under 1.3 Single-application host. The delegate checks Core's caller identity and any required proof. Forged claims such as "I am Alice" produce errors |
 | Private replies | Replies reach authorized sessions. The host discards replies for expired sessions |
@@ -129,27 +129,44 @@ The mobile API records when Bob's phone receives the room state and passes that 
 
 ### Bob's saved draft
 
-River adds the draft and pending-message storage described in [UPSTREAM_ISSUES.md](../UPSTREAM_ISSUES.md#r4-save-drafts-and-pending-signed-messages-in-the-chat-delegate):
+River maintainers approve the draft and pending-message protocol before its publisher/mobile integration. Saving drafts and exact signed messages in the chat delegate lets Bob resume after an app restart or background node stop. River delivery requires the agreed record format, export/migration coverage and iOS and Android recovery fixtures.
+
+File a River issue to retain drafts and exact pending signed messages in the chat delegate across app restarts and background node stops. Keep signing in the page. Save alongside the send because delegate calls queue behind contract merges ([river#512](https://github.com/freenet/river/issues/512)).
+
+Implementation references: [River CAS requests #345](https://github.com/freenet/river/issues/345) and [Mail's per-device drafts delegate #56](https://github.com/freenet/mail/pull/56).
 
 | Work | Required result |
 | --- | --- |
 | Save each draft under a small separate key | Typing updates the draft record independently of the room record |
-| Reuse River's versioned reads and compare-and-swap writes | Two screens or a background run editing the same draft detect a conflicting save ([river#347](https://github.com/freenet/river/pull/347)) |
-| Batch edits and flush on pause or backgrounding | River marks a save complete after storage acknowledges it. Reopening restores the last acknowledged draft |
-| Save the exact signed message beside the send | Reopening can retry the saved bytes under [Sending updates](#sending-updates) |
-| Set limits on record count and size | River enforces its own local-store limits and reports a failed save when a limit or storage capacity is reached ([#5560](https://github.com/freenet/freenet-core/issues/5560)) |
-| Keep every saved record discoverable | Limits account for other records in the same scope and the 4,096-key listing limit ([store.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/wasm_runtime/secrets_store/store.rs)) |
-| Include draft and pending-message keys in River's export and migration index | Backup, restore and release migration preserve these new records through [1.5 Identity, keys and local protection](05-identity.md) and [1.7 Upgrades and migration](07-migration.md) |
+| Use `GetVersionedRequest` and `CasStoreRequest` | Two screens or a background run editing the same draft detect a conflicting save ([river#347](https://github.com/freenet/river/pull/347)) |
+| Batch edits and flush on pause or backgrounding | Mark a save complete after storage acknowledges it. Reopening restores the last acknowledged draft |
+| Save the exact signed message alongside the send | Reopening can retry the saved bytes through [Sending updates](#sending-updates) |
+| Set limits on record count and size | Enforce River's local-store limits and report a failed save when a limit or storage capacity is reached ([#5560](https://github.com/freenet/freenet-core/issues/5560)) |
+| Keep every saved record discoverable | Account for other records in the same scope and the 4,096-key listing limit ([store.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/secrets_store/store.rs)) |
+| Include draft and pending-message keys in River's export and migration index | Backup, restore and release migration preserve these records through [1.5 Identity, keys and local protection](05-identity.md) and [1.7 Upgrades and migration](07-migration.md) |
 
 ### Core retention and offline delivery
 
-Core retains contract state and sends it to peers. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while the room state remains in Core's store. Storage tests fill the hosting budget and record which room copies the pinned Core build retains or evicts.
+Core maintainers decide the pinning, persistence and demand-restoration approaches in #5041, #4651 and #4785 before those feature PRs. The changes support recovery when demand eviction removes a contract or every mobile node is stopped. Stronger retention and delivery claims require the approved implementation and eviction/restart evidence; the release fixtures below test the declared hosting budget.
 
-Durable offline delivery across contract eviction belongs to separate Core work. Follow [bounded local contract retention #5041](https://github.com/freenet/freenet-core/issues/5041), the [storage design question #4651](https://github.com/freenet/freenet-core/issues/4651) and [restart demand recovery #4785](https://github.com/freenet/freenet-core/issues/4785). [UPSTREAM_ISSUES.md](../UPSTREAM_ISSUES.md#core-retention-and-delivery-research) records the requirements and status. This plan adopts stronger retention and delivery guarantees when they ship in Core.
+Core stores contract state and sends it to peers. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while Core retains the room state. Storage tests fill the pinned Core build's hosting budget and record which room copies it retains or evicts.
+
+Core work will address offline delivery after contract eviction. Reconnect tests for milestone 1 (Freenet mobile AppKit) and milestone 2 (EVY on Freenet) retain room state within the pinned Core build's hosting budget. Both milestones and [3.2 Device sync](../3-optional-extensions/02-sync.md#traffic-and-lifecycle) will adopt stronger Core retention and delivery guarantees when released, including data availability while all linked mobile nodes are stopped.
+
+| Thread | Scope | Status checked 2026-10-07 |
+| --- | --- | --- |
+| [#5041 Bounded local contract pin](https://github.com/freenet/freenet-core/issues/5041) | Quota-bounded API to keep selected contracts on the user's node through normal demand eviction | Open design proposal with an exploratory fork; awaiting approach approval |
+| [#4651 Contract storage design](https://github.com/freenet/freenet-core/issues/4651) | Evaluates on-disk persistence and a targeted backstop for newly published contracts until a second replica exists | Open design question |
+| [#4785 Persist hosting demand across restart](https://github.com/freenet/freenet-core/issues/4785) | Restores live subscriptions for contracts with prior client demand after a node restart | Open follow-up proposal |
+| [#3465 PUT propagation reliability](https://github.com/freenet/freenet-core/issues/3465) | Tracks locally applied PUTs whose reported results or remote propagation are unreliable | Open; assigned to iduartgomez |
+| [#3611 PUT forwarding acknowledgements and retries](https://github.com/freenet/freenet-core/pull/3611) | Adds hop-level forwarding acknowledgements and retries for in-flight PUT operations | Merged 2026-03-21 |
+| [#5515 Repair dropped broadcast UPDATEs](https://github.com/freenet/freenet-core/pull/5515) | Adds resynchronization for rate-limited broadcasts; [#5527](https://github.com/freenet/freenet-core/issues/5527) tracks repair latency when a throttle window suppresses another request | Merged 2026-09-02; latency follow-up open |
+
+Evaluate future Core releases for local retention, subscription recovery and in-flight retries. A successful client PUT confirms local persistence. Network propagation continues asynchronously, as [#3626](https://github.com/freenet/freenet-core/pull/3626) specifies.
 
 ## Sending updates
 
-This plan adds interrupted-send recovery on iOS and Android. River saves the draft and signed message alongside its existing send, under [Save drafts and pending signed messages in the chat delegate](../UPSTREAM_ISSUES.md#r4-save-drafts-and-pending-signed-messages-in-the-chat-delegate).
+This plan adds interrupted-send recovery on iOS and Android. River saves the draft and signed message alongside its existing send, as [Bob's saved draft](#bobs-saved-draft) specifies.
 
 Track saves, local room state and delivery independently:
 
@@ -159,7 +176,7 @@ Track saves, local room state and delivery independently:
 | Core stores the update, then River reads the message in the phone's room state | The message in the locally stored room, while Core keeps that room hosted |
 | An independent peer reads the message | Evidence that the message reached another node |
 
-Test Core's response timing with forwarding to a peer blocked. Core must answer after saving locally and let River read the saved message. Adjust Core if the release fails this check on its [forwarding path](https://github.com/freenet/freenet-core/blob/main/crates/core/src/operations/update/op_ctx_task.rs).
+Test Core's response timing with forwarding to a peer blocked. Core must answer after saving locally and let River read the saved message. Adjust Core if the release fails this check on its [forwarding path](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/operations/update/op_ctx_task.rs).
 
 | What happens to Bob's send | Required result |
 | --- | --- |
@@ -167,7 +184,7 @@ Test Core's response timing with forwarding to a peer blocked. Core must answer 
 | River starts without signal, before the node's first join | Keep the saved draft and test the first-join path from [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). An independent peer reads the message after joining |
 | River stops after the message reaches the locally stored room | With the room state retained within Core's hosting budget, River reads it back after restart and checks that a peer receives it after reconnecting |
 | River stops before the send result arrives | River checks the room and retries any saved signed message with the same bytes. An interrupted save leaves the last acknowledged draft save |
-| The same signed message arrives twice | The room contains one copy. River's message ID derives from its signature ([message.rs](https://github.com/freenet/river/blob/main/common/src/room_state/message.rs)) |
+| The same signed message arrives twice | The room contains one copy. River's message ID derives from its signature ([message.rs](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/common/src/room_state/message.rs)) |
 | Validation or storage fails | River keeps the recoverable draft and shows the error returned through [1.2 Embedded node and mobile SDK](02-sdk.md#typed-errors) |
 
 Test the save completion, version checks and cleanup order in [How a send works](#how-a-send-works).
@@ -176,16 +193,16 @@ Test the save completion, version checks and cleanup order in [How a send works]
 
 - Subscribe to each room Bob uses. Restore client subscriptions on every start and reconnect. Test River's reconnect flow, which submits the saved room with `Put { subscribe: true }` and resumes sends after the PUT reply ([river#561](https://github.com/freenet/river/issues/561), [#4785](https://github.com/freenet/freenet-core/issues/4785)). Room retention follows the storage budget in [1.2 Embedded node and mobile SDK](02-sdk.md#storage).
 - Read a room absent from the node before updating it. If Core returns `NotFound`, keep the draft and report the room unavailable. An owner with a saved copy uses [Lost network state](#lost-network-state). Test this first-send case ([#5724](https://github.com/freenet/freenet-core/issues/5724), [Harvest's first-message fix](https://github.com/freenet/harvest/pull/126)).
-- Test the selected first-join path from [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). Core builds with [local updates before the first join](../UPSTREAM_ISSUES.md#c2-accept-local-updates-and-subscriptions-before-the-first-join) must save the message before joining and share it on join. Releases using the SDK queue must keep acknowledged drafts and submit queued sends on join.
+- Test the selected first-join path from [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). Core builds with [Local operations before the first join in 1.2 Embedded node and mobile SDK](02-sdk.md#local-operations-before-the-first-join) must save the message before joining and share it on join. Releases using the SDK queue must keep acknowledged drafts and submit queued sends on join.
 - After reopening or release activation, read saved drafts and pending messages from the delegate and read each room from the node. Confirm recovery after those reads complete.
 
-Test reconnect delivery through Core's [state comparison](https://github.com/freenet/freenet-core/blob/main/crates/core/src/ring/interest.rs). Cellular traffic follows [1.8 Thin-peer role and cellular data budgets](08-thin-peer.md); update rate limits follow [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm).
+Test reconnect delivery through Core's [state comparison](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/ring/interest.rs). Cellular traffic follows [1.8 Thin-peer protocol](08-thin-peer.md); update rate limits follow [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm).
 
 ### Conflicting changes
 
 | Change | Work in this plan |
 | --- | --- |
-| Alice edits the room settings on her phone and laptop | Test the [higher-version winner](https://github.com/freenet/river/blob/main/common/src/room_state/configuration.rs) and tell Alice when her edit was overridden. Acceptance of equal-version edits depends on the upstream convergence fix in [river#703](https://github.com/freenet/river/issues/703) |
+| Alice edits the room settings on her phone and laptop | Test the [higher-version winner](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/common/src/room_state/configuration.rs) and tell Alice when her edit was overridden. Acceptance of equal-version edits depends on the upstream convergence fix in [river#703](https://github.com/freenet/river/issues/703) |
 | A ban changes the room secret while Bob has a draft | Keep the draft. River checks Bob's current membership and the room secret before deciding whether to sign it again and send it |
 | Peers merge changes in different orders or receive duplicates | Run `fdev verify-merge` and test actual room states after those deliveries. Check the verification report for inconclusive results ([#5725](https://github.com/freenet/freenet-core/issues/5725)) |
 
@@ -198,13 +215,13 @@ Test River's recovery flow when remote peers lose a room and Alice's phone still
 3. River submits Alice's saved copy to the same room contract.
 4. An independent peer reads the restored room. Record the recovery time.
 
-River requests owner-room subscriptions through `EnsureRoomSubscription` ([river#235](https://github.com/freenet/river/pull/235), [river#276](https://github.com/freenet/river/pull/276)). Core supplies [network interest](https://github.com/freenet/freenet-core/pull/5615) and [subscription restoration after restart](https://github.com/freenet/freenet-core/pull/5728). River's [re-PUT handler](https://github.com/freenet/river/blob/main/ui/src/components/app/freenet_api/response_handler/subscribe_response.rs) waits 20 seconds before submitting the saved copy. Use the controlled test setup to establish remote loss. The 20-second wait is a retry delay.
+River requests owner-room subscriptions through `EnsureRoomSubscription` ([river#235](https://github.com/freenet/river/pull/235), [river#276](https://github.com/freenet/river/pull/276)). Core supplies [network interest](https://github.com/freenet/freenet-core/pull/5615) and [subscription restoration after restart](https://github.com/freenet/freenet-core/pull/5728). River's [re-PUT handler](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/components/app/freenet_api/response_handler/subscribe_response.rs) waits 20 seconds before submitting the saved copy. Use the controlled test setup to establish remote loss. The 20-second wait is a retry delay.
 
 | Condition | Required check |
 | --- | --- |
-| Owner-room subscription | Confirm acceptance, restoration after restart and hosting behavior on the selected Core version. Track the remaining subscription work in [#4669](https://github.com/freenet/freenet-core/issues/4669) and acknowledgement work in [#5565](https://github.com/freenet/freenet-core/issues/5565) |
+| Owner-room subscription | Verify that delegate subscriptions register hosting demand while the node runs and restore subscriptions after restart on the selected Core version. Track this work in [#4669](https://github.com/freenet/freenet-core/issues/4669) and acknowledgement work in [#5565](https://github.com/freenet/freenet-core/issues/5565) |
 | Delegate subscription limit | Exercise the 256-subscription cap and eviction of the least recently notified room. Check River's resubscription on start and reconnect ([#5623](https://github.com/freenet/freenet-core/pull/5623), [#5622](https://github.com/freenet/freenet-core/issues/5622)) |
-| Room lookup fails | River's UI owns the recovery decision and uses its client subscription result. Test missing-room and failed-lookup cases because the delegate GET reports both as `None` ([stdlib #131](https://github.com/freenet/freenet-stdlib/issues/131)) |
+| Room lookup fails | River's UI uses the client subscription result to decide how to recover. Test missing rooms and failed lookups; delegate GET returns `None` for both ([stdlib #131](https://github.com/freenet/freenet-stdlib/issues/131)) |
 | A room above 1 MiB, sent through NAT | Require an independent peer to read the restored room. Resolve any failure before accepting this case ([#5643](https://github.com/freenet/freenet-core/issues/5643)) |
 | Hosting and retry timing | Measure room retention and recovery time on the release build, within the mobile storage budget. Use those results to choose River's retry timing ([D5310](https://github.com/freenet/freenet-core/discussions/5310)) |
 
@@ -225,4 +242,4 @@ Run these scenarios with River's real code, room contract and chat delegate on t
 | Permission is revoked, the device locks or a session expires | The host enforces [1.3 Single-application host](03-host.md) and [1.5 Identity, keys and local protection](05-identity.md). Saved drafts remain protected. Forged identities fail, and calls between delegates, private replies and Core-started runs use only their verified authority |
 | Remote room copies disappear while Alice retains hers | The [isolated recovery test](#lost-network-state) restores the same room contract and an independent peer reads it, including a room above 1 MiB through NAT |
 | A release activates or changes delegate versions | Drafts and pending signed messages survive activation and the record migration in [1.7 Upgrades and migration](07-migration.md). Incompatible versions and message formats report defined errors with recoverable drafts |
-| A backup is restored | Drafts and pending signed messages return through [1.5 Identity, keys and local protection](05-identity.md#restore), and each room refreshes from the network |
+| A backup is restored | Drafts and pending signed messages return through [1.10 Backup and restore](10-backup-and-restore.md#restore), and each room refreshes from the network |

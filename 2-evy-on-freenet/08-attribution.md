@@ -4,137 +4,139 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution` and the EVY GitHub App. EVY Developer (`web/`) from [2.5 EVY Developer on Freenet](05-developer.md) gains contributor screens, proposal mode and review screens. `services/payment` takes the fee rate from the service policy. UI proposal contract in `freenet/contracts/ui_proposal/`. Contributor keys and new messages in the EVY Developer delegate |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Node for the attribution service, delegate secret backup |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `services/attribution` and the EVY GitHub App. Local EVY Developer (`web/`) and `evyctl` from [2.5 EVY authoring and publishing](05-developer.md) gain proposal/review file workflows and protected contributor credentials. `services/payment` uses the EVY application policy. One application UI proposal contract lives in `freenet/contracts/ui_proposal/` |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Node for the attribution backend and application proposal records |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | TypeScript client for the attribution service |
 
 ## Purpose
 
-The attribution service credits accepted UI proposals from EVY Developer and code merged into `evy`. Each acceptance earns units for a service capability. Implement `services/attribution` in evy with TypeScript on Bun and Postgres, following [`services/marketplace`](https://github.com/EVY-Platform/evy/blob/dev/services/marketplace/package.json).
+The attribution service credits accepted UI proposals from EVY Developer and code merged into `evy`. Each acceptance earns units for an EVY feature capability. Implement `services/attribution` in evy with TypeScript on Bun and Postgres, following [`services/marketplace`](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/package.json).
 
-- Carol moves the "Listing dimensions" row of Marketplace's "Create item" flow from the "Create listing" page to the "Describe item" page ([service_sdui.json](https://github.com/EVY-Platform/evy/blob/dev/scripts/fixtures/services/service_sdui.json)). The service publisher publishes her proposal as Marketplace UI version 2, and Carol earns 6.8 units for `marketplace.item.create`.
+- Carol moves the "Listing dimensions" row of Marketplace's "Create item" flow from the "Create listing" page to the "Describe item" page ([service_sdui.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/services/service_sdui.json)). The EVY publisher publishes her proposal as EVY application UI version 8, and Carol earns 6.8 units for `marketplace.item.create`.
 - Dan opens a pull request to evy that makes Marketplace's contract accept a pickup request only at a time Alice offered. It merges, and Dan earns 4.25 units for `marketplace.item.buy`.
+
+The transaction's originating feature and retained EVY application UI document and matching attribution snapshot select its capability contribution pool. Accepted UI work and verified merged code add cumulative units to that pool; the units measure accepted feature contributions under the retained policy. A merge becomes eligible for the attribution snapshot of the next published UI document under the rules below.
 
 Units decide each contributor's part of the 1% contributor fee that [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts) collects on each sale.
 
 ## Contributor keys
 
-Carol's contributor key is an Ed25519 key in the EVY Developer delegate on her own node, from [The EVY Developer bundle in 2.5 EVY Developer on Freenet](05-developer.md#the-evy-developer-bundle). The page asks the delegate to sign; the private key stays in the delegate. A web app in Core's shell reaches only its own node ([client_api.rs](https://github.com/freenet/freenet-core/blob/main/crates/core/src/server/client_api.rs)) and can open new tabs ([#5100](https://github.com/freenet/freenet-core/pull/5100)), so EVY Developer sends each signed statement to the attribution service by opening the service's contributor page in a new tab.
+Carol keeps an Ed25519 contributor key in her protected local author workspace under [2.5 EVY authoring and publishing](05-developer.md#publisher-workspace). `evyctl` signs contributor operations; the editor exchanges public documents and draft files with the CLI.
 
-| Action | In EVY Developer | At the attribution service |
+| Action | Local author tool | Attribution backend |
 | --- | --- | --- |
-| Register | Carol clicks "Create contributor key". The new `ContributorKey` message creates the key, and `SignContribution` signs a registration statement | Checks the signature and creates an `ActorId` for the key |
-| Link GitHub | Carol signs in with GitHub on the contributor page. Only code work needs it | Stores her GitHub user ID with her `ActorId` |
-| Rotate | Carol clicks "Rotate key". `RotateContributorKey` creates a new key and signs a statement with the old key that names the new one | Moves her `ActorId`, roles and units to the new key |
-| Back up | Carol runs Core's [`freenet secrets export`](https://github.com/freenet/freenet-core/blob/main/docs/secrets-at-rest.md), which writes her node's delegate secrets to a file encrypted with her passphrase | Nothing |
+| Register | Create a contributor key and sign its registration statement. | Verify and assign an `ActorId`. |
+| Link GitHub | Complete GitHub sign-in at the declared contributor endpoint. | Bind the GitHub user ID to that `ActorId`. |
+| Rotate | Sign an old-to-new key statement using the existing key. | Preserve roles and units under the same `ActorId`. |
+| Back up | Export encrypted contributor credentials and drafts; the publisher separately backs up its key and publication journal. | Retain its acknowledged contribution records. |
 
-`SignContribution { kind, record }` also signs proposals, reviews, size estimates, challenges and sign-in statements. `SignServiceRecord { service, kind, record }` signs a policy, acceptance or publication confirmation with the publisher key, after the author confirms in Core's prompt, as `SignUiVersion` does.
+Sign proposals, reviews, estimates, challenges and sign-in statements with operation-specific domains. Publisher policy, acceptance and publication confirmations use the EVY publisher key. [Backend requests in 2.5 EVY authoring and publishing](05-developer.md#backend-requests) validates the endpoint, audience, challenge, expiry and signed response.
 
-| Carol's situation | What the attribution service does |
+| Recovery | Backend result |
 | --- | --- |
-| She restores her backup file | Nothing. The key and `ActorId` are unchanged |
-| She lost the key and the backup | She creates a new key and signs in with her linked GitHub account. The service links the new key to her `ActorId` after a 7-day hold. A signature from the old key during the hold cancels the link |
-| She lost the key, the backup and the GitHub account | The new key gets a new `ActorId`. Her earlier units stay with the old one |
+| Restore the contributor-key backup | Preserve the key and `ActorId`. |
+| Recover through linked GitHub after key loss | Apply a 7-day replacement hold; a valid old-key objection cancels replacement. |
+| Register a new identity after loss of all recovery credentials | Assign a new `ActorId`; retain earlier units against their recorded identity. |
 
-## Service policy
+## Service setup
 
-Each EVY service has a UI proposal contract, built from `freenet/contracts/ui_proposal/` in evy. Its parameters are those of the service's UI contract in [The UI contract in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-contract): the service publisher's verifying key and the service ID. Its state holds the service policy, registered contributor keys, open UI proposals, review records and attribution snapshots.
+Install contributor/proposal state and attribution signing custody after the base release archive in [2.13 Release archive and policy evidence](13-release-archive-and-policy-evidence.md) passes its setup/recovery gate. The first attributed policy authorizes explicit attribution and archive roles. Use the archive and backup configuration in [Operating the services in 2.14 Backend operations and recovery](14-backend-operations-and-recovery.md#operating-the-services) at this stage. Test durable receipt issuance and restore of acknowledged bytes before accepting contributed UI publication. The payment deployment from [Service setup in 2.6 Payments](06-payments.md#service-setup) runs independently; remuneration adds its ledger after archive recovery passes.
 
-The EVY Developer bundle gains its Wasm as `evy.ui_proposal`, and `types/freenet/contract-keys.json` gains its code hash under `code.ui_proposal`. EVY Developer derives each service's UI proposal contract key from it, as it derives UI contract keys in [The home service in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-home-service).
+## Application policy
 
-The service publisher signs each policy version in EVY Developer with `SignServiceRecord`. For Marketplace the key is the EVY publisher key from [The EVY publisher key in 2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key). Policy version 1 PUTs the contract. Setup archives the service's current signed UI document and confirms its readback before enabling attribution-backed publication and payouts.
+Record feature/capability pools, role shares and merged-code eligibility in the retained policy. Contributors can then reproduce why their work receives units and which purchases use those units.
 
-- The contract keeps the highest policy version signed by the key in its parameters.
+The signed EVY policy extends [Financial policy identity in 2.6 Payments](06-payments.md#financial-policy-identity). Existing policies retain their exact bytes/digests; attribution fields produce a higher application policy version.
+
+Build one EVY UI proposal contract in `freenet/contracts/ui_proposal/` with the EVY publisher's verifying key and UTF-8 `evy` parameters. It holds the application policy, registered contributor keys, proposals, reviews and attribution snapshots. Pin its full identity and code in `types/freenet/contract-keys.json`. The local publisher tool verifies that identity before writes.
+
+The EVY publisher signs each policy and complete application UI publication through `evyctl`. Setup archives the current complete signed EVY document and confirms independent readback before attribution-backed publication and payouts. Capabilities identify internal features and their flow IDs. Each capability entry records its `feature`; allocation selects that feature's eligible capabilities and normalizes their policy weights.
+
+- The contract keeps the higher `(policy_version, policy_digest)` signed by the key in its parameters, using the canonical encoding and byte ordering in [Financial policy identity in 2.6 Payments](06-payments.md#financial-policy-identity). Every referenced policy remains in the archive.
 - Each record is signed over its own prefix, such as `evy.ui-proposal/1`, and its RFC 8785 canonical JSON, as hello states are.
 - A new version applies to work accepted after it, and each acceptance records the version it used.
-- The payment service takes the fee rate from the service policy's `fee_rate_bp`, 100 basis points (1%) for Marketplace, and checks each purchase's `fee_cents` against it, rounded half up as in [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts). A service with no policy, such as `hello`, keeps the 1% fee of 2.6 Payments.
+- Each attributed UI document names `policy_version` and `policy_digest` for its immutable signed policy. The archive and snapshot verify that identity. The payment service checks the purchase's fee against its retained policy, rounded half up under [Financial policy identity in 2.6 Payments](06-payments.md#financial-policy-identity). New policy versions apply to new purchases created from documents naming them; existing purchases retain their agreed policy. Marketplace purchases use the retained EVY policy and their originating feature.
 
 ```jsonc
 {
-  "service": "marketplace",                              // EVY service ID, as in its UI contract
-  "version": 1,                                          // a new number for every change
+  "service": "evy",                                      // fixed EVY application namespace
+  "policy_version": 2,                                   // extends the EVY application financial policy
+  "reservation_grace_seconds": 3600,                   // release checks start one hour after agreed pickup end
   "fee_rate_bp": 100,                                    // contributor fee on each sale: 1%, so 0.70 of 70 dollars
   "capabilities": {                                      // credited behavior, by capability ID
-    "marketplace.item.create": {                         // "Create item": "Create listing" to "Payment options"
-      "weight_bp": 4000,                                 // 40% of each fee. All weights total 10,000
+    "marketplace.item.create": {                         // internal EVY feature capability
+      "feature": "marketplace",
+      "weight_bp": 4000,                                 // 40% of each fee. Weights total 10,000 for this feature
       "flows": ["ca47e6c5-da19-4491-8422-adb40d9e8a27"]  // flow IDs in the UI document
     },
-    "marketplace.item.buy": {                            // "View Item": pickup request to "Item received"
+    "marketplace.item.buy": {                            // internal EVY feature capability
+      "feature": "marketplace",
       "weight_bp": 6000,                                 // 60% of each fee
       "flows": ["74a49d4b-2176-4925-857a-e29e2991f1bd"]  // flow IDs in the UI document
     }
   },
   "sizes": [1, 2, 3, 5, 8, 13, 21],                      // the sizes a piece of work can have
   "role_split_bp": [8500, 1000, 500],                    // units to contributors, reviewer and validators
-  "reviewers": ["actor:..."],                            // ActorIds that review for the service publisher
+  "reviewers": ["actor:..."],                            // ActorIds that review for the EVY publisher
   "validators": ["actor:..."],                           // ActorIds that size work
   "attribution_key": "ed25519:...",                      // attribution service key: snapshots and registered keys
-  "archive_url": "https://attribution.example/ui-archive", // HTTPS archive page and API, signed with the policy
+  "archive_url": "https://attribution.example/ui-archive", // signed HTTPS archive endpoint
+  "contributor_url": "https://attribution.example/contributor", // signed contributor statement endpoint
+  "payouts_url": "https://remuneration.example/payouts",     // signed earnings and sign-in endpoint
   "challenge_days": 30,                                  // days after acceptance to open a challenge
   "payout_hold_days": 30,                                // days after a purchase is sold before a share is payable
-  "payout_minimum_cents": "...",                         // set by the service publisher before launch
-  "payout_schedule": "...",                              // set by the service publisher before launch
-  "signature": "ed25519:..."                             // by the service publisher key
+  "payout_minimum_cents": "...",                         // set by the EVY publisher before launch
+  "payout_schedule": "...",                              // set by the EVY publisher before launch
+  "signature": "<canonical padded base64 Ed25519 signature>"                             // by the EVY publisher key
 }
 ```
 
-## Archiving before publication
-
-For a service using attribution, `evyctl ui publish` and EVY Developer archive each signed UI document before its PUT or UPDATE. The service policy supplies the HTTPS `archive_url` and `attribution_key`. The archive identity is the UI contract key, service, version and `ui_digest`: the 32-byte BLAKE3 hash of the exact complete signed bytes sent as contract state. The publisher saves those bytes and the receipt for retries.
-
-| Step | Required behavior |
-| --- | --- |
-| 1. Submit | The publisher supplies the signed document and its UI contract identity. EVY Developer uses the archive service page in a separate tab; `evyctl` calls the archive API. |
-| 2. Check | The attribution service checks the publisher signature against the UI contract's parameters, the service, version, document validation and size cap, then computes the digest itself. |
-| 3. Save | Create a receipt signed with `attribution_key` under `evy.ui-archive/1`, covering the UI contract key, service, version, digest and policy version. Save an immutable copy of the exact signed document bytes, receipt and archive manifest in the second-region S3-compatible bucket from [Operating the services in 2.9 Remuneration and payouts](09-remuneration.md#operating-the-services), then commit the archive index and receipt in Postgres. |
-| 4. Acknowledge | Return the saved receipt after the bucket objects and database commit are durable. A repeated submission returns the same receipt. |
-| 5. Publish | The publisher verifies the receipt against the signed policy and pending document identity, sends those same bytes to Freenet, and performs the publishing tool's readback check. |
-| 6. Confirm | The publisher signs a publication confirmation containing the archive identity and readback evidence. The attribution service verifies it, saves it with the immutable archive evidence and records the version as published. This confirmation can be retried after an interruption. |
-
-An acknowledged archive entry is prepared for publication. UI acceptance and snapshots use entries with verified publisher publication confirmation. UI proposal acceptance records name the same version and digest. The service can process that confirmation and create a snapshot from the archived bytes after later versions replace the live UI document. Each snapshot names the service, version and digest, and the archive retains its signed snapshot with the publication evidence.
-
-Archive failure keeps publication pending until a valid durable receipt is available. Identical retries keep one archive entry; different signed documents retain separate digest identities. The immutable copies cover acknowledged documents and signed snapshots within the database's recovery window. Recovery verifies and reindexes these copies before resuming attribution or payout calculations.
+The policy example is a schema template. Published fixtures supply all required base fields, exact canonical signatures and encoded digests under [2.6 Payments](06-payments.md#financial-policy-identity) and [2.13 Release archive and policy evidence](13-release-archive-and-policy-evidence.md).
 
 ## Proposing a UI change
 
 ```mermaid
 flowchart LR
-    Carol[Carol in EVY Developer] -->|signed UI proposal| Prop[Marketplace UI proposal contract]
+    Carol[Carol in EVY Developer] -->|signed UI proposal| Prop[EVY application proposal contract]
     Val[Validator] -->|size estimate| Prop
-    Pub[Service publisher in EVY Developer] -->|review and acceptance| Prop
+    Pub[EVY publisher in EVY Developer] -->|review and acceptance| Prop
     Pub -->|signed bytes before publication| Archive[Durable UI archive]
     Archive -->|signed receipt| Pub
-    Pub -->|UI version 2| UI[Marketplace UI contract]
+    Pub -->|UI version 8| UI[EVY application UI contract]
     Prop --> Attr[Attribution service]
     Pub -->|publication confirmation| Attr
-    Archive -->|version 2 bytes| Attr
-    Attr -->|snapshot for version 2| Prop
+    Archive -->|version 8 bytes| Attr
+    Attr -->|snapshot for version 8| Prop
 ```
 
 | Step | Who | Rule |
 | --- | --- | --- |
-| 1. Draft | Carol | Opens Marketplace as [Opening a service in 2.5 EVY Developer on Freenet](05-developer.md#opening-a-service) describes. Without the publisher key, EVY Developer opens it in proposal mode. Carol edits a draft and uses Propose. She moves the "Listing dimensions" row to the "Describe item" page |
-| 2. Preview | Carol | Checks the change on the EVY test build on iOS and Android, as [Previewing on a phone in 2.5 EVY Developer on Freenet](05-developer.md#previewing-on-a-phone) describes |
-| 3. Propose | Carol | Picks `marketplace.item.create` and size 8. EVY Developer assembles and validates the document as [Publishing from EVY Developer in 2.5 EVY Developer on Freenet](05-developer.md#publishing-from-evy-developer) does. `SignContribution` signs the complete changed flows (here "Create item", about 17 KB), base version 1, capability IDs, contributor shares totaling 10,000 and size 8. EVY Developer sends it as an UPDATE<br>Returns the signed UI proposal |
-| 4. Size | Validator | Signs a size estimate in EVY Developer |
-| 5. Review | Service publisher | A reviewer from the policy opens the proposal beside version 1, previews it on iOS and Android and signs an approval. A rejection closes the proposal |
-| 6. Publish | Service publisher | Builds the next document from the live version with the proposal's flows in place, archives its signed bytes and waits for the receipt, then publishes Marketplace UI version 2 and confirms readback, as [Publishing a UI version in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#publishing-a-ui-version) describes. Signs an acceptance record naming the proposal, version 2 and the document's digest |
-| 7. Link | Attribution service | Uses version 2's archived bytes, verifies the publication confirmation and acceptance digest, and records the acceptance<br>Records Carol's acceptance and units |
+| 1. Draft | Carol | Opens the Marketplace flow in the complete EVY document as [Opening the application in 2.5 EVY authoring and publishing](05-developer.md#opening-the-application) describes. Without the publisher key, EVY Developer opens it in proposal mode. Carol edits a draft and uses Propose. She moves the "Listing dimensions" row to the "Describe item" page |
+| 2. Preview | Carol | Checks the change on the EVY test build on iOS and Android, as [Previewing on a phone in 2.5 EVY authoring and publishing](05-developer.md#previewing-on-a-phone) describes |
+| 3. Propose | Carol | Picks `marketplace.item.create` and size 8. EVY Developer assembles and validates the document as [Publishing the application in 2.5 EVY authoring and publishing](05-developer.md#publishing-the-application) does. The local contributor signer signs under `evy.ui-proposal/1`, covering the EVY application key, source feature and the complete changed flows (here "Create item", about 17 KB), base version 7, capability IDs, contributor shares totaling 10,000 and size 8. `evyctl` signs the exported proposal file with Carol's protected local key and submits it as an UPDATE<br>Returns the signed UI proposal |
+| 4. Size | Validator | Exports a size estimate from EVY Developer and signs/submits it through `evyctl` |
+| 5. Review | EVY publisher | A reviewer from the policy opens the proposal beside version 7, previews it on iOS and Android and signs/submits an approval through `evyctl`. A rejection closes the proposal |
+| 6. Publish | EVY publisher | Builds the next complete EVY document from the live version with the proposal's approved flows in place, archives its signed bytes and waits for the receipt, then publishes EVY application UI version 8 and confirms readback, as [Publishing a UI version in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#publishing-a-ui-version) describes. Signs an acceptance record naming the proposal, version 8 and the document's digest |
+| 7. Link | Attribution service | Uses version 8's archived bytes, verifies the publication confirmation and acceptance digest, and records the acceptance<br>Records Carol's acceptance and units |
 
 - The contract caps its state at 512 KiB, as the UI contract does. It accepts a proposal only from a registered contributor key, with one open proposal per key. The attribution service writes the registered keys, signed with `attribution_key`.
-- It accepts an acceptance record only when the service publisher key signed it, and a [snapshot](#attribution-units) only when `attribution_key` signed it.
+- It accepts an acceptance record only when the EVY publisher key signed it, and a [snapshot](#attribution-units) only when `attribution_key` signed it.
 - A closed proposal keeps its record and drops its flows. The attribution service keeps their bytes.
 - The attribution service accepts the work only when the reviewer and validators are on the policy's lists, nobody reviews or sizes their own proposal, the size is in `sizes`, shares total 10,000, every changed flow belongs to a claimed capability and no challenge is open.
 
 ### Capacity follow-up
 
-The service's UI proposal contract keeps its 512 KiB state limit. Contributor registrations, proposal and review records, policy history and snapshots share that budget. An update that exceeds the limit leaves the accepted contract state intact; EVY Developer and the attribution service retain the draft or pending signed record and report the capacity limit.
+Bounded active state keeps new proposals usable while archived evidence supports historical challenges and payouts. Capacity and recovery fixtures verify the active-record model, checkpoint signatures and pruning rules below.
 
-Long-term attribution storage is a planned follow-up. That work will define how the service accommodates growing contribution history and snapshots while preserving verifiable evidence for challenges and historical payouts. The storage structure and migration rules remain open questions for that work.
+Owner: EVY attribution lead. Start before enabling attributed publication for production. Dependency: release capacity gate; bootstrap and bounded proposal fixtures establish interfaces earlier.
+
+Keep the 512 KiB proposal-contract bound. Define active registrations, proposals, reviews and challenges separately from immutable archived history. A publisher/service-signed checkpoint commits contributor registrations, authority generation, active records and archived-history digests. Pruning follows durable archive receipts and a verified checkpoint; historical acceptance, challenge and payout evidence stays addressable.
+
+Completion evidence: growing-history fixtures, checkpoint/pruning interruption, concurrent registration/challenge recovery, retained authorization and historical payout reproduction. At capacity, preserve signed pending records and report the required action. Codec or contract identity changes pass exact build admission and migration fixtures on iOS and Android.
 
 ## Code contributions
 
-Code reaches attribution through the EVY GitHub App, served by `services/attribution` and installed on `evy`. Dan's pull request description names the service, the capability and the size:
+Code reaches attribution through the EVY GitHub App, served by `services/attribution` and installed on `evy`. Dan's pull request description names the internal EVY feature, capability and size. The existing `EVY-Service` field carries that feature namespace:
 
 ```text
 EVY-Service: marketplace
@@ -149,7 +151,7 @@ EVY-Size: 5
 | 3. Size | Validator | Comments `/evy size 5` from a linked account on the `validators` list |
 | 4. Confirm eligibility | Attribution service | Validates the review, size, contributor shares and policy. Saves an eligibility record for the exact head commit and contribution metadata, and marks the check passed<br>Records eligibility to merge |
 | 5. Merge | Maintainer | Merges the eligible head into the configured evy target branch. GitHub branch protection requires the passed check for that head |
-| 6. Accept merged work | Attribution service | Verifies the merge through GitHub's API, matches the merged PR's head to the eligible head and checks the contribution against the policy in force at acceptance. Commits the acceptance and units together, recording repository ID, PR number, reviewed head, merge commit, merge time and acceptance time<br>Records Dan's acceptance and units for the first Marketplace UI version published after this verified acceptance |
+| 6. Accept merged work | Attribution service | Verifies the merge through GitHub's API, matches the merged PR's head to the eligible head and checks the contribution against the policy in force at acceptance. Commits the acceptance and units together, recording repository ID, PR number, reviewed head, merge commit, merge time and acceptance time<br>Records Dan's acceptance and units for the first EVY application UI version published after this verified acceptance |
 
 - The author holds all contributor shares. Shared work lists each contributor's share in the description, and each listed contributor confirms with a `/evy confirm` comment from their linked account.
 - Reviews, size estimates and share confirmations are bound to the eligible head and contribution metadata. A new commit or a change to that metadata sets the check back to pending until the approvals cover the new values.
@@ -168,11 +170,11 @@ The attribution service splits each accepted size by the policy's `role_split_bp
 | Carol's UI proposal | `marketplace.item.create` | 8 | Carol 6.8 (68,000) | 0.8 (8,000) | 0.4 (4,000) |
 | Dan's pull request | `marketplace.item.buy` | 5 | Dan 4.25 (42,500) | 0.5 (5,000) | 0.25 (2,500) |
 
-For each published UI document identity, the attribution service signs a snapshot with `attribution_key`, saves its immutable bucket copy, then writes it to the service's UI proposal contract and makes it available to remuneration. EVY Developer shows Carol her units and anyone can check them.
+For each published UI document identity, the attribution service signs an attribution snapshot with `attribution_key`, saves its immutable bucket copy, then writes it to the EVY application UI proposal contract and makes it available to remuneration. EVY Developer shows Carol her units and anyone can check them.
 
-- A snapshot identifies the archived service, UI version and document digest. It lists the units per capability and `ActorId` of every acceptance that counts in that version, and the policy version in force when the version was published.
+- A snapshot identifies the archived EVY application key, UI version and document digest. It lists the units per capability and `ActorId` of every acceptance that counts in that version, and the exact policy version and digest named by that UI document.
 - A UI proposal counts from the version that published it. A pull request counts from the first UI version published after its merge is verified and its acceptance is committed. Snapshots take units from committed acceptances.
-- Signed snapshots are immutable. Marketplace version 2's snapshot includes Carol's UI proposal and Dan's pull request. Dan's merge verification and acceptance committed before version 2. A delayed merge verification contributes to a later version's snapshot.
+- Signed snapshots are immutable. EVY application version 8's Marketplace snapshot includes Carol's UI proposal and Dan's pull request. Dan's merge verification and acceptance committed before version 8. A delayed merge verification contributes to a later version's snapshot.
 
 | Challenge | Opened by | Resolved when |
 | --- | --- | --- |
@@ -182,18 +184,28 @@ For each published UI document identity, the attribution service signs a snapsho
 
 A challenge on a UI proposal is a signed record in the UI proposal contract. A challenge on a pull request is a `/evy challenge` comment from a linked account. An open challenge blocks acceptance. A challenge within `challenge_days` after acceptance marks the acceptance as challenged. A resolution that changes shares or size creates a new acceptance, which counts from the next UI version's snapshot. Older snapshots keep their units.
 
+## Attribution snapshot recovery
+
+Signed attribution snapshots remain immutable. On suspected key compromise, freeze new snapshot/payout use, retain every original snapshot and policy, and classify trust using the publisher-signed recovery record in [2.14 Backend operations and recovery](14-backend-operations-and-recovery.md#signing-key-recovery).
+
+A replacement snapshot has a new identity and names the original digest, recovery record and independently reconstructed acceptance evidence. Preserve original units and historical allocation links; resolve an affected snapshot only through an explicit trusted replacement association. New policy versions authorize replacement signing roles. Fixtures verify cutoff decisions, invalid replacement signatures and recovery of already allocated purchases.
+
 ## Acceptance
 
-- Carol registers and rotates her key in EVY Developer, and the private key stays in the EVY Developer delegate. A rotation signed by the old key keeps her `ActorId`. A GitHub recovery links a new key after the 7-day hold, and an old-key signature during the hold cancels it.
-- The UI proposal contract refuses a policy with a lower version or another signer, a proposal from an unregistered key, a second open proposal from one key, a state over 512 KiB, an acceptance not signed by the service publisher key and a snapshot not signed by `attribution_key`.
+- Before attributed publication is enabled, restore the archive database/index and immutable bucket objects and verify every acknowledged receipt. The service issues a receipt only after both stores are durable.
+- A policy change between purchase creation and payment preserves the earlier purchase's signed policy digest and snapshot. Archive receipts and snapshots with substituted policy identities fail validation.
+- A verified merged contribution enters the next eligible application UI document's feature capability pool. The snapshot records that contribution policy explicitly, including when a customer's reader or contract build predates the merge.
+
+- Carol registers and rotates her key through `evyctl`; the private key stays in her protected local contributor workspace. A rotation signed by the old key keeps her `ActorId`. A GitHub recovery links a new key after the 7-day hold, and an old-key signature during the hold cancels it.
+- The UI proposal contract refuses a policy with a lower version or another signer, a proposal from an unregistered key, a second open proposal from one key, a state over 512 KiB, an acceptance not signed by the EVY publisher key and a snapshot not signed by `attribution_key`.
 - The attribution service refuses self-review, self-sizing, reviewers and validators missing from the policy, sizes outside `sizes`, share totals other than 10,000 and a proposal that changes a flow outside its capabilities.
-- On iOS and Android, the Marketplace "Create item" flow shows "Listing dimensions" on the "Describe item" page after the service publisher publishes Carol's proposal as version 2.
+- On iOS and Android, the Marketplace "Create item" flow shows "Listing dimensions" on the "Describe item" page after the EVY publisher publishes Carol's proposal as version 8.
 - Dan's pull request stays pending until the review and size arrive. A changed head or contribution metadata renews the eligibility checks, and GitHub blocks the merge until they pass. A pull request with no EVY lines merges with the check passed.
 - An approved PR awaiting merge and a PR closed without merging each retain zero attribution units. A verified merge of the eligible head creates one initial acceptance and the units in the table. Merge, squash and rebase fixtures preserve both the reviewed head and resulting merge commit.
 - Duplicate and reordered merge events, two racing workers and a service restart produce the same initial acceptance and units. A merge with a head that differs from the eligibility record stays pending attribution until valid checks cover that head.
-- Publish a UI version while Dan's PR is eligible and awaiting merge, then merge and verify it. His units appear in the first UI version published after the acceptance commits. A delayed merge verification uses a later snapshot and preserves existing signed snapshots.
-- Marketplace version 2's snapshot holds exactly the units in the table, recomputing it from stored acceptances reproduces it, and units always sum to the accepted size.
-- Publish versions 2 and 3 rapidly while snapshot processing is paused. Each receives a durable archive receipt before its Freenet update. After processing resumes, version 2's archived bytes and publication evidence reproduce its acceptance and signed snapshot even when the live contract holds version 3.
+- Publish a UI version while Dan's PR is eligible and awaiting merge, then merge and verify it. His units appear in the first UI version published after the acceptance commits. A delayed merge verification uses a later snapshot and preserves existing signed attribution snapshots.
+- EVY application version 8's Marketplace snapshot holds exactly the units in the table, recomputing it from stored acceptances reproduces it, and units always sum to the accepted size.
+- Publish versions 8 and 9 rapidly while snapshot processing is paused. Each receives a durable archive receipt before its Freenet update. After processing resumes, version 8's archived bytes and publication evidence reproduce its acceptance and signed attribution snapshot even when the live contract holds version 9.
 - Archive outages, invalid receipts, interrupted publication and retries preserve the exact pending signed bytes. Prepared entries become snapshot sources after verified publication confirmation. Digest, signature or contract-identity mismatches fail validation.
-- Restore the attribution database to a point before an acknowledged archive write. Recover its document, receipt, publication evidence and signed snapshot from the immutable bucket copies, verify their identities and signatures, and rebuild the archive index before remuneration resumes.
-- An open challenge blocks acceptance. A resolution after version 2 changes only the snapshots of later versions.
+- Restore the attribution database to a point before an acknowledged archive write. Recover its document, receipt, publication evidence and signed attribution snapshot from the immutable bucket copies, verify their identities and signatures, and rebuild the archive index before remuneration resumes.
+- An open challenge blocks acceptance. A resolution after version 8 changes only the snapshots of later versions.
