@@ -6,7 +6,7 @@ Research Bitcoin payments for EVY physical-goods purchases. Owner: EVY payments 
 
 ## When this becomes a plan
 
-Define custody, trusted bridges, confirmations, refunds and contributor-fee handling. Relevant Freenet maintainers agree changes to Bitcoin bridge/proof interfaces before their feature PRs. Verifiable payment evidence gives peers a defined way to establish settlement and respond to chain reorganizations. Release requires the agreed evidence model and matching iOS and Android payment/recovery fixtures.
+Define custody, trusted bridges, confirmations, refunds and contributor-fee handling. Verifiable payment evidence gives peers a defined way to establish settlement and respond to chain reorganizations. Release requires the evidence model and matching iOS and Android payment/recovery fixtures.
 
 Bitcoin has a separate start decision: buyers or sellers request it, and EVY selects a supported custody and payment-evidence model. Its implementation can proceed independently of saved cards.
 

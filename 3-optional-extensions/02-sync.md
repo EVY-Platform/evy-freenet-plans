@@ -27,7 +27,7 @@ The EVY delegate follows the sync design proposed in [RFC #5587](https://github.
 - Records live as ciphertext in sync contracts. Two concurrent writes stay as two values until the EVY delegate resolves them.
 - The stable `evy` namespace and versioned record envelopes provide the compatibility boundary between supported EVY builds.
 
-The EVY delegate compiles sync code as a library using Core's existing one-way delegate messages. This plan proposes the protocol below for RFC #5587. Implementation starts after protocol agreement, security review and assignment of a named owner. The proposed work includes host and delegate integration for device credentials.
+The EVY delegate compiles sync code as a library using Core's existing one-way delegate messages. This plan proposes the protocol below for RFC #5587. The proposed work includes host and delegate integration for device credentials.
 
 ## Membership and authority
 
@@ -53,7 +53,7 @@ Conflicting signed manifests with the same predecessor or ordering position prod
 
 ### Linking a device
 
-Pairing uses Core's rendezvous proposal ([#992](https://github.com/freenet/freenet-core/issues/992)) as prior art. The protocol and its test vectors are reviewed with RFC #5587.
+Pairing uses Core's rendezvous proposal ([#992](https://github.com/freenet/freenet-core/issues/992)) as prior art.
 
 | Step | Who | What happens |
 | --- | --- | --- |
@@ -119,11 +119,11 @@ The EVY delegate applies these merge rules:
 
 ## What Core still needs
 
-Core maintainers agree #5587's protocol and approve the trusted device-signing/seed-unwrapping interfaces before their feature PRs. The EVY identity owner records security review and implementation ownership. Member-specific credentials support device removal and seed rotation while keeping routine application keys in the delegate; this optional feature releases after the agreed Core scope and iOS and Android pairing, revocation and recovery fixtures pass.
+Member-specific credentials support device removal and seed rotation while keeping routine application keys in the delegate; this optional feature releases after the Core implementation and iOS and Android pairing, revocation and recovery fixtures pass.
 
 | Need | Issue |
 | --- | --- |
-| Agree the sync protocol, complete security review and name an owner. Cover the membership, recovery and mixed-version rules above, including host signing and seed-unwrapping calls with Swift and Kotlin bindings | [RFC #5587](https://github.com/freenet/freenet-core/issues/5587) |
+| Implement the membership, recovery and mixed-version rules above, including host signing and seed-unwrapping calls with Swift bindings for iOS and Kotlin bindings for Android | [RFC #5587](https://github.com/freenet/freenet-core/issues/5587) |
 | Delegate UPDATE reaches contracts beyond the local store. GET and SUBSCRIBE reach the network ([#5615](https://github.com/freenet/freenet-core/pull/5615)). The EVY delegate reads a sync contract before its first UPDATE | [#5542](https://github.com/freenet/freenet-core/issues/5542) |
 | Delegate subscriptions register hosting demand while the node runs and restore subscriptions when it restarts | [#4669](https://github.com/freenet/freenet-core/issues/4669) |
 | Delegate GET distinguishes a missing sync contract from a failed lookup. Create fresh groups with a new random group ID. For an existing group with a missing contract, recover a retained copy or explicitly create a new group | [stdlib #131](https://github.com/freenet/freenet-stdlib/issues/131) |

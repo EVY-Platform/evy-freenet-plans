@@ -105,15 +105,13 @@ Include a predecessor with a corrupt blob in the registry fixtures ([#4909](http
 
 ### Compatible migration library
 
-Freenet migration-library maintainers agree the compatible release; Core maintainers approve its mobile integration. A tested dependency set lets the mobile runner read predecessor messages and preserve identity keys. Library compatibility and the integrated runner are release requirements for supported upgrades and restores.
+Library compatibility and the integrated runner are release requirements for supported upgrades and restores.
 
 File a freenet-migrate issue to release a version compatible with Core's pinned freenet-stdlib, 0.12.1. Build the selected Core, stdlib and freenet-migrate versions together in the mobile SDK and run migration fixtures on that exact dependency set before release. This library release precedes the mobile migration interface below.
 
 Sources: [Cargo.toml](https://github.com/freenet/freenet-migrate/blob/74aed27eaec8a4347b47fa2665ea511d2fd14175/freenet-migrate/Cargo.toml), [stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136) and [stdlib #137](https://github.com/freenet/freenet-stdlib/pull/137).
 
 ### Mobile migration interface
-
-Core maintainers approve the mobile runner, namespace authorization and lifecycle fencing before its feature PR. The interface lets iOS and Android run the same migration adapters and verify successor records before opening a session.
 
 File a Core issue for `crates/mobile` to run freenet-migrate's `migrate_delegate_secrets` in Rust and expose it to Swift and Kotlin. The app supplies its predecessor registry, walk policy and export, import and verification adapters. Before migration, the host checks the owning application and its declared delegate namespaces under [Application data inventory in 1.5 Identity, keys and local protection](05-identity.md#application-data-inventory).
 
@@ -138,8 +136,6 @@ After verification, the app follows [Retiring the old version](#retiring-the-old
 iOS and Android fixtures cover normal upgrades, skipped supported generations, interruption, failed imports, successor readback and rejection of records outside the application inventory. [2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#updating-the-evy-delegate) supplies EVY fixtures preserving `root_seed`, derived public keys, addresses and exact pending signed operations.
 
 ### Core-assisted migration
-
-Core maintainers decide author-bound provenance and successor transfer under #5255. Adoption is a separate gate: it requires an implemented protocol and the provenance, secret-transfer and record-preservation fixtures below. Supported releases use the application-driven migration path defined in this plan.
 
 Evaluate [Core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) after Core implements and tests author-bound delegate provenance and Core-mediated secret transfer to a successor. Adoption tests verify provenance, secret deposit and preservation of application records. EVY uses [application-driven migration](#delegate-secret-export-and-import).
 

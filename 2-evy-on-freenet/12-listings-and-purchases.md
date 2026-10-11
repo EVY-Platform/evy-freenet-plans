@@ -10,7 +10,7 @@
 
 Define Marketplace listings, purchases, participant messages, admission and one-sale reservations. [2.6 Payments](06-payments.md) supplies Stripe integration, financial policy and payment evidence. [2.7 EVY Marketplace](07-marketplace.md) supplies production flows, moderation and pilot hosting.
 
-Owner: EVY commerce lead. Agree contract and payment interfaces before implementing either service path.
+Owner: EVY commerce lead.
 
 ## The purchase contract
 

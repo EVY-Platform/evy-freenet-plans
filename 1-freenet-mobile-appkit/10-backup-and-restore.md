@@ -26,7 +26,7 @@ Generate 32 random bytes and encode them as 52 uppercase RFC 4648 base32 charact
 
 ### Optional passkey recovery
 
-Core maintainers and the AppKit recovery lead agree the wrapping method and #5764 integration before enabling this option. It gives users a passkey-based way to recover the same backup master key. Admission requires the iOS and Android interoperability and trusted-context fixtures below.
+Passkey wrapping gives users a way to recover the same backup master key. Admission requires the iOS and Android interoperability and trusted-context fixtures below.
 
 Owner: AppKit recovery lead. Track [Core #5764](https://github.com/freenet/freenet-core/issues/5764), checked 2026-10-09, as optional interoperability work. Trusted recovery UI uses a dedicated top-level loopback context at `http://localhost:<recovery-port>`, RP ID `localhost`, separate from River’s `127.0.0.1` application context. Only the recovery coordinator opens it; validate origin, challenge, RP ID and current recovery generation.
 
@@ -34,7 +34,7 @@ Matching native iOS and Android interfaces expose `CreateRecoveryCredential` and
 
 ### The backup file
 
-Core maintainers approve the versioned FNSX application payload, sealing interface and executable-inclusive export/import scope under #4035 before feature PRs. A fresh installation needs the exact delegate artifacts as well as its records to restore supported predecessors. The authenticated manifest binds code, secrets and host records to one snapshot; the codec and supported-generation fixtures are release requirements.
+A fresh installation needs the exact delegate artifacts as well as its records to restore supported predecessors. The authenticated manifest binds code, secrets and host records to one snapshot; the codec and supported-generation fixtures are release requirements.
 
 ```text
 River backup file
@@ -71,7 +71,7 @@ Implement the executable backup export and import proposed in [#4035](https://gi
 
 ### Export
 
-Core maintainers approve the snapshot barrier and capture/cancellation interface before its feature PR. Capturing delegate and host records together preserves writes already acknowledged to Alice and keeps identity, drafts and pending signatures consistent. Export acceptance requires the approved implementation and interruption/concurrent-write fixtures on iOS and Android.
+Capturing delegate and host records together preserves writes already acknowledged to Alice and keeps identity, drafts and pending signatures consistent. Export acceptance requires the implementation and interruption/concurrent-write fixtures on iOS and Android.
 
 File a Core issue for the snapshot barrier and capture interface below. Core and `crates/mobile` expose capture and cancellation to Swift and Kotlin. Capture the complete [application data inventory in 1.5 Identity, keys and local protection](05-identity.md#application-data-inventory).
 
@@ -97,7 +97,7 @@ A backup from a supported earlier River release supplies that release's chat del
 
 ### Staged restore transaction
 
-Core maintainers approve isolated execution, store selection and durable generation activation before its feature PR. Restore updates code, secrets and host records as one generation, so a crash recovers a complete usable identity. River test delivery and EVY production release require the approved transaction and failure-injection fixtures on iOS and Android.
+Restore updates code, secrets and host records as one generation, so a crash recovers a complete usable identity. River test delivery and EVY production release require the restore transaction and failure-injection fixtures on iOS and Android.
 
 File a Core issue for isolated restore stores and a durable activation record that selects one application's complete data generation. Core and `crates/mobile` expose the transaction to Swift and Kotlin. Build on the executable-inclusive backup capability proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035).
 

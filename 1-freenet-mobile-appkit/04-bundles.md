@@ -96,7 +96,7 @@ EVY's matching iOS and Android builds pin `ui.evy`, the EVY publisher key, suppo
 
 ### Reference adapter and digest encodings
 
-Freenet maintainers and the AppKit lead agree the release-reference encodings and metadata consumers before the format is used for publication and recovery. Shared vectors let hosts, publishers and backups identify the same release and detect altered artifacts.
+Shared vectors let hosts, publishers and backups identify the same release and detect altered artifacts.
 
 | Value | Algorithm and exact byte input | Wire encoding and consumers |
 | --- | --- | --- |
@@ -131,13 +131,13 @@ River’s signed archive contains `file_manifest.json`: format version, unique r
 
 ### River release metadata
 
-River maintainers and the AppKit lead agree the metadata fields and artifact paths before publisher integration. The host needs these declarations to verify components, request permissions and select recovery adapters for the signed River release.
+The host uses River release metadata to verify components, request permissions and select recovery adapters for the signed release.
 
 File a River issue for its release build to write `app_definition.json` with the room contract, chat delegate and `notifications` permission defined above. The AppKit host and packaging CLI read this file from the release archive. Ship both Wasm files under the declared paths.
 
 ## Execution policy
 
-Core maintainers approve the embedder-supplied execution-policy interface and enforcement across client paths before its feature PR. AppKit owns the policy packaged in matching iOS and Android builds. Exact code and role admission keeps ordinary calls, predecessor recovery and staged migration within the build's declared authority; release requires bypass and recovery fixtures.
+AppKit owns the policy packaged in matching iOS and Android builds. Exact code and role admission keeps ordinary calls, predecessor recovery and staged migration within the build's declared authority; release requires bypass and recovery fixtures.
 
 Each matching iOS and Android store build includes an execution policy for its owning application and exact Wasm code hash. The policy assigns each hash its allowed roles:
 
@@ -166,7 +166,7 @@ Registration carries the pinned cipher/nonce fields; Core derives delegate prote
 
 ### Prepare and submit
 
-Core maintainers approve the fdev prepare/submit interface before its feature PR; River maintainers approve its publisher integration. Saving signed bytes before upload lets a retry reproduce the same release after a timeout or process exit. River publication depends on the integrated fdev operations and exact-byte replay/readback fixtures.
+Saving signed bytes before upload lets a retry reproduce the same release after a timeout or process exit. River publication depends on the integrated fdev operations and exact-byte replay/readback fixtures.
 
 Selected interface: separate fdev preparation and submission. The source checked on 2026-10-09 exposes `publish` and `update`; this plan requires durable preparation before dispatch. Acceptance records the selected Core/fdev commit and proves exact-byte replay and independent readback.
 

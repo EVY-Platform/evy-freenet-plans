@@ -90,7 +90,7 @@ The local publisher tools handle archive, attribution and payout requests as [2.
 
 ## Freenet issues being worked on that are required
 
-Core maintainers agree the application/session binding, private-event routing and permission interfaces needed by the mobile host. These changes protect keys and private results from unauthorized local callers and keep consent attached to the right request. Record the accepted scope in the linked issues before feature PRs; release requires the checks below on the selected Core build. The AppKit host owns device consent, WebView enforcement and encrypted host records.
+Application/session binding, private-event routing and permission checks protect keys and private results from unauthorized local callers and keep consent attached to the right request. Release requires the checks below on the selected Core build. The AppKit host owns device consent, WebView enforcement and encrypted host records.
 
 | Requirement | Github links | Release check |
 | --- | --- | --- |
@@ -184,7 +184,7 @@ Expansion requires a named River or EVY flow, paired iOS and Android fixtures, e
 
 ### Background runs and delegate prompts
 
-Core maintainers approve the public embedder-supplied `UserInputPrompter` interface before its feature PR. River and EVY need it to show delegate prompts and startup consent in trusted native UI on iOS and Android, with each answer bound to the requesting session.
+River and EVY use the embedder-supplied `UserInputPrompter` interface to show delegate prompts and startup consent in trusted native UI on iOS and Android, with each answer bound to the requesting session.
 
 A delegate that needs startup runs or wake-ups declares them, with `Background`, in its Wasm manifest ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)). River's chat delegate declares no manifest. It rotates private-room secrets when a room update arrives ([subscription.rs](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/delegates/chat-delegate/src/subscription.rs)), and its room subscriptions survive a node restart ([#5728](https://github.com/freenet/freenet-core/pull/5728)).
 

@@ -1,6 +1,6 @@
 # 1.1 Mobile feasibility and supported profiles
 
-The prototype feasibility tests ran on 2026-09-30. Release support requires the evidence below for the selected iOS and Android release profiles. The runs used an iPhone 13 mini (iOS 27.0, 4 GB), the iOS Simulator and the Android emulator (API 37). `freenet-appkit` stores the results and the remaining device tests:
+**This plan was already executed in order to assess the viability of all the other plans. Results can be found in:**
 
 | Document | Contents |
 | --- | --- |
@@ -107,7 +107,7 @@ Alerts cover updates that arrive while the host runs in the foreground. The host
 | Bob's message arrives while Alice has River open on the members screen | River shows an alert |
 | Alice taps the alert | The host refreshes verified "Skate club" state, then opens the conversation |
 
-An alert triggers a refresh of verified state before the screen opens. Background delivery requires a delivery service, its privacy policy, passing iOS and Android tests and release approval.
+An alert triggers a refresh of verified state before the screen opens. Background delivery requires a delivery service, its privacy policy and passing iOS and Android tests.
 
 ## Distribution review
 

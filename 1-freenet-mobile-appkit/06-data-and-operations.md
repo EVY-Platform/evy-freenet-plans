@@ -129,7 +129,7 @@ The mobile API records when Bob's phone receives the room state and passes that 
 
 ### Bob's saved draft
 
-River maintainers approve the draft and pending-message protocol before its publisher/mobile integration. Saving drafts and exact signed messages in the chat delegate lets Bob resume after an app restart or background node stop. River delivery requires the agreed record format, export/migration coverage and iOS and Android recovery fixtures.
+Saving drafts and exact signed messages in the chat delegate lets Bob resume after an app restart or background node stop. River delivery requires the record format, export/migration coverage and iOS and Android recovery fixtures.
 
 File a River issue to retain drafts and exact pending signed messages in the chat delegate across app restarts and background node stops. Keep signing in the page. Save alongside the send because delegate calls queue behind contract merges ([river#512](https://github.com/freenet/river/issues/512)).
 
@@ -147,7 +147,7 @@ Implementation references: [River CAS requests #345](https://github.com/freenet/
 
 ### Core retention and offline delivery
 
-Core maintainers decide the pinning, persistence and demand-restoration approaches in #5041, #4651 and #4785 before those feature PRs. The changes support recovery when demand eviction removes a contract or every mobile node is stopped. Stronger retention and delivery claims require the approved implementation and eviction/restart evidence; the release fixtures below test the declared hosting budget.
+Contract pinning, persistence and demand restoration support recovery when demand eviction removes a contract or every mobile node is stopped. Stronger retention and delivery claims require the implementation and eviction/restart evidence; the release fixtures below test the declared hosting budget.
 
 Core stores contract state and sends it to peers. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while Core retains the room state. Storage tests fill the pinned Core build's hosting budget and record which room copies it retains or evicts.
 
@@ -155,7 +155,7 @@ Core work will address offline delivery after contract eviction. Reconnect tests
 
 | Thread | Scope | Status checked 2026-10-07 |
 | --- | --- | --- |
-| [#5041 Bounded local contract pin](https://github.com/freenet/freenet-core/issues/5041) | Quota-bounded API to keep selected contracts on the user's node through normal demand eviction | Open design proposal with an exploratory fork; awaiting approach approval |
+| [#5041 Bounded local contract pin](https://github.com/freenet/freenet-core/issues/5041) | Quota-bounded API to keep selected contracts on the user's node through normal demand eviction | Open design proposal with an exploratory fork |
 | [#4651 Contract storage design](https://github.com/freenet/freenet-core/issues/4651) | Evaluates on-disk persistence and a targeted backstop for newly published contracts until a second replica exists | Open design question |
 | [#4785 Persist hosting demand across restart](https://github.com/freenet/freenet-core/issues/4785) | Restores live subscriptions for contracts with prior client demand after a node restart | Open follow-up proposal |
 | [#3465 PUT propagation reliability](https://github.com/freenet/freenet-core/issues/3465) | Tracks locally applied PUTs whose reported results or remote propagation are unreliable | Open; assigned to iduartgomez |

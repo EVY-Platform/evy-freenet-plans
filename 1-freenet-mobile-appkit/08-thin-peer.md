@@ -50,7 +50,7 @@ Development fixtures and dated feasibility runs may select a full-peer profile. 
 | Byte limits per workload, how to count bytes and what happens at a cap | [Cellular budget contract in 1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#cellular-budget-contract) |
 | The upstream proposal and carrier issues | [Upstream work and carrier evidence](#upstream-work-and-carrier-evidence) |
 
-Agree the thin-role protocol with Core maintainers, implement it and pass terminal-role device/carrier fixtures. The independent budget plan owns numeric caps and accounting acceptance.
+Implement the thin-role protocol and pass terminal-role device/carrier fixtures. The independent budget plan owns numeric caps and accounting acceptance.
 
 | Upstream source | State on 2026-10-01 |
 | --- | --- |
@@ -59,8 +59,6 @@ Agree the thin-role protocol with Core maintainers, implement it and pass termin
 | [Incentive discussions #136](https://github.com/freenet/freenet-core/discussions/136), [#137](https://github.com/freenet/freenet-core/discussions/137) and [#893](https://github.com/freenet/freenet-core/discussions/893) | Open. Core intends to tie the resources a peer uses on others to a karma score |
 | Thin-role proposal issue | To be filed |
 | [Whitepaper peers and ring section](https://github.com/freenet/paper-1/blob/bff15702759800a003ffbfce639fe859f57d966d/sections/03-primitives.tex) | Describes one peer role |
-
-Before acceptance runs, check the sources against the pinned Core build and record the proposal issue and accepted protocol.
 
 ## Scope and trust boundary
 
@@ -83,11 +81,11 @@ Specify how thin nodes reach gateways and select replacement serving peers, incl
 
 ## Upstream work and carrier evidence
 
-File the thin-role Core proposal in this plan. [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md) owns the independent cap-enforcement and client-delta proposals. Core maintainers approve the terminal-role protocol; its completion evidence is negotiated-role and carrier fixtures on the pinned build. Begin protocol approval and serving-peer work alongside [1.2 Embedded node and mobile SDK](02-sdk.md).
+File the thin-role Core proposal in this plan. [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md) owns the independent cap-enforcement and client-delta proposals. Build the thin-peer protocol and serving-peer support alongside [1.2 Embedded node and mobile SDK](02-sdk.md).
 
 Define terminal-link renewal alongside the admission, retention and capacity rules in [Scope and trust boundary](#scope-and-trust-boundary), separately from unjoined transport safeguards. Run the same workload on iOS and Android with the selected serving-peer build. Cover the carrier cases in [Acceptance](#acceptance), capacity rejection, renewal and reconnect within the [Cellular budget contract in 1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#cellular-budget-contract).
 
-1. File the thin-role Core issue and record maintainer approach approval before opening its feature PR ([#4311](https://github.com/freenet/freenet-core/pull/4311)). Follow the evidence requirements in the [decision gates in README.md](../README.md#decision-gates).
+1. File the thin-role Core issue.
 2. Link the issue here and track negotiation, terminal edges, serving-peer selection, subscription delivery and carrier acceptance.
 
 | Proposal decision | Requirements |

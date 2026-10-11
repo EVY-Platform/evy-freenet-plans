@@ -24,7 +24,7 @@ Harvest accepts complaints from paying buyers. The order's receipt key signs eac
 
 ## When this becomes a plan
 
-Define the proof boundary and privacy/consent rules. If the chosen proof path needs a Core interface change, obtain Freenet approach approval for that scope and release it after the authenticated caller/reply and iOS and Android fixtures pass. The proof lets buyers establish a claim while controlling which identity and purchase details are disclosed.
+Define the proof boundary and privacy/consent rules. If the chosen proof path needs a Core interface change, test authenticated callers and replies on iOS and Android before release. The proof lets buyers establish a claim while controlling which identity and purchase details are disclosed.
 
 Work starts when EVY Marketplace needs evidence of completed purchases or an unlinkable ghost key proof. For example, Alice may request either claim when Bob asks to buy her 70-dollar skateboard in [The skateboard sale in 2.7 EVY Marketplace](../2-evy-on-freenet/07-marketplace.md#the-skateboard-sale).
 

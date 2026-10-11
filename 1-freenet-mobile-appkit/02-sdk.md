@@ -10,13 +10,13 @@
 
 ## Purpose
 
-Start and stop embedded Core, manage its connections and expose its operations to Swift on iOS and Kotlin on Android. Each application installation owns one embedded node and supplies its storage paths. River uses its existing browser client in an AppKit WebView; EVY uses the Swift and Kotlin APIs for its native SDUI readers. Core verifies contract state and runs the application's delegates on the device.
+Start and stop embedded Core, manage its connections and expose its operations to Swift on iOS and Kotlin on Android.
+
+Each application installation owns one embedded node and supplies its storage paths. River uses its existing browser client in an AppKit WebView; EVY uses the Swift and Kotlin APIs for its native SDUI readers. Core verifies contract state and runs the application's delegates on the device.
 
 ## What to build
 
-Integrate the [mobile prototype in the Core fork](https://github.com/glesage/freenet-core/tree/571ad1acba9e6f6bddc71156d7d2791fc9a1bf65/crates/mobile) into upstream Core as `crates/mobile`. This gives iOS and Android one maintained interface for node lifecycle and contract operations. Core maintainers approve the embedding API and upstream scope before its feature PR. Record the decision, integrated implementation commit and device fixtures under the [decision gates in README.md](../README.md#decision-gates). Swift and Kotlin packages expose the selected implementation to iOS and Android. [1.3 Single-application host](03-host.md#freenet-issues-being-worked-on-that-are-required) records caller/permission release dependencies.
-
-Classify operations against the [sources in README.md](../README.md#sources). **Existing** identifies a supplied operation. **Extension** adds an interface, platform backend or behavior to an existing primitive. **New Core capability** adds a coordinated runtime operation. **New host/application workflow** adds policy and coordination owned by the embedder or data layer.
+Integrate the [mobile prototype in the Core fork](https://github.com/glesage/freenet-core/tree/571ad1acba9e6f6bddc71156d7d2791fc9a1bf65/crates/mobile) into upstream Core as `crates/mobile`, giving iOS and Android one maintained interface for node lifecycle and contract operations.
 
 | Operations needed | Existing Freenet support | New concept for Freenet? | Required behavior |
 | --- | --- | --- | --- |
@@ -45,30 +45,47 @@ Set `telemetry-enabled = false` and keep `otel-telemetry-enabled` off on every s
 
 ### Application connections
 
-Freenet Core and stdlib maintainers agree the public browser delegate methods and transport changes before their feature PRs. River needs these methods to call its chat delegate through the authenticated browser connection. Each demonstrated reply-routing bug carries its regression fixture; parallel request support is enabled after the request-ID checks below pass.
+An application connection carries requests from the app to its embedded Freenet node, and replies and updates back to the app. River and EVY each use the node owned by their installation:
 
-River uses its browser WebSocket client and Core's authenticated shell route. EVY's native readers use the SDK connection. Each transport adapter owns its request queue, reply matching and connection generation. The host owns the application's session generation and permitted components, as [1.3 Single-application host](03-host.md#trusted-calls) defines.
+- **River:** its web code runs in a WebView and calls Core through the browser WebSocket client and authenticated shell route.
+- **EVY:** its Swift reader on iOS and Kotlin reader on Android call Core through the native SDK.
 
-Use Core and stdlib's client APIs. A transport fix is required when a fixture demonstrates incorrect reply ownership, admission or private-event delivery. Record that fix and its regression in the owning upstream issue. Lock, Forget, restore and reconnect replace the relevant session or connection generation and reject earlier callbacks.
+The **transport adapter** manages the connection: it queues requests and sends each reply to the right call. The **host** checks which application is calling, which components it may use and whether its session is current, as [1.3 Single-application host](03-host.md#trusted-calls) defines.
 
-The pinned [TypeScript client](https://github.com/freenet/freenet-stdlib/blob/fca0848b78b12942f77422309bb07f76108940d6/typescript/src/websocket-interface.ts) exposes contract methods and delegate message types. Add public register, unregister and application-message methods. Route every operation through the browser adapter's submission queue and match delegate replies and prompts to their authorized caller. Its contract reply matching uses the contract key; apply [Matching replies to requests](#matching-replies-to-requests) before dispatch. Record the adapter implementation commit and browser fixtures for queued calls, keyless errors, unsolicited events, cancellation and reset. Run the corresponding Swift and Kotlin fixtures on iOS and Android.
+For example, River asks its chat delegate to process Alice's message. The trusted route checks River's session and permitted delegate, the adapter submits the call, and Core runs the delegate. Its reply returns to that authorized caller. Any prompt stays bound to the originating request and session. Room-state updates go to River's data layer through its subscription.
+
+Each connection and session has a **generation**, a label for its lifetime. Reconnecting replaces the connection generation; locking and unlocking ends one host session and opens another. The adapter and host reject callbacks from an ended lifetime. For example, an answer to a delegate prompt opened before locking expires after unlocking. Apply the same checks during Forget and restore.
+
+Use Core and stdlib's client APIs. The pinned [TypeScript client](https://github.com/freenet/freenet-stdlib/blob/fca0848b78b12942f77422309bb07f76108940d6/typescript/src/websocket-interface.ts) supplies contract methods and delegate message types. Add public register, unregister and application-message methods, with all operations using the browser adapter's queue and the reply checks below.
+
+Record demonstrated caller-admission, reply-routing and private-event delivery bugs, their fixes and regression fixtures in the owning upstream issues. Record the adapter implementation commit and test queued calls, errors without keys, unsolicited events, cancellation and reset in the browser, Swift on iOS and Kotlin on Android.
 
 ### Matching replies to requests
 
-Assign a local request ID and retain the submitted contract/delegate key, expected reply type and connection generation. Some Core errors carry neither a request ID nor a structured contract key ([#5724](https://github.com/freenet/freenet-core/issues/5724)). Allow one request awaiting a reply per connection until the pinned API passes complete request-ID checks. Queue subsequent requests across contracts and request types. An UPDATE to "Skate club" waits while a PUT to another room awaits its reply.
+Each reply must reach the call that requested it. The adapter gives each call a local request ID and records its contract or delegate key, expected reply type, connection generation and originating session.
+
+Some Core errors contain neither a request ID nor a structured contract key ([#5724](https://github.com/freenet/freenet-core/issues/5724)). Until Core returns request IDs on every enabled success and error path, allow **one submitted request awaiting a reply per connection**. All later calls wait in that connection's queue, across contracts and request types. The local ID tracks the call; Core must return it to support reliable parallel matching.
+
+For example:
+
+1. River submits a PUT to create “Weekend ride”. This occupies the connection's request slot.
+2. An UPDATE to “Skate club” waits in the queue. Subscription updates for “Skate club” still reach River's data layer.
+3. A terminal reply—a success or error that finishes the PUT—settles its slot. The adapter checks the reply and can then submit the UPDATE. An error without a key belongs to the sole submitted call; its details determine whether the outcome is known or uncertain.
 
 | Event | Transport adapter behavior |
 | --- | --- |
-| Request reply | Match the sole submitted request and check its returned type and key. A terminal reply releases the slot. |
-| Subscription update or unsolicited delegate event | Route to the application's authorized data/event handler while the request slot stays occupied. |
-| Cancellation | Remove queued work before submission. For submitted work, stop its callback and retain the slot until a terminal reply or reset. |
-| Timeout | Report uncertainty for submitted work and retain the slot. A retry waits for settlement or reset. |
-| Connection reset | Report submitted work as uncertain, reject the earlier generation and restore the application's required subscriptions through the new queue. Queued work remains unsubmitted. |
-| Unclassifiable reply | Report uncertainty and reset before sending another request. |
+| Request reply | Match the sole submitted call and check its returned type and key. A terminal reply releases the slot. |
+| Subscription update or unsolicited delegate event | Deliver to the authorized data/event handler. Keep the request slot occupied. |
+| Cancellation | Remove queued work. For submitted work, end its callback and keep the slot until a terminal reply or reset. |
+| Timeout | Report an uncertain outcome and keep the submitted call's slot occupied. A retry waits for settlement or reset. |
+| Connection reset | Keep submitted work's outcome uncertain, reject earlier-generation callbacks and restore required subscriptions through the new queue. Recheck queued work before submission. |
+| Reply whose purpose or owner is unclear | Report uncertainty and reset before sending another request. |
 
-Core's request timeout is 60 seconds ([#3442](https://github.com/freenet/freenet-core/pull/3442)). Use a bounded reply window longer than that, then reset if settlement is still missing. Test dropped replies under load ([stdlib #105](https://github.com/freenet/freenet-stdlib/pull/105)).
+If the “Skate club” UPDATE times out, Core may already have applied it. Keep its slot occupied so a late reply settles that call. After settlement or reset, the app checks the pending operation against observed contract state before deciding whether to retry. Cancellation of submitted work also ends the app's wait while Core may finish the operation.
 
-Enable parallel requests only after browser and native fixtures verify client request IDs in every enabled success and error path ([stdlib #106](https://github.com/freenet/freenet-stdlib/issues/106)). Keep subscription updates flowing in both modes.
+Core's request timeout is 60 seconds ([#3442](https://github.com/freenet/freenet-core/pull/3442)). Set a bounded reply window longer than that, then reset if the terminal reply is still missing. Test dropped replies under load ([stdlib #105](https://github.com/freenet/freenet-stdlib/pull/105)).
+
+Enable parallel requests after browser and native fixtures verify returned request IDs in every enabled success and error path ([stdlib #106](https://github.com/freenet/freenet-stdlib/issues/106)). Replies can then resolve their calls by ID even when they arrive out of order. Keep subscription updates flowing in both modes.
 
 ### Ending subscriptions
 
@@ -134,7 +151,7 @@ Each prompt and private result is bound to the originating request and current s
 
 ### Running Wasm
 
-Core maintainers agree the memory-address change before its feature PR. It lets the mobile runtime use smaller reservations while keeping contract and delegate results valid after guest memory grows. Switching iOS and Android to Core's default executor and Store limits requires the approved implementation and passing device fixtures below.
+The memory-address change lets the mobile runtime use smaller reservations while keeping contract and delegate results valid after guest memory grows. Switching iOS and Android to Core's default executor and Store limits requires the implementation and passing device fixtures below.
 
 The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). iOS and Android release builds use interpreted execution with data-only memory mappings. This supports iOS App Store distribution and Android Google Play's interpreter exception ([distribution review](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/distribution-review.md)). Both platforms run one backend and the same test fixtures.
 
@@ -210,7 +227,7 @@ When Alice's phone moves from Wi-Fi to cellular, the SDK:
 
 ### Gateway hostnames
 
-Core maintainers agree deferred gateway resolution and background index fetching before their feature PR. This lets a network-mode node open stored rooms while offline and join when connectivity returns. Offline-start acceptance requires the selected build to pass the iOS and Android fixtures.
+Deferred gateway resolution and background index fetching let a network-mode node open stored rooms while offline and join when connectivity returns. Offline-start acceptance requires the selected build to pass the iOS and Android fixtures.
 
 File a Core issue for these changes so Alice can open River and read stored "Skate club" messages while offline:
 
@@ -222,7 +239,7 @@ Sources: [node.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377
 
 ### Local operations before the first join
 
-Core maintainers agree local reads, merges and subscriptions before the first handshake, including how saved work reaches peers on join. This lets Alice use stored rooms and queue messages during an offline first start. The selected build's capability determines the SDK behavior in the table below.
+Local reads, merges and subscriptions before the first handshake let Alice use stored rooms and queue messages during an offline first start. The selected build's capability determines the SDK behavior in the table below.
 
 File a Core issue to allow local operations on stored contracts before the first network handshake:
 

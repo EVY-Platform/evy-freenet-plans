@@ -31,7 +31,7 @@ Bind key, setup salt/profile and folder settings to the active EVY identity gene
 
 ## The backup file
 
-Automatic backup uses the approved codec, snapshot barrier and staged activation from [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#the-backup-file). Enable it after that Core implementation and the manual/automatic cross-restore fixtures pass on iOS and Android.
+Automatic backup uses the codec, snapshot barrier and staged activation from [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#the-backup-file). Enable it after that Core implementation and the manual/automatic cross-restore fixtures pass on iOS and Android.
 
 ```text
 EVY backup file

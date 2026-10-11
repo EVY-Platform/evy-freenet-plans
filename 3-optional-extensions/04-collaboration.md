@@ -21,7 +21,7 @@ In a live session, Carol and a second contributor would edit Marketplace's "Crea
 
 ## When this becomes a plan
 
-Define session latency, bandwidth and contributor-confirmation requirements. If measurements lead to a new Core transport, obtain Freenet approach approval for that interface before its feature PR. A live session lets contributors reconcile overlapping edits and confirm one draft and contribution split before publication.
+Define session latency, bandwidth and contributor-confirmation requirements. A live session lets contributors reconcile overlapping edits and confirm one draft and contribution split before publication.
 
 Work starts when contributors ask to edit a flow together or frequently submit overlapping UI proposals. EVY measures demand and tests contract delivery before starting the work.
 

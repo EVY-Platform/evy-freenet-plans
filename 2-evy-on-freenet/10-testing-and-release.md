@@ -132,7 +132,7 @@ The EVY operator records each approval in `docs/launch/approvals.md` in evy, wit
 
 ## Production completion
 
-Record the accepted upstream decisions and implementation/fixture evidence for applicable [decision gates in README.md](../README.md#decision-gates), including inherited AppKit requirements. Production on iOS and Android requires those upstream changes in the packaged Core and passing reader, contract and backend tests.
+Production on iOS and Android requires the upstream changes needed by AppKit and EVY in the packaged Core and passing reader, contract and backend tests.
 
 | Stage | iOS evidence | Android evidence | Shared gate |
 | --- | --- | --- | --- |

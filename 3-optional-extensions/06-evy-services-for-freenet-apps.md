@@ -23,7 +23,7 @@ The current delivery scope is defined by [2.10 Testing and release](../2-evy-on-
 
 ## When this becomes a plan
 
-The outside application's owner and EVY integration owner agree the authority and service terms below. Relevant Freenet maintainers approve changes to shared Freenet interfaces before their feature PRs. This lets an independently published application use EVY services with a verified caller, retained policy and defined recovery path.
+An independently published application uses EVY services with a verified caller, retained policy and defined recovery path.
 
 Require a named outside application, an integration owner and a concrete operation before writing an implementation plan.
 

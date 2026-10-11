@@ -43,7 +43,7 @@ The app goes to public users only after backup and restore pass the tests in [Ac
 
 ### Node encryption key
 
-Core maintainers approve the persistent iOS Keychain and Android Keystore backends under #4137 before their feature PR. Keeping the installation key in platform-protected storage supports private records across restarts and gives lock, key-loss and deletion checks a defined backend. Both platform backends and their device fixtures are release requirements.
+Keeping the installation key in platform-protected storage supports private records across restarts and gives lock, key-loss and deletion checks a defined backend. Both platform backends and their device fixtures are release requirements.
 
 Add persistent iOS Keychain and Android Keystore backends to Core's closed `KekBackendKind` enum. File a Core sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137) for these backends and Android's rejection of keyring's in-memory mock backend. Use [kek.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/config/kek.rs) and [#4140](https://github.com/freenet/freenet-core/issues/4140) as implementation references.
 
@@ -77,7 +77,7 @@ Core derives a separate key for each delegate from the node encryption key. The 
 
 ### Locking and unlocking
 
-Core maintainers approve the `SecretsStore` lock/unlock lifecycle before its feature PR. Platform key protection also needs runtime fencing and controlled-buffer cleanup after a key has been loaded. River and EVY release requires the Core lock lifecycle and the matching host cleanup fixtures on iOS and Android.
+Platform key protection also needs runtime fencing and controlled-buffer cleanup after a key has been loaded. River and EVY release requires the Core lock lifecycle and the matching host cleanup fixtures on iOS and Android.
 
 File a Core issue to add `lock` and `unlock` to `SecretsStore`, using [store.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/secrets_store/store.rs).
 

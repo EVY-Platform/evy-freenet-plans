@@ -120,6 +120,6 @@ Run every release test on iOS and Android with the phone in the thin-peer role.
 
 ## Acceptance evidence
 
-For every applicable [decision gate in README.md](../README.md#decision-gates), link the accepted scope, approver, implementation commit and passing fixture result. Record conditional optimizations used by the release profile. River test delivery requires its mandatory Core and River gates to be complete on the packaged build for iOS and Android.
+Record conditional optimizations used by the release profile. River test delivery requires its mandatory Core and River changes to be complete on the packaged build for iOS and Android.
 
 Publish results with exact revisions, devices, OS versions, network conditions and redacted logs.

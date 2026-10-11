@@ -11,7 +11,7 @@
 
 Measure and enforce one installation’s Freenet traffic, storage and subscription budgets on iOS and Android. [1.8 Thin-peer protocol](08-thin-peer.md) owns terminal connections and serving peers.
 
-Owner: AppKit network lead. Agree measured cap values and reserves before release-profile acceptance.
+Owner: AppKit network lead. Measure cap values and reserves for release-profile acceptance.
 
 ## Accounting scope and external traffic
 
@@ -32,9 +32,9 @@ Each release profile records measured installation storage, document-cache reten
 
 ## Cellular budget contract
 
-Core maintainers approve raw receive accounting and network cap teardown before their feature PRs. The AppKit network lead agrees measured ceilings and reserves. Counting packets before decryption and ending serving-peer delivery lets the installation enforce its cellular allowance; release requires the selected Core build and iOS and Android measurements below.
+Counting packets before decryption and ending serving-peer delivery lets the installation enforce its cellular allowance; release requires the selected Core build and iOS and Android measurements below.
 
-[1.1 Mobile feasibility and supported profiles](01-feasibility.md#startup-and-network) measured the full-peer numbers in [Purpose in 1.8 Thin-peer protocol](08-thin-peer.md#purpose). Its [harness](https://github.com/glesage/freenet-appkit/tree/1988c5cbdfc5c1f88065382de2a4f86093948b6e/harness) `watch` scenario and Core's `node_traffic` counters measure each workload. Use those measurements to set thin-role upload and download ceilings. Select supported carriers, devices and test durations, then enforce the ceilings. Approve them before this plan's acceptance runs.
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md#startup-and-network) measured the full-peer numbers in [Purpose in 1.8 Thin-peer protocol](08-thin-peer.md#purpose). Its [harness](https://github.com/glesage/freenet-appkit/tree/1988c5cbdfc5c1f88065382de2a4f86093948b6e/harness) `watch` scenario and Core's `node_traffic` counters measure each workload. Use those measurements to set thin-role upload and download ceilings. Select supported carriers, devices and test durations, then enforce the ceilings.
 
 | Workload | Fix in the test definition | Required limits and measurements |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ Core maintainers approve raw receive accounting and network cap teardown before 
 | Reconnect and network transition | Offline duration, stale state, pending work, Wi-Fi/cellular path, retry schedule and a room state above 1 MiB | Upload/download bytes per reconnect, cumulative retry bytes, attempts and recovery time. |
 | Serving-peer loss | Forced disconnects, unavailable candidates, repeated failures and recovery window | Upload/download bytes per loss and across the full failure window, bounded replacement attempts and subscription-repair traffic. |
 | Traffic-accounting overhead | Counter collection, persistence, diagnostic/report export and instrumented comparison runs | Upload/download bytes added by accounting or reporting, plus CPU, memory and battery cost. |
-| Total cellular use | Freenet node work plus shared protocol overhead over an approved period | Node-wide upload/download caps. Include retries, archive downloads and background-transition traffic. |
+| Total cellular use | Freenet node work plus shared protocol overhead over a measured period | Node-wide upload/download caps. Include retries, archive downloads and background-transition traffic. |
 
 | Cost | Traffic to measure | Workloads that count it |
 | --- | --- | --- |
@@ -91,7 +91,7 @@ Reserve bounded upload/download allowances inside the caps for counter delay, in
 
 ### Client update deltas
 
-Core maintainers agree the delta wire format, receiver-summary handling and version compatibility before its feature PR. Rollout requires matching sender/receiver fixtures and measured traffic reduction. The release profile records whether approved caps depend on this optimization.
+Rollout requires matching sender/receiver fixtures and measured traffic reduction. The release profile records whether caps depend on this optimization.
 
 File a Core issue for `RequestUpdate` to send a delta computed against the receiving peer's state summary. Each new message to "Skate club" then carries only the changes that peer needs, reducing cellular traffic. Use Core's broadcast delta handling for the receiving path.
 
@@ -99,7 +99,7 @@ Sources: [#4072](https://github.com/freenet/freenet-core/pull/4072) deferred the
 
 ## Acceptance
 
-- On iOS and Android, idle, active, reconnect, serving-peer loss and accounting-overhead workloads meet approved upload/download caps. Publish devices, carriers, durations, cap values, reserves and packet traces.
+- On iOS and Android, idle, active, reconnect, serving-peer loss and accounting-overhead workloads meet the upload/download caps. Publish devices, carriers, durations, cap values, reserves and packet traces.
 - With remote publishers sending continuously, exhaust upload and download allowances separately. Subscription release and connection shutdown end delivery within measured byte/time reserves.
 - Restart, foreground resume and Wi-Fi/cellular changes preserve exhausted allowances and pending operations. A new allowance resumes reconciliation once.
 - Storage and demand fixtures keep retained releases, predecessor artifacts, purchase evidence and subscription leases within the installation budget.
