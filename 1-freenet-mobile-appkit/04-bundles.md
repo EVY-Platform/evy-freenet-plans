@@ -10,14 +10,14 @@
 
 ## Purpose
 
-Package and publish an application's web UI, contract and delegate artifacts, and host metadata. River's web UI is the AppKit test application on iOS and Android. EVY's SwiftUI and Compose builds pin one EVY application UI identity and its supported components.
+Package and publish an application's web UI, contract and delegate artifacts, and host metadata. River's web UI is the AppKit test application on iOS and Android. EVY's SwiftUI and Compose builds use one EVY application UI identity and its supported components.
 
 Build contracts, archive the web directory, sign it and store it in a Freenet website container. Add metadata, publication evidence and installation checks for the mobile host.
 
 | Area | Required result |
 | --- | --- |
 | Archive | `index.html`, application assets, `contracts/` from `fdev build`, and `app_definition.json` naming every contract and delegate Wasm file |
-| Publication | Validate the archive, assign an increasing version, save the signed state, submit with pinned container Wasm, verify independent readback and replay saved bytes after an uncertain result |
+| Publication | Validate the archive, assign an increasing version, save the signed state, submit with container Wasm, verify independent readback and replay saved bytes after an uncertain result |
 | Installation | Check releases in the packaging CLI and host; track activation, rollback, retention and component setup |
 | References | `publication_ref` and `application_content_ref` identify one exact release by container key, version and digest |
 
@@ -76,7 +76,7 @@ River's [chat delegate messages](https://github.com/freenet/river/blob/8cf54dd77
 
 River website releases carry these identity values. [Release references](#release-references) defines the record used by the host and recovery tools.
 
-- The container identity is the full container `ContractKey`. It derives from the container Wasm and the publisher's verifying key. fdev embeds a stock container Wasm that can change between fdev versions, so the packaging CLI passes each app's pinned container Wasm with `--contract-wasm` on every publication ([dapp-builder skill](https://github.com/freenet/freenet-agent-skills/blob/890ad1b20c03ee99dd0a0ae89ec3e3b17c19eac4/skills/dapp-builder/references/web-container-contract.md)). For River that file is the committed [`published-contract/web_container_contract.wasm`](https://github.com/freenet/river/tree/8cf54dd7799514851da7eab051e4cc43f797208d/published-contract), so every River release keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`. Check container identity across releases using [mail#200](https://github.com/freenet/mail/issues/200) and [raven#45](https://github.com/freenet/raven/issues/45) as regression cases.
+- The container identity is the full container `ContractKey`. It derives from the container Wasm and the publisher's verifying key. fdev embeds a stock container Wasm that can change between fdev versions, so the packaging CLI passes each app's container Wasm with `--contract-wasm` on every publication ([dapp-builder skill](https://github.com/freenet/freenet-agent-skills/blob/890ad1b20c03ee99dd0a0ae89ec3e3b17c19eac4/skills/dapp-builder/references/web-container-contract.md)). For River that file is the committed [`published-contract/web_container_contract.wasm`](https://github.com/freenet/river/tree/8cf54dd7799514851da7eab051e4cc43f797208d/published-contract), so every River release keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`. Check container identity across releases using [mail#200](https://github.com/freenet/mail/issues/200) and [raven#45](https://github.com/freenet/raven/issues/45) as regression cases.
 - The container version is an unsigned 32-bit integer covered by the publisher signature. The packaging CLI assigns each new publication a version higher than every version it has reserved and the verified version read from the network. Unix seconds provide a starting floor, as defined under [Publishing and evidence](#publishing-and-evidence). Retries retain the prepared publication's version.
 
 A bundle carries web code, contracts and delegates. Changes to the native iOS or Android app ship as a new release through the App Store or Google Play.
@@ -92,7 +92,7 @@ A bundle carries web code, contracts and delegates. Changes to the native iOS or
 
 Each release reference identifies one format and one application. The host, backup manifest and attribution archive resolve it using that format's validation rules.
 
-EVY's matching iOS and Android builds pin `ui.evy`, the EVY publisher key, supported data-contract code and the EVY delegate. Its signed application document declares flows, resource bindings and compatible reader versions. Native component policy ships with the mobile build; compatible UI publications use that permitted code and update the application's document version.
+EVY's matching iOS and Android builds include `ui.evy`, the EVY publisher key, supported data-contract code and the EVY delegate. Its signed application document declares flows, resource bindings and compatible reader versions. Native component policy ships with the mobile build; compatible UI publications use that permitted code and update the application's document version.
 
 ### Reference adapter and digest encodings
 
@@ -158,9 +158,9 @@ Use fixed startup sequences for River and EVY. Component metadata names the owni
 | Application | Startup sequence |
 | --- | --- |
 | River | Verify the website release and room/chat artifacts, open the authorized session, register the chat delegate with empty parameters, wait for its reply, then load rooms. Room creation uses the selected room contract and exact owner parameters. |
-| EVY | Verify build policy and pinned UI/delegate identities, recover or migrate the complete private generation, register the admitted EVY delegate, wait for its reply, then restore application demand and open Home. |
+| EVY | Verify build policy and UI/delegate identities, recover or migrate the complete private generation, register the admitted EVY delegate, wait for its reply, then restore application demand and open Home. |
 
-Registration carries the pinned cipher/nonce fields; Core derives delegate protection from the installation KEK ([#4146](https://github.com/freenet/freenet-core/pull/4146), [#5265](https://github.com/freenet/freenet-core/issues/5265), [#5472](https://github.com/freenet/freenet-core/pull/5472)). Persist each startup checkpoint and resume idempotently after interruption. Features open after required component verification and registration replies ([river#709](https://github.com/freenet/river/issues/709), [river#710](https://github.com/freenet/river/pull/710)).
+Registration carries the cipher/nonce fields; Core derives delegate protection from the installation KEK ([#4146](https://github.com/freenet/freenet-core/pull/4146), [#5265](https://github.com/freenet/freenet-core/issues/5265), [#5472](https://github.com/freenet/freenet-core/pull/5472)). Persist each startup checkpoint and resume idempotently after interruption. Features open after required component verification and registration replies ([river#709](https://github.com/freenet/river/issues/709), [river#710](https://github.com/freenet/river/pull/710)).
 
 ## Publishing and evidence
 
@@ -174,7 +174,7 @@ File a Core issue for separate fdev preparation and submission operations:
 
 | Operation | Inputs and result |
 | --- | --- |
-| Prepare | Takes the release directory, explicit unsigned 32-bit version, publisher key and pinned container Wasm. Returns the exact archive and complete signed container state for durable local storage. |
+| Prepare | Takes the release directory, explicit unsigned 32-bit version, publisher key and container Wasm. Returns the exact archive and complete signed container state for durable local storage. |
 | Submit | Sends the saved signed state with the same container Wasm and parameters. |
 
 The packaging CLI owns the publication journal, allocates versions and serializes release jobs under the rules below. fdev encodes the archive and signatures and validates the supplied version and state. Fixtures cover local preparation, exact replay after termination and exact readback through another node. Implement these operations in Core's fdev before River's publisher integration.
@@ -189,7 +189,7 @@ version = max(current Unix seconds,
               highest verified network version recorded in the journal + 1)
 ```
 
-Each verified network read raises the journal's observed version floor when higher. A new, verified absent container starts with a network floor of zero. A failed lookup waits for a successful read. Calculate in a wider integer and check that the result fits `1..=u32::MAX` before preparation. Version exhaustion reports a release error. Preparation preserves the pinned container's metadata and signature encoding: the four-byte big-endian version followed by the archive bytes ([website container source](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/website-contract/src/lib.rs)). Reserved versions remain consumed after a failed preparation or a cancelled attempt. The CLI prepares exactly one signed state for each reserved version. After termination, a reservation with no complete saved signed state is closed as an interrupted preparation; the next attempt reserves a higher version.
+Each verified network read raises the journal's observed version floor when higher. A new, verified absent container starts with a network floor of zero. A failed lookup waits for a successful read. Calculate in a wider integer and check that the result fits `1..=u32::MAX` before preparation. Version exhaustion reports a release error. Preparation preserves the container's metadata and signature encoding: the four-byte big-endian version followed by the archive bytes ([website container source](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/website-contract/src/lib.rs)). Reserved versions remain consumed after a failed preparation or a cancelled attempt. The CLI prepares exactly one signed state for each reserved version. After termination, a reservation with no complete saved signed state is closed as an interrupted preparation; the next attempt reserves a higher version.
 
 ```mermaid
 flowchart LR
@@ -207,15 +207,15 @@ flowchart LR
 
 | Step | What the packaging CLI does |
 | --- | --- |
-| 1. Validate | Locks the container and checks `app_definition.json`, component hashes, parameter fixtures, host API and protocol versions, and archive size limits. Checks device permission names against the host's supported adapters and delegate grants against the pinned Core manifest schema. Reconciles a pending attempt before preparing another publication. |
-| 2. Prepare and save | Reads and verifies the network state, reserves the next version, then archives and signs the release once. Durably saves the release folder, file digests, exact archive and complete signed state, container key, pinned container Wasm, signing key name, version and attempt record before submission. A failed save stops the attempt. |
-| 3. Submit | Sends the saved signed state with its pinned container Wasm and exact container parameters. Every retry sends those same bytes, signature and version. |
+| 1. Validate | Locks the container and checks `app_definition.json`, component hashes, parameter fixtures, host API and protocol versions, and archive size limits. Checks device permission names against the host's supported adapters and delegate grants against the Core manifest schema. Reconciles a pending attempt before preparing another publication. |
+| 2. Prepare and save | Reads and verifies the network state, reserves the next version, then archives and signs the release once. Durably saves the release folder, file digests, exact archive and complete signed state, container key, container Wasm, signing key name, version and attempt record before submission. A failed save stops the attempt. |
+| 3. Submit | Sends the saved signed state with its container Wasm and exact container parameters. Every retry sends those same bytes, signature and version. |
 | 4. Read back | Reads through a node other than the publishing node, with `fdev --node-url <url> execute get`. Verifies the container identity and publisher signature, then compares the complete signed state, version, archive digest and files with the prepared copy. An exact match saves the readback evidence and closes the attempt.<br>Produces a `publication_ref`: the full container `ContractKey`, signed version, hash algorithm and archive digest. Produces a `website/1` `application_content_ref` with the full container key, version and BLAKE3 digest of the exact complete signed container state. |
 | 5. Reconcile | After a timeout or termination, reads back first as in step 4. An exact match completes the attempt. An older or verified absent state allows replay of step 3. A failed lookup leaves the attempt pending. Different bytes at the same version record a conflict; a higher version records the attempt as superseded. Both outcomes retain the evidence and advance the journal's observed version floor. A subsequent publication starts at step 1 with a higher version. |
 
 The publishing node's PUT reply confirms local persistence, with propagation continuing asynchronously ([#3626](https://github.com/freenet/freenet-core/pull/3626)). The CLI issues a `publication_ref` after exact readback through another node. Retry fixtures cover timeouts, termination and equal-version divergence, using [river#634](https://github.com/freenet/river/pull/634), [river#635](https://github.com/freenet/river/pull/635), [delta#82](https://github.com/freenet/delta/issues/82) and [atlas#53](https://github.com/freenet/atlas/issues/53) as cases.
 
-The readback fixture pins the container metadata encoding and Ed25519 signature serialization to the pinned container Wasm ([#5437](https://github.com/freenet/freenet-core/issues/5437)).
+The readback fixture verifies the container metadata encoding and Ed25519 signature serialization against the container Wasm ([#5437](https://github.com/freenet/freenet-core/issues/5437)).
 
 Changes to release files start a new publication at step 1, with a new reserved version and saved signed state.
 
@@ -266,14 +266,14 @@ Release handling:
 
 ## Publisher release backups
 
-The packaging CLI keeps a saved copy of each release, including supported predecessor releases. Each saved copy holds the prepared archive, complete signed state and pinned container Wasm, plus readback evidence when publication completes. The website container holds its latest state, and network availability depends on hosting demand, as described in the [whitepaper status](https://github.com/freenet/paper-1/blob/bff15702759800a003ffbfce639fe859f57d966d/sections/07-status.tex). Core's [netcheck probe](https://github.com/freenet/freenet-core/tree/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/netcheck) reads contracts published 24 hours, 48 hours and 7 days earlier, and [#5504](https://github.com/freenet/freenet-core/issues/5504) asks whether 7 days fits demand-driven hosting. Restoring an older release needs its saved copy and a compatible host.
+The packaging CLI keeps a saved copy of each release, including supported predecessor releases. Each saved copy holds the prepared archive, complete signed state and container Wasm, plus readback evidence when publication completes. The website container holds its latest state, and network availability depends on hosting demand, as described in the [whitepaper status](https://github.com/freenet/paper-1/blob/bff15702759800a003ffbfce639fe859f57d966d/sections/07-status.tex). Core's [netcheck probe](https://github.com/freenet/freenet-core/tree/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/netcheck) reads contracts published 24 hours, 48 hours and 7 days earlier, and [#5504](https://github.com/freenet/freenet-core/issues/5504) asks whether 7 days fits demand-driven hosting. Restoring an older release needs its saved copy and a compatible host.
 
 The publisher keeps a tested backup of its signing key file, `~/.config/freenet/website-keys/<name>.toml`, which `--key <name>` reads. The website container accepts updates only from that key, so a restored backup signs the next release to the same container. River's publisher stores River's existing signing key in this file.
 
 ## Acceptance
 
 - River's web archive builds, signs, publishes and opens in the supported iOS and Android WebViews.
-- Every fixture prepares and submits through the separate fdev capabilities with its pinned container Wasm. River keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv` across releases. Two releases within one second receive increasing versions, including after clock rollback or journal recovery.
+- Every fixture prepares and submits through the separate fdev capabilities with its container Wasm. River keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv` across releases. Two releases within one second receive increasing versions, including after clock rollback or journal recovery.
 - CLI/CI rejects unsafe paths, hash mismatches, unsupported metadata, invalid parameter fixtures and releases that exceed the selected profile's limits. The install check accepts River's archive with the Wasm copies its UI embeds.
 - A failed save in step 2 stops submission. Timeout and termination fixtures replay exactly the saved signed state, archive and version after readback. Termination after reservation consumes that version. Concurrent jobs for one container serialize through the same journal. Same-version conflict and a higher network version retain evidence and require a new publication at a higher version. Step 4 issues references only after exact readback through another node.
 - A consumer verifies a `publication_ref` against the saved copy after the live container advances. An EVY `evy-ui/1` reference verifies against the exact signed application document. Each native build reference verifies against its packaged build and execution-policy digests.

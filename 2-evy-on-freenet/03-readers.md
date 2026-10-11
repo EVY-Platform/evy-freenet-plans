@@ -21,9 +21,9 @@ flowchart LR
 
 ## Reading the application UI contract
 
-Each build pins `ui.evy` in `types/freenet/contract-keys.json`, under [2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-contract). Both readers ship EVY's internal resource adapters and supported contract codecs from [2.4 SDUI data and actions](04-data-and-actions.md#evy-resource-catalogue).
+Each build includes `ui.evy` in `types/freenet/contract-keys.json`, under [2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-contract). Both readers ship EVY's internal resource adapters and supported contract codecs from [2.4 SDUI data and actions](04-data-and-actions.md#evy-resource-catalogue).
 
-1. GET the pinned application UI contract and subscribe through the Swift or Kotlin SDK. Before first join, read a retained local copy and queue subscription demand under [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#start-stop-and-reconnect).
+1. GET the application UI contract and subscribe through the Swift or Kotlin SDK. Before first join, read a retained local copy and queue subscription demand under [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#start-stop-and-reconnect).
 2. Verify application identity, `service: evy`, signature and canonical encoding before comparing the version/hash tuple.
 3. Save the newest verified document and tuple atomically. Save a compatible document as the application's drawable document.
 4. Open the Home entry route. Resolve all feature routes within the activated document.
@@ -162,7 +162,7 @@ Both outputs must equal the expected file, so VoiceOver and TalkBack read the sa
 | Sign | Distribution certificate and App Store provisioning profile | Upload key |
 | Deliver | Upload with an App Store Connect API key<br>Publishes a TestFlight build | Upload with a Play service account<br>Publishes a Play internal testing release |
 
-- Both apps pin the same freenet-appkit release for the Swift package and the Kotlin library, and both read the same `types/freenet/contract-keys.json`.
+- Both apps use the same freenet-appkit release for the Swift package and the Kotlin library, and both read the same `types/freenet/contract-keys.json`.
 - The secrets live in the GitHub environment `mobile-builds`, which only maintainers can use: `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and `APP_STORE_CONNECT_KEY` for TestFlight, `IOS_DISTRIBUTION_P12`, `IOS_DISTRIBUTION_P12_PASSWORD` and `IOS_PROVISIONING_PROFILE` for iOS signing, `ANDROID_UPLOAD_KEYSTORE` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD` for Android signing, `PLAY_SERVICE_ACCOUNT_JSON` for Play internal testing, and `ANDROID_MAPS_API_KEY` for the `map` row on Android.
 - The run summary lists the commit, the variant, both build numbers, the freenet-appkit release and the hash of `contract-keys.json`. Testers install from TestFlight on iOS and from the Play internal testing link on Android.
 
@@ -174,7 +174,7 @@ Pilot delivery uses TestFlight on iOS and Play internal testing on Android. Prod
 
 ## Acceptance
 
-- On iOS and Android, start from the one pinned EVY application UI contract and navigate Home, Hello and Marketplace within its complete document.
+- On iOS and Android, start from the one EVY application UI contract and navigate Home, Hello and Marketplace within its complete document.
 - A compatible publication reaches both running readers within 30 seconds. Both produce matching semantic snapshots and action traces.
 - On iOS and Android, restart offline after a successful read and show the saved compatible document. Fresh offline installation shows Connecting to Freenet until the application becomes available.
 - On iOS and Android, start a form or purchase, publish a new application version, navigate within the retained document and return. Drafts, resource context and exact action/purchase UI identity remain intact. An idle boundary activates the queued compatible document.

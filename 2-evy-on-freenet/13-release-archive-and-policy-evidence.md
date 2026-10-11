@@ -16,7 +16,7 @@ Owner: EVY evidence lead. [2.14 Backend operations and recovery](14-backend-oper
 
 Before the first payment-capable UI release, the publisher signs policy version 1 under [2.6 Payments](06-payments.md#financial-policy-identity), including publisher identity, application key, `archive_url`, `archive_key` and payment key-role certificate references. The archive stores its exact canonical signed bytes and returns a durable policy receipt. Independent retrieval verifies those bytes and digest.
 
-The policy archive endpoint is pinned in the publisher workspace for initial setup; signed policy bytes bind the endpoint/audience and trusted key. Readers and backend services verify publisher/application identity before using it. Attribution extends the same envelope at a higher version. Each acknowledged UI document retains its referenced policy bytes for the lifetime of purchases and ledger evidence.
+The policy archive endpoint is in the publisher workspace for initial setup; signed policy bytes bind the endpoint/audience and trusted key. Readers and backend services verify publisher/application identity before using it. Attribution extends the same envelope at a higher version. Each acknowledged UI document retains its referenced policy bytes for the lifetime of purchases and ledger evidence.
 
 ## Receipt and confirmation schema
 

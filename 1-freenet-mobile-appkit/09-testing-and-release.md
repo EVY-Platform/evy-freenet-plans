@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | AppKit tests, developer package and signed River test builds |
 | [river](https://github.com/freenet/river) | Modified | River test fixtures, invite-only rooms and tester support |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Pinned Core build and compatibility |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Core build and compatibility |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | River component migration fixtures |
 | [freenet-test-network](https://github.com/freenet/freenet-test-network) | Used | Isolated test networks |
 
@@ -18,11 +18,11 @@ Deliver signed River test builds through TestFlight on iOS and Play internal tes
 
 ## River scope
 
-- Pin the River website container, publisher, archive reference, room contract, chat delegate and original parameter bytes for every run. Preserve predecessor artifacts needed by upgrade tests.
-- Instantiate River's chat delegate on the pinned Core in a compatibility fixture. Verify that its freenet-stdlib host-function imports match that Core build ([#5617](https://github.com/freenet/freenet-core/issues/5617), [#5719](https://github.com/freenet/freenet-core/issues/5719), [#5717](https://github.com/freenet/freenet-core/issues/5717)).
+- Record the River website container, publisher, archive reference, room contract, chat delegate and original parameter bytes for every run. Preserve predecessor artifacts needed by upgrade tests.
+- Instantiate River's chat delegate on the Core build in a compatibility fixture. Verify that its freenet-stdlib host-function imports match that Core build ([#5617](https://github.com/freenet/freenet-core/issues/5617), [#5719](https://github.com/freenet/freenet-core/issues/5719), [#5717](https://github.com/freenet/freenet-core/issues/5717)).
 - Drive River's own UI for invite, join, read, send and reconnect tests. Use real embedded Core, contract validation and delegate signing. Deterministic fixtures isolate transport or fault cases alongside these end-to-end runs.
 - Run prompt and notification tests with the node in network mode to exercise delegate prompts and contract notifications ([#5273](https://github.com/freenet/freenet-core/issues/5273)).
-- Build isolated test networks with [freenet-test-network](https://github.com/freenet/freenet-test-network), whose Docker NAT simulation covers carrier-NAT cases. It pins freenet-stdlib 0.1.29, so check it against the pinned Core before the first run.
+- Build isolated test networks with [freenet-test-network](https://github.com/freenet/freenet-test-network), whose Docker NAT simulation covers carrier-NAT cases. It uses freenet-stdlib 0.1.29, so check it against Core before the first run.
 - Each isolated node gets its gateways with `--gateway` and `--skip-load-from-network` ([#4264](https://github.com/freenet/freenet-core/pull/4264)). Supply a nonempty gateway list and verify that every node's peers belong to the isolated network ([#5552](https://github.com/freenet/freenet-core/issues/5552)).
 - Exercise the supported Swift/Kotlin APIs with the same protocol fixtures. [1.1 Mobile feasibility and supported profiles](01-feasibility.md) published native-route coverage for the iPhone 13 mini, iOS Simulator and Android emulator in the [support matrix](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#operations). Add the Android phone column to it.
 - Label observations by their source: the local cache or an independent network read. Keep signed bytes with the draft until Core answers, under [1.6 Application protocols, data and operations](06-data-and-operations.md).
@@ -55,13 +55,13 @@ Use a separate test contract for destructive migration cases. Use bounded River 
 Provide these materials for River test builds and EVY native integration on iOS and Android:
 
 - A River WebView starter, and Swift and Kotlin SDK examples for native screens
-- The supported-version matrix and pinned dependencies
+- The supported-version matrix and dependencies
 - iOS and Android setup, build and distribution instructions, covering artifact verification, fixture setup and lifecycle integration
 - Diagnostic export and the release checklist
 
 ## Store requirements
 
-Deliver River to controlled testers through TestFlight on iOS and Play internal testing on Android. Pin one River publication and use invite-only test rooms with a named room owner and a monitored tester-support channel. Record the distribution review and declarations required by the selected testing channel before inviting testers.
+Deliver River to controlled testers through TestFlight on iOS and Play internal testing on Android. Use one River publication and invite-only test rooms with a named room owner and a monitored tester-support channel. Record the distribution review and declarations required by the selected testing channel before inviting testers.
 
 | Requirement | Evidence |
 | --- | --- |
@@ -69,7 +69,7 @@ Deliver River to controlled testers through TestFlight on iOS and Play internal 
 | Device access | Review notes list the notifications, clipboard, file, external-link and navigation adapters enabled by [1.3 Single-application host](03-host.md#shell-bridge-messages), their caller checks and consent rules. |
 | Tester support | Test invitations identify the room owner, support contact and test-data handling. The owner can remove a participant using River's room controls. |
 | Distribution review | Record approval for the actual River test build and testing channel, including applicable content, privacy and native-bridge requirements. Use the [App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) and [Google Play policy centre](https://play.google.com/about/developer-content-policy/) as the review sources. |
-| Runtime | Pulley runs the pinned contracts and delegate on iOS and Android. Review notes describe the embedded node, website container and enabled bridge adapters. |
+| Runtime | Pulley runs the contracts and delegate on iOS and Android. Review notes describe the embedded node, website container and enabled bridge adapters. |
 | Privacy | The testing checklist records public room data, peer-visible keys and IP addresses, private device records, and the declarations required by the distribution channel. |
 | Encryption | The checklist records X25519, AES-GCM, ChaCha20, XChaCha20-Poly1305, Ed25519, BLAKE3, HKDF-SHA256 and SHA-256, following [Encryption export regulations](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations). Record distribution territories and any required declarations. |
 
@@ -90,7 +90,7 @@ This plan owns the shared iOS and Android build-check interface. Pass applicatio
 | Privacy and encryption | `PrivacyInfo.xcprivacy` is in the `.app`, and `Info.plist` sets `ITSAppUsesNonExemptEncryption` | – |
 | No test harness | The binary has no `appkit.scenario` or `APPKIT_RESULT` | `classes*.dex` and native libraries have no `appkit.scenario` or `APPKIT_RESULT` |
 | Merge laws | `fdev verify-merge` passes on the application’s declared contract set (River room; every EVY contract) | Same |
-| Core version | The release checklist records the pinned Core version and the network's `min-compatible-version` | Same |
+| Core version | The release checklist records the Core version and the network's `min-compatible-version` | Same |
 
 From 2027-02-01, Play blocks app updates that lack 16 KB page support. The merge-law check follows [sending updates in 1.6 Application protocols, data and operations](06-data-and-operations.md#sending-updates). [#5725](https://github.com/freenet/freenet-core/issues/5725) tracks `fdev verify-merge` reporting a rejected merge of two valid states as inconclusive.
 
@@ -99,7 +99,7 @@ From 2027-02-01, Play blocks app updates that lack 16 KB page support. The merge
 Peers refuse a node whose Core version is below the network's `min-compatible-version` ([#1360](https://github.com/freenet/freenet-core/pull/1360), [#3294](https://github.com/freenet/freenet-core/pull/3294)). The build derives its configured minimum from `FREENET_MIN_COMPATIBLE_VERSION`; record the resolved build value and independently observed network minimum at each release gate. Desktop nodes update themselves and reconnect ([#2521](https://github.com/freenet/freenet-core/pull/2521), [#2516](https://github.com/freenet/freenet-core/pull/2516)), and Core's maintainers want peers to update quickly during alpha ([D2918](https://github.com/freenet/freenet-core/discussions/2918)). The iOS and Android store builds keep their packaged Core version. Apply these release rules:
 
 - Each iOS and Android store build records its Core version and the network's `min-compatible-version`.
-- A new iOS and Android store build ships before the network's minimum passes the pinned Core version.
+- A new iOS and Android store build ships before the network's minimum passes the Core version.
 - A phone that falls behind gets "update the app" from the SDK ([typed errors in 1.2 Embedded node and mobile SDK](02-sdk.md#typed-errors)). River tells the user to install the new store build.
 
 ## Release tests
@@ -110,7 +110,7 @@ Run every release test on iOS and Android with the phone in the thin-peer role.
 | --- | --- |
 | Independent build | A second developer builds and installs River from the starter instructions on iOS and Android. |
 | River | The join, read, send, reconnect, restart and interrupted-upgrade cases in [River acceptance cases](#river-acceptance-cases) pass through River's UI and real chat delegate. |
-| Thin role and budgets | The [acceptance in 1.8 Thin-peer protocol](08-thin-peer.md#acceptance) passes on the pinned Core build. |
+| Thin role and budgets | The [acceptance in 1.8 Thin-peer protocol](08-thin-peer.md#acceptance) passes on the Core build. |
 | Safety and durability | Browser WebSocket and native SDK paths pass the caller-authority, reply-correlation, cancellation and connection-generation tests in [1.2 Embedded node and mobile SDK](02-sdk.md#application-connections). Locking destroys the application WebView and releases controlled plaintext copies. Consistent, authenticated backup snapshots, fallback-port storage, offline sends, staged restore and policy-admitted migrations pass their owning plans. |
 | Local network | The local-network case in the [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) passes with River. |
 | Device limits and accessibility | Startup, memory, battery, storage exhaustion, keyboard, focus, large text and screen-reader tests pass on the declared devices. The [release-profile evidence in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence) records the exact release artifacts, runtime, ABI and real-device/carrier coverage. |

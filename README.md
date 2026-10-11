@@ -1,5 +1,7 @@
 # EVY + Freenet <3
 
+These plans lay out how we might build the [EVY plantform](https://github.com/EVY-Platform/evy) on top of Freenet. The 1st milestone is simply to add a generic mobile ecosystem in order to allow app builders to create native mobile apps on freenet, while the other 2 milestones focus on building EVY. Feel free to only read milestone 1 if you have limited time (:
+
 ## EVY's vision
 
 Imagine smartphones and the internet built by the people, for the people. We want to enable anyone to connect consumers to services, free from gatekeepers taking a cut, and compensate contributors fairly.
@@ -118,6 +120,8 @@ New adds mobile, application or tooling functionality. **Change** modifies share
 | [Core](https://github.com/freenet/freenet-core) delegates can read and subscribe over the network; their updates use the local store. | **Change** | Agree the sync protocol and protected device-key interfaces with Core maintainers; add delegate network updates and subscription recovery. Enable after security review, naming an owner and iOS and Android pairing, removal and recovery tests. [3.2](3-optional-extensions/02-sync.md#what-core-still-needs) |
 
 ## Sources
+
+Repository sources with a checked commit below are pinned to that commit for these plans.
 
 - [freenet/freenet-core](https://github.com/freenet/freenet-core): checked commit [`e7d0b06c9326f377d250bf8344baaac2ba2658c6`](https://github.com/freenet/freenet-core/commit/e7d0b06c9326f377d250bf8344baaac2ba2658c6)
 - [freenet/river](https://github.com/freenet/river): checked commit [`8cf54dd7799514851da7eab051e4cc43f797208d`](https://github.com/freenet/river/commit/8cf54dd7799514851da7eab051e4cc43f797208d)

@@ -139,12 +139,12 @@ Each record-set entry declares `id`, `owner`, `schema_version`, storage namespac
 | User publisher approvals and key choices | Trusted host; user-selected trust records | Export/import subject to current build policy; delete on Forget |
 | Host lifecycle checkpoints | Host; snapshot, activation and pending-operation reconciliation references | Export recoverable references; receiving installation recreates local transaction/control journals |
 | Device credentials | Host/platform; KEK, node keys, sessions, sync member/coordinator keys, backup master key, folder grants | Coverage report marks device-only; Forget deletes keys/grants and local copies |
-| Build-pinned publisher configuration | Signed native build; public publisher keys, permitted code and inventory definitions | Installed build supplies it; retained through identity reset |
+| Build-supplied publisher configuration | Signed native build; public publisher keys, permitted code and inventory definitions | Installed build supplies it; retained through identity reset |
 | Public contract caches and UI documents | Node/data layer; release dependencies of drafts, purchases and pending operations | Manifest declares required retained evidence; Forget clears local caches |
 
 Delegate pending records own signed operation bytes and replay context. Host checkpoints own lifecycle progress and reference those operation IDs/digests. Cross-record verification checks both; receiving installations recreate local authority and transaction handles. [1.10 Backup and restore](10-backup-and-restore.md) defines capture and staged activation.
 
-On iOS and Android, inventory fixtures enumerate every required record set, test backup coverage and verify the declared Forget rule for user trust records and build-pinned public configuration.
+On iOS and Android, inventory fixtures enumerate every required record set, test backup coverage and verify the declared Forget rule for user trust records and build-supplied public configuration.
 
 ## Acceptance
 

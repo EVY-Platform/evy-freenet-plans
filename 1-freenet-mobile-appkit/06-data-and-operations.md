@@ -149,9 +149,9 @@ Implementation references: [River CAS requests #345](https://github.com/freenet/
 
 Contract pinning, persistence and demand restoration support recovery when demand eviction removes a contract or every mobile node is stopped. Stronger retention and delivery claims require the implementation and eviction/restart evidence; the release fixtures below test the declared hosting budget.
 
-Core stores contract state and sends it to peers. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while Core retains the room state. Storage tests fill the pinned Core build's hosting budget and record which room copies it retains or evicts.
+Core stores contract state and sends it to peers. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while Core retains the room state. Storage tests fill the Core build's hosting budget and record which room copies it retains or evicts.
 
-Core work will address offline delivery after contract eviction. Reconnect tests for milestone 1 (Freenet mobile AppKit) and milestone 2 (EVY on Freenet) retain room state within the pinned Core build's hosting budget. Both milestones and [3.2 Device sync](../3-optional-extensions/02-sync.md#traffic-and-lifecycle) will adopt stronger Core retention and delivery guarantees when released, including data availability while all linked mobile nodes are stopped.
+Core work will address offline delivery after contract eviction. Reconnect tests for milestone 1 (Freenet mobile AppKit) and milestone 2 (EVY on Freenet) retain room state within the Core build's hosting budget. Both milestones and [3.2 Device sync](../3-optional-extensions/02-sync.md#traffic-and-lifecycle) will adopt stronger Core retention and delivery guarantees when released, including data availability while all linked mobile nodes are stopped.
 
 | Thread | Scope | Status checked 2026-10-07 |
 | --- | --- | --- |

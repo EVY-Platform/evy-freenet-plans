@@ -4,7 +4,7 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | New `freenet/` Rust workspace with the hello contract and the `evyctl` CLI. Native hello screen in `ios/`. New Kotlin and Compose app in `android/` with the same screen. Pinned contract keys in `types/freenet/contract-keys.json` |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | New `freenet/` Rust workspace with the hello contract and the `evyctl` CLI. Native hello screen in `ios/`. New Kotlin and Compose app in `android/` with the same screen. Contract keys in `types/freenet/contract-keys.json` |
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Swift package and Kotlin library from 1.2 Embedded node and mobile SDK |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Node and `fdev` |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Contract interface and the Rust client that `evyctl` uses |
@@ -54,7 +54,7 @@ The contract implements the four functions of freenet-stdlib's [contract interfa
 
 Publishers encode the signature as canonical standard padded base64, then serialize the complete signed object as RFC 8785 canonical JSON. `state_hash` is BLAKE3 of those exact complete signed state bytes, including `signature`. Ordering compares versions numerically, then the 32 hash bytes lexicographically as unsigned bytes at equal versions. The contract, greeting screen and `evyctl` use this ordering after checking identity and signature. The screen saves the exact bytes and tuple together and restores them on restart.
 
-CI in evy runs a test for each rule and runs `fdev verify-merge` on fixture states. The workspace uses the freenet-stdlib release matching the SDK's pinned Core, 0.12.1. This keeps contract imports within the host functions that Core provides ([River scope in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#river-scope)).
+CI in evy runs a test for each rule and runs `fdev verify-merge` on fixture states. The workspace uses the freenet-stdlib release matching the SDK's Core, 0.12.1. This keeps contract imports within the host functions that Core provides ([River scope in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#river-scope)).
 
 ## The EVY publisher key
 
@@ -84,9 +84,9 @@ Both apps start the embedded node at launch, in network mode and the thin-peer r
 
 Both apps get the SDK from the [developer package in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#developer-package). The local network rows follow [local network access in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#local-network-access).
 
-### Pinned keys
+### Contract keys
 
-`evyctl keys --out types/freenet/contract-keys.json` computes each contract key from the built Wasm and the parameters, and writes it to the file. Its `hello` entry holds the hello contract's base58 instance ID and code hash. Xcode copies the file into the iOS app bundle and Gradle copies it into the Android assets. The app reads only the pinned contract, using the component identity and release checks in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#release-references). A change to the hello contract's code or to the publisher key gives a new key, which ships in a new app build.
+`evyctl keys --out types/freenet/contract-keys.json` computes each contract key from the built Wasm and the parameters, and writes it to the file. Its `hello` entry holds the hello contract's base58 instance ID and code hash. Xcode copies the file into the iOS app bundle and Gradle copies it into the Android assets. The app reads only the contract, using the component identity and release checks in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#release-references). A change to the hello contract's code or to the publisher key gives a new key, which ships in a new app build.
 
 ### The hello screen
 

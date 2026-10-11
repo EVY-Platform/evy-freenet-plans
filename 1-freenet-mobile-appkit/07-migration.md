@@ -14,7 +14,7 @@ Carry application state and private records across upgrades. Define component ke
 
 The [installation interface in 1.4 Application bundles](04-bundles.md#release-verification) verifies a release and [1.3 Single-application host](03-host.md#activating-a-release) activates it. Each app runs its own migrations with freenet-migrate when the new release first starts, and runs them again on the next start if they fail. Release fixtures record the exact compatible library, Core and stdlib commits selected for the build.
 
-| App | Migration code | freenet-migrate pin |
+| App | Migration code | freenet-migrate version |
 | --- | --- | --- |
 | River | [delegate_migration.rs](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/components/app/freenet_api/delegate_migration.rs) | 0.5 |
 | Delta | [delegate_migration.rs](https://github.com/freenet/delta/blob/6e8c96031642e03f9cdcbe1bea71059b03699b1d/ui/src/freenet_api/delegate_migration.rs) | 0.6 |
@@ -31,7 +31,7 @@ A contract or delegate key derives from BLAKE3 over its code hash and exact para
 | --- | --- |
 | Room contract | Code hash and `ChatRoomParametersV1 { owner: VerifyingKey }` |
 | Chat delegate | Code hash and empty parameters, yielding BLAKE3 of the code hash |
-| Website container | Code hash of the pinned container Wasm, which [1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) passes on every publication, and the publisher's verifying-key parameters |
+| Website container | Code hash of the container Wasm, which [1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) passes on every publication, and the publisher's verifying-key parameters |
 
 Sources: [River FREENET.md](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/FREENET.md), [publication rules](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/.claude/rules/river-publish.md), and the [whitepaper status](https://github.com/freenet/paper-1/blob/bff15702759800a003ffbfce639fe859f57d966d/sections/07-status.tex). [Core upgrade issue #2776](https://github.com/freenet/freenet-core/issues/2776) is related protocol evidence. freenet-migrate provides the explicit application migration adapters. The dapp-builder skill's [upgrade and migration guide](https://github.com/freenet/freenet-agent-skills/blob/890ad1b20c03ee99dd0a0ae89ec3e3b17c19eac4/skills/dapp-builder/references/upgrade-and-migration.md) gives app authors the same rules.
 
@@ -60,7 +60,7 @@ Handle these registry cases:
 
 ### Supported backup generations
 
-The pinned River registry checked on 2026-10-09 lists chat delegates V1–V3 and V7–V31, and room contracts V1–V32. These are candidate automatic-migration fixtures. The release build declares tested source/target pairs, exact artifacts and backup format `application-backup/1` in its compiled inventory; admission requires passing iOS and Android readback evidence for each declared pair. EVY starts with delegate generation 1 and adds each tested predecessor pair when its code changes.
+The River registry checked on 2026-10-09 lists chat delegates V1–V3 and V7–V31, and room contracts V1–V32. These are candidate automatic-migration fixtures. The release build declares tested source/target pairs, exact artifacts and backup format `application-backup/1` in its compiled inventory; admission requires passing iOS and Android readback evidence for each declared pair. EVY starts with delegate generation 1 and adds each tested predecessor pair when its code changes.
 
 River room recovery for V4–V6 delegates uses a valid invite and is a separate recovery fixture. Report that coverage explicitly alongside automatic migration. Shared backup coverage lists current generation plus every admitted predecessor; skipped-version tests verify the declared pairs before public release.
 
@@ -107,7 +107,7 @@ Include a predecessor with a corrupt blob in the registry fixtures ([#4909](http
 
 Library compatibility and the integrated runner are release requirements for supported upgrades and restores.
 
-File a freenet-migrate issue to release a version compatible with Core's pinned freenet-stdlib, 0.12.1. Build the selected Core, stdlib and freenet-migrate versions together in the mobile SDK and run migration fixtures on that exact dependency set before release. This library release precedes the mobile migration interface below.
+File a freenet-migrate issue to release a version compatible with Core's freenet-stdlib, 0.12.1. Build the selected Core, stdlib and freenet-migrate versions together in the mobile SDK and run migration fixtures on that exact dependency set before release. This library release precedes the mobile migration interface below.
 
 Sources: [Cargo.toml](https://github.com/freenet/freenet-migrate/blob/74aed27eaec8a4347b47fa2665ea511d2fd14175/freenet-migrate/Cargo.toml), [stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136) and [stdlib #137](https://github.com/freenet/freenet-stdlib/pull/137).
 

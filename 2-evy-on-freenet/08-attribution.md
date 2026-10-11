@@ -48,7 +48,7 @@ Record feature/capability pools, role shares and merged-code eligibility in the 
 
 The signed EVY policy extends [Financial policy identity in 2.6 Payments](06-payments.md#financial-policy-identity). Existing policies retain their exact bytes/digests; attribution fields produce a higher application policy version.
 
-Build one EVY UI proposal contract in `freenet/contracts/ui_proposal/` with the EVY publisher's verifying key and UTF-8 `evy` parameters. It holds the application policy, registered contributor keys, proposals, reviews and attribution snapshots. Pin its full identity and code in `types/freenet/contract-keys.json`. The local publisher tool verifies that identity before writes.
+Build one EVY UI proposal contract in `freenet/contracts/ui_proposal/` with the EVY publisher's verifying key and UTF-8 `evy` parameters. It holds the application policy, registered contributor keys, proposals, reviews and attribution snapshots. Record its full identity and code in `types/freenet/contract-keys.json`. The local publisher tool verifies that identity before writes.
 
 The EVY publisher signs each policy and complete application UI publication through `evyctl`. Setup archives the current complete signed EVY document and confirms independent readback before attribution-backed publication and payouts. Capabilities identify internal features and their flow IDs. Each capability entry records its `feature`; allocation selects that feature's eligible capabilities and normalizes their policy weights.
 

@@ -63,7 +63,7 @@ Create a preview UI contract with a dedicated preview verifying key and UTF-8 `e
 
 `evyctl ui preview` validates and signs the complete draft, publishes it under the preview key and exports a QR descriptor containing the contract key, publisher key and schema/reader requirements. Matching iOS and Android preview builds have separate application IDs, node stores and keys. Their explicit Scan preview screen admits the descriptor and checks the supported UI code and parameter identity before reading it.
 
-The preview readers subscribe to that complete application document. Preview resources use declared test keys, test contracts and test payment endpoints. Production builds pin the production application identity.
+The preview readers subscribe to that complete application document. Preview resources use declared test keys, test contracts and test payment endpoints. Production builds use the production application identity.
 
 ## Publishing the application
 
@@ -93,7 +93,7 @@ Contributor keys are protected local author credentials. Contributor statements,
 - Editing one feature publishes a new complete EVY version with all internal routes and other flows intact.
 - Publisher private keys remain in protected local credential storage. Document and journal outputs contain only their declared signed public material.
 - Editor and CLI validation return matching paths for malformed rows, internal routes, adapters and policies.
-- On iOS and Android, preview builds verify the explicit test application descriptor and receive later complete preview versions. Production builds use the pinned production identity and resource endpoints.
+- On iOS and Android, preview builds verify the explicit test application descriptor and receive later complete preview versions. Production builds use the production identity and resource endpoints.
 - Interrupt before signing, after journal persistence, archive receipt, submission and readback. Resume with the saved version/bytes and obtain one verified application publication.
 - Concurrent jobs serialize version reservation. A higher network winner stops replay; an exact saved-byte readback completes the operation.
 - Archive failure, invalid receipt, altered audience/digest and expired sign-in challenge preserve the journal and fail the affected operation.

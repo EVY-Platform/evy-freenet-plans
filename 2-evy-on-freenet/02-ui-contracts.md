@@ -10,7 +10,7 @@
 
 ## Purpose
 
-Publish EVY as one Freenet application. One publisher signs a complete UI document containing Home, Hello and Marketplace flows. The iOS and Android native readers pin that application's UI contract and receive its signed updates.
+Publish EVY as one Freenet application. One publisher signs a complete UI document containing Home, Hello and Marketplace flows. The iOS and Android native readers use that application's UI contract and receive its signed updates.
 
 The first document contains Home and Hello. A later application version adds Marketplace. Each publication updates the complete EVY document under one application identity and one version stream.
 
@@ -72,7 +72,7 @@ Sign the bytes `evy.ui/1` followed by RFC 8785 canonical JSON of every field exc
 
 Use `ui.evy`, the fixed `evy` namespace and the signing domain below in shared identity/signature fixtures. These labels distinguish the complete application publication from internal feature data and give both readers the same contract identity.
 
-Build one UI contract from `freenet/contracts/ui/`. Its parameters are the EVY publisher's 32-byte verifying key followed by UTF-8 `evy`. The publisher key is defined in [2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key). Matching iOS and Android builds pin the resulting full key as `ui.evy` in `types/freenet/contract-keys.json`.
+Build one UI contract from `freenet/contracts/ui/`. Its parameters are the EVY publisher's 32-byte verifying key followed by UTF-8 `evy`. The publisher key is defined in [2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key). Matching iOS and Android builds include the resulting full key as `ui.evy` in `types/freenet/contract-keys.json`.
 
 | Function | Rule |
 | --- | --- |
@@ -129,13 +129,13 @@ This plan owns the complete-document schema, canonical signed bytes, UI identity
 | Route action, method, formatter or adapter behavior | Increase when its schema changes | Increase |
 | Compatible reader fix | Same | Same |
 
-Both readers store the newest verified application document and the newest drawable document with their exact bytes and tuples. A verified document requiring a newer reader advances the saved observation; the app keeps a drawable document and shows the update banner. A fresh installation fetches the pinned EVY document. Offline restart draws the retained compatible document.
+Both readers store the newest verified application document and the newest drawable document with their exact bytes and tuples. A verified document requiring a newer reader advances the saved observation; the app keeps a drawable document and shows the update banner. A fresh installation fetches the EVY document. Offline restart draws the retained compatible document.
 
 Active forms, drafts and purchases retain the exact application version and resource context that opened them. Compatible queued updates activate when the user reaches the defined idle boundary in [2.3 Native SDUI readers](03-readers.md#reading-the-application-ui-contract). Retain historical documents referenced by pending operations and purchase evidence.
 
 ## Acceptance
 
-- On iOS and Android, one pinned EVY UI contract opens Home and navigates to Hello within one document.
+- On iOS and Android, one EVY UI contract opens Home and navigates to Hello within one document.
 - Publishing a compatible application version updates both running readers within 30 seconds. A later version adds Marketplace flows and their routes together.
 - Both publisher and contract reject a complete application document over 512 KiB. Report assembled fixture size and update bytes.
 - Signature, identity, canonical encoding, version ordering, duplicates and equal-version hash conflicts produce identical results in Rust, TypeScript, Swift and Kotlin.

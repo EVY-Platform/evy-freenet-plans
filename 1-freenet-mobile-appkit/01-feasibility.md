@@ -4,7 +4,7 @@
 
 | Document | Contents |
 | --- | --- |
-| [Support matrix](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md) | Routes, targets, Wasm backends, pinned revisions, operations per device, required adapters |
+| [Support matrix](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md) | Routes, targets, Wasm backends, revisions, operations per device, required adapters |
 | [Device results](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md) | Every measured value, generated from the stored runs |
 | [Findings](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md) | What the runs turned up and which plan acts on each finding |
 | [Distribution review](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/distribution-review.md) | The iOS and Android packages against App Store and Google Play policy |
@@ -116,14 +116,14 @@ The [distribution review](https://github.com/glesage/freenet-appkit/blob/1988c5c
 | Item | Result |
 | --- | --- |
 | Interpreter use | Pulley maps no executable memory, which fits both stores |
-| Downloaded website content and Wasm | Ship River with pinned website and contract keys |
+| Downloaded website content and Wasm | Ship River with website and contract keys |
 | Local network | Release builds retry the first LAN send after the iOS local-network prompt and request `ACCESS_LOCAL_NETWORK` on Android |
 | User-generated content | River provides reporting, blocking, a filter, terms and a support URL in its own UI |
 | Encryption export and data safety | Declare the standard algorithms and the data sent to peers |
 
 ## Prototype learnings
 
-The dated iOS and Android prototype runs record their Core/runtime revisions in the linked findings. Release runs use the exact pinned dependency set. A community prototype also runs River on Android with an in-process node ([river#319](https://github.com/freenet/river/issues/319), [river#313](https://github.com/freenet/river/pull/313)). It stages fallback gateways for an offline first start and registers a synthetic auth token so River's chat delegate accepts the app's messages.
+The dated iOS and Android prototype runs record their Core/runtime revisions in the linked findings. Release runs use the exact dependency set. A community prototype also runs River on Android with an in-process node ([river#319](https://github.com/freenet/river/issues/319), [river#313](https://github.com/freenet/river/pull/313)). It stages fallback gateways for an offline first start and registers a synthetic auth token so River's chat delegate accepts the app's messages.
 
 | Requirement | Apply in |
 | --- | --- |
@@ -147,4 +147,4 @@ Run the remaining harness scenarios when the equipment is available ([remaining 
 | UDP-filtering network | A network that blocks UDP |
 | LAN test gateway on the iPhone | The phone and Mac on one Wi-Fi |
 | Cold start after a reboot | A phone reboot before the `startup` run |
-| Wasm backend conformance on the pinned Wasmtime version | The selected Core commit and its resolved `Cargo.lock`, with iOS and every supported Android ABI tested under [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) |
+| Wasm backend conformance on the Wasmtime version | The selected Core commit and its resolved `Cargo.lock`, with iOS and every supported Android ABI tested under [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) |

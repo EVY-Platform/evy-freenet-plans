@@ -32,7 +32,7 @@ EVY uses `evy.purchases` and `evy.messages` from [EVY resource catalogue in 2.4 
   "purchase": {                                          // what Bob buys
     "resource": "marketplace.items",                           // EVY resource ref of the item
     "fk": "4f1c6a0e-2b7d-4c1e-9a55-0d8e3f6b2a91",        // item ID, EVY's fk
-    "application_key": "<full EVY UI contract key>",   // pinned EVY application identity
+    "application_key": "<full EVY UI contract key>",   // EVY application identity
     "feature": "marketplace",                                  // internal source feature
     "ui_version": 6,                                      // retained complete EVY application document
     "ui_digest": "3b9e...",                              // exact signed UI state

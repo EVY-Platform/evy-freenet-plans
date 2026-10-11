@@ -17,7 +17,7 @@ Run one application per mobile installation. River is the AppKit WebView test ap
 
 ### Application node and key scope
 
-Each River or EVY installation owns its embedded node, node store, encryption key and host records. The application pins one published identity and its supported component code. EVY's Home, Hello and Marketplace features use that installation's node and one EVY delegate.
+Each River or EVY installation owns its embedded node, node store, encryption key and host records. The application uses one published identity and its supported component code. EVY's Home, Hello and Marketplace features use that installation's node and one EVY delegate.
 
 | Part | Responsibility |
 | --- | --- |
@@ -54,7 +54,7 @@ Authenticate the local node WebSocket, including clients that omit Origin ([#301
 | EVY native | SwiftUI on iOS and Compose on Android calling the SDK | Owning application, component policy and current session |
 | River browser reference | River web code inside Core's sandboxed frame | Core authentication, storage and capability enforcement |
 
-[1.1 Mobile feasibility and supported profiles](01-feasibility.md) confirmed that River's WebView and additional prototype measurements run in WKWebView and Android WebView, served by the embedded node from their pinned website containers ([device results](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#river-and-atlas-in-the-webview)).
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md) confirmed that River's WebView and additional prototype measurements run in WKWebView and Android WebView, served by the embedded node from their website containers ([device results](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#river-and-atlas-in-the-webview)).
 
 Host requirements:
 
@@ -78,7 +78,7 @@ River's frame posts `__freenet_shell__` messages to Core's shell for anything it
 | `clipboard` | Writes the text with no grant after a user tap, at most once per second and at most 2,048 characters ([#3748](https://github.com/freenet/freenet-core/pull/3748), [#4015](https://github.com/freenet/freenet-core/pull/4015)) | Writes the text with no grant and no prompt, under the same three rules as Core's shell. Android 13 and later shows a short system confirmation |
 | `download` | Saves the file, at most one every 2 seconds | Hands the file to the approved files adapter |
 | `open_url` | Opens an http or https URL in a new tab | Validates the URL and opens it through the approved external-link adapter. Signed backend operations use the owning application's authenticated service client |
-| `navigate` | Moves the frame within the same app, for a selected in-application destination | Keeps the pinned River application identity and validates the room destination |
+| `navigate` | Moves the frame within the same app, for a selected in-application destination | Keeps the River application identity and validates the room destination |
 
 River's web UI copies invite links with `document.execCommand('copy')` inside its own frame ([util.rs](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/util.rs)), so those copies need no host involvement.
 
@@ -139,7 +139,7 @@ The application's component declaration identifies required and optional device 
 
 River's `notifications` choice is an application setting enforced by its native adapter. The adapter answers shell requests from that choice and OS status. A delegate consent prompt runs through the embedder's `UserInputPrompter`, as [Background runs and delegate prompts](#background-runs-and-delegate-prompts) specifies.
 
-Forget clears the installation's permission records and regenerable tokens. Build-pinned public publisher keys and execution policy remain part of the installed build. User publisher approvals, key choices and identity-specific trust records belong to the encrypted inventory and are deleted by Forget under [1.5 Identity, keys and local protection](05-identity.md#application-data-inventory).
+Forget clears the installation's permission records and regenerable tokens. Build-supplied public publisher keys and execution policy remain part of the installed build. User publisher approvals, key choices and identity-specific trust records belong to the encrypted inventory and are deleted by Forget under [1.5 Identity, keys and local protection](05-identity.md#application-data-inventory).
 
 ### Asking for a permission
 
@@ -220,7 +220,7 @@ Expose per-app connection state, subscription demand, last observation time, pen
 
 ## Acceptance
 
-- On iOS and Android, River runs its pinned website publication in one WebView, using that installation's node and private store.
+- On iOS and Android, River runs its website publication in one WebView, using that installation's node and private store.
 - On iOS and Android, EVY's native host starts one node and one EVY delegate for all its features. Home, Hello and Marketplace routes retain the same application identity and session.
 - Authenticated connections and protected bridge methods reject substituted identities, forbidden components, invalid targets and expired sessions. Test loopback clients and equivalent local paths.
 - Reload, lock, suspension, reconnect and restore reject earlier callbacks and preserve acknowledged drafts and pending operations. Lock disposes of River's WebView and EVY's private native buffers before fresh contexts open on unlock.

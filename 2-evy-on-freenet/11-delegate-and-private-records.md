@@ -82,7 +82,7 @@ Release requires compatible libraries, a mobile SDK interface and passing migrat
 
 | Requirement | Work and evidence |
 | --- | --- |
-| Compatible library versions | [Compatible migration library in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#compatible-migration-library) aligns freenet-migrate with Core's pinned stdlib. The selected dependency set builds together in the SDK. |
+| Compatible library versions | [Compatible migration library in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#compatible-migration-library) aligns freenet-migrate with Core's stdlib. The selected dependency set builds together in the SDK. |
 | Mobile SDK interface | [Mobile migration interface in 1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#mobile-migration-interface) exposes the Rust runner to Swift and Kotlin with EVY's export, import and verification adapters and host-authorized namespaces. |
 | Migration fixtures | iOS and Android tests verify preserved identity, addresses and pending signed operations, retries after interruption or failed imports, skipped supported generations and rejection of records outside the EVY inventory. Successor readback completes before retirement. |
 
