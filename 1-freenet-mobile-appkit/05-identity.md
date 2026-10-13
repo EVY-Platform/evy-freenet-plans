@@ -45,7 +45,7 @@ The app goes to public users only after backup and restore pass the tests in [Ac
 
 Keeping the installation key in platform-protected storage supports private records across restarts and gives lock, key-loss and deletion checks a defined backend. Both platform backends and their device fixtures are release requirements.
 
-Add persistent iOS Keychain and Android Keystore backends to Core's closed `KekBackendKind` enum. File a Core sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137) for these backends and Android's rejection of keyring's in-memory mock backend. Use [kek.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/config/kek.rs) and [#4140](https://github.com/freenet/freenet-core/issues/4140) as implementation references.
+Add persistent iOS Keychain and Android Keystore backends to Core's closed `KekBackendKind` enum. File a Core sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137) for these backends and Android's rejection of keyring's in-memory mock backend. Use [kek.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/config/kek.rs) and [#4140](https://github.com/freenet/freenet-core/issues/4140) as implementation references.
 
 On first start, `crates/mobile` creates one encryption key for the node installation and stores it with the backend defined in this plan. Each installation has its own key, following [Application node and key scope in 1.3 Single-application host](03-host.md#application-node-and-key-scope).
 
@@ -73,13 +73,13 @@ Core derives a separate key for each delegate from the node encryption key. The 
 | Alice's signing key, room secrets and membership proof for "Skate club" | River's chat delegate store, under `room:<owner key>` | The chat delegate's derived key | Back from the backup file |
 | DMs Alice sent | River's chat delegate store | The chat delegate's derived key | Back from the backup file |
 | Records the app declares | Host records | The host's derived key | Back from the backup file |
-| "Skate club" messages, members and bans | Room contract state on the network | The [room secret](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/README.md#privacy-model) and member signatures | The app fetches them from the network |
+| "Skate club" messages, members and bans | Room contract state on the network | The [room secret](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/README.md#privacy-model) and member signatures | The app fetches them from the network |
 
 ### Locking and unlocking
 
 Platform key protection also needs runtime fencing and controlled-buffer cleanup after a key has been loaded. River release requires the Core lock lifecycle and matching host cleanup fixtures on iOS and Android.
 
-File a Core issue to add `lock` and `unlock` to `SecretsStore`, using [store.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/secrets_store/store.rs).
+File a Core issue to add `lock` and `unlock` to `SecretsStore`, using [store.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/wasm_runtime/secrets_store/store.rs).
 
 | Event | iOS signal | Android signal | What happens |
 | --- | --- | --- | --- |

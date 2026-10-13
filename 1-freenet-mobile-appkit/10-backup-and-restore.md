@@ -18,7 +18,7 @@ Owner: AppKit recovery lead. Complete this plan before River test delivery on iO
 
 Alice saves River's keys and private records in one encrypted backup file. On a new iPhone or Android phone, she opens the file with her recovery code and gets her rooms and DMs back.
 
-Use Core's `export` and `import` support for the passphrase-encrypted [FNSX file](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/docs/secrets-at-rest.md). Test coverage against the room identities available through [`riverctl identity export`](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/cli/README.md), River's UI and `IdentityExport` ([river#136](https://github.com/freenet/river/issues/136)).
+Use Core's `export` and `import` support for the passphrase-encrypted [FNSX file](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/docs/secrets-at-rest.md). Test coverage against the room identities available through [`riverctl identity export`](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/cli/README.md), River's UI and `IdentityExport` ([river#136](https://github.com/freenet/river/issues/136)).
 
 ### Recovery code
 
@@ -61,11 +61,12 @@ The canonical manifest binds these fields to the authenticated payload:
 | Format and execution policy | Backup format version, source store-policy version and SHA-256 policy digest |
 | Application and release | Application format, full published identity and verified `application_content_ref`, as [1.4 Application bundles](04-bundles.md#release-references) defines |
 | Identity and migration | Identity generation, migration checkpoint and supported component generations |
+| `source_generations` | Exhaustive set of component data generations captured at the snapshot barrier, with exact identities and required record-set references, including declared empty sets. Supported predecessor artifacts have separate inventory entries |
 | Inventory | Declared current and supported predecessor delegate namespaces and host-record sets |
 | Components and records | Exact delegate keys, code hashes, registration parameters, record-set identifiers, byte lengths and SHA-256 digests |
 | Coverage | Included and excluded application data and supported restore generations |
 
-Authenticate the whole envelope and verify every declared length, digest, namespace and component before staging. This binds the coverage report, host records and executable artifacts to the same secrets and snapshot.
+Authenticate the whole envelope and verify every declared length, digest, namespace and component before staging. Check that `source_generations` and record references agree with the captured inventory and checkpoint. This binds the coverage report, host records and executable artifacts to the same secrets and snapshot. Include the source-set field and its validation rules in the shared codec vectors.
 
 Implement the executable backup export and import proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035), open and unassigned as checked on 2026-10-07. Core exports each selected delegate's Wasm, code hash, full delegate key and exact registration parameters from the snapshot. `crates/mobile` exposes snapshot capture and sealing to the host. Keep device-only credentials in host-owned storage: session tokens, node keys, OS grants and local backup keys. The coverage report lists these exclusions; restore creates or provisions replacements through each owning protocol.
 
@@ -88,9 +89,9 @@ Set byte and time limits for the barrier and staging snapshot. On timeout or sto
 ### Restore
 
 1. Alice picks the file and types her recovery code. The host authenticates the full envelope and header, then verifies its canonical manifest, all record and component digests, application inventory, snapshot generation and cross-record references. A wrong code, altered manifest, missing record set or damaged file stops the restore before any restore writes.
-2. The host checks that this River release can read the file. Core verifies each Wasm code hash and delegate registration against the authenticated snapshot and the store build's [execution policy in 1.4 Application bundles](04-bundles.md#execution-policy). The app checks its migration checkpoint, adapters and mobile runtime against every restored generation. An expanded execution policy requires matching iOS and Android store builds before restore proceeds. The host shows Alice what the file holds and asks her to confirm. These checks finish before any restore writes.
+2. The host checks that this River release can read the file. Core verifies each Wasm code hash and delegate registration against the authenticated snapshot and the store build's [execution policy in 1.4 Application bundles](04-bundles.md#execution-policy). The coordinator derives the restore source set from authenticated `source_generations` and checks every source against the tested migration path, checkpoint, adapters and mobile runtime. Required missing or damaged data stops restore and preserves the existing generation. An expanded execution policy requires matching iOS and Android store builds before restore proceeds. The host shows Alice what the file holds and asks her to confirm. These checks finish before any restore writes.
 3. `crates/mobile` creates an encrypted staging store for River. Core installs and registers the bundled delegates there through the capability required under #4035, then restores their secrets under the recorded keys with `import_bundle`. The host writes the declared host records into the same staged generation.
-4. River runs its supported delegate migrations in staging and verifies the resulting records. The host activates the complete generation through the [staged restore transaction](#staged-restore-transaction).
+4. The SDK lifecycle coordinator authorizes River's existing migration adapter to run against staging. The adapter scopes its walk and journal to the authenticated source set and tested path, resumes that restore checkpoint, migrates supported records and verifies successor readback. The coordinator requires its durable completion checkpoint before the host activates the complete generation through the [staged restore transaction](#staged-restore-transaction).
 5. River checks each restored signing key against Alice's member entry in "Skate club", then fetches messages, members and bans. The host opens new sessions and shows Alice the coverage report.
 
 A backup from a supported earlier River release supplies that release's chat delegate Wasm and exact parameters. Core registers it in staging and restores its secrets under the recorded key. River carries those secrets forward to the current chat delegate in staging, as [1.7 Upgrades and migration](07-migration.md#delegate-secret-export-and-import) describes. River test delivery requires supported restore paths to pass on iOS and Android.
@@ -101,12 +102,12 @@ Restore updates code, secrets and host records as one generation, so a crash rec
 
 File a Core issue for isolated restore stores and a durable activation record that selects one application's complete data generation. Core and `crates/mobile` expose the transaction to Swift and Kotlin. Build on the executable-inclusive backup capability proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035).
 
-Before staging, verify the authenticated manifest, snapshot generation and migration checkpoint from [Export](#export). `crates/mobile` coordinates the application's delegate code, registrations, secrets and declared host records:
+Before staging, verify the authenticated manifest, source generations, snapshot generation and migration checkpoint from [Export](#export). The installation SDK lifecycle coordinator selects the application route under [1.7 Upgrades and migration](07-migration.md#mobile-migration-interface): River's existing adapter/journal or native EVY's Rust runner. It coordinates delegate code, registrations, secrets and declared host records:
 
 | Phase | Required behavior |
 | --- | --- |
 | Stage | Show the host's native restoring screen and pause the app's sessions. Keep the existing generation selected. Write into separate delegate and host-record stores protected by the node KEK through the iOS Keychain or Android Keystore. Direct Core's per-entry `import_bundle` writes into this generation. |
-| Validate and migrate | Check cross-record references, resume the migration checkpoint, run policy-admitted restore adapters and verify successor readback. Preserve identity keys, drafts and exact pending signed operations. Staged delegates run only restore adapters. |
+| Validate and migrate | Validate the authenticated source set and tested path, check required records and cross-record references, and resume the checkpoint bound to this backup/source/target/route. Run policy-admitted restore adapters and verify successor readback. Preserve identity keys, drafts and exact pending signed operations. Staged delegates run only restore adapters. |
 | Prepare activation | Flush the complete generation and validated manifest to durable storage. Close the application session, delegates and store handles. |
 | Activate | Atomically switch the durable activation record to select the complete application generation. Core and host records resolve through that record. Open a fresh session and reject callbacks from the previous generation. |
 | Recover | Read the activation record on startup before opening sessions. An interruption before the switch selects the existing generation; an interruption after the switch selects the complete restored generation. A staging failure keeps the existing generation selected and offers a retry. |
@@ -119,7 +120,7 @@ On iOS and Android, inject write failures, full storage, migration failures and 
 ## Acceptance
 
 - On iOS and Android, River's backup file restores Alice's signing keys, room secrets and DMs onto a fresh installation.
-- On iOS and Android, a fresh installation containing only the latest River release restores a backup from a supported earlier delegate build using the file's Wasm and exact parameters, then migrates its keys and records to the current delegate. Fixtures cover skipped releases, code or registration mismatches and unsupported generations; validation failures keep the phone's data intact.
+- On iOS and Android, a fresh installation containing only the latest River release restores a backup from a supported earlier delegate build using the file's Wasm and exact parameters, then migrates its keys and records to the current delegate. Fixtures cover an authenticated version 1 source restored by a version 4 build with intermediate data generations absent, required missing or damaged source records, source-set/checkpoint substitution, code or registration mismatches and unsupported paths. Validation failures keep the phone's data intact.
 - Host records River declares round-trip through the backup file. Device-local backup keys, session tokens, node keys, folder-access grants and cleanup-control records stay with their owning installation.
 - On iOS and Android, export while signing, saving drafts, cleaning pending operations, changing identity, migrating or updating application components. Every accepted backup restores one consistent snapshot, including all writes acknowledged before its barrier, matching keys and records, and a resumable migration checkpoint.
 - On iOS and Android, alter the manifest or header, mix record sets from two backups, remove a part, substitute a namespace or code artifact, and change a length or digest. Authentication or validation rejects each case before restore writes.

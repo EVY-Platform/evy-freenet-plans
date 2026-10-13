@@ -10,10 +10,9 @@ Define custody, trusted bridges, confirmations, refunds and contributor-fee hand
 
 Bitcoin has a separate start decision: buyers or sellers request it, and EVY selects a supported custody and payment-evidence model. Its implementation can proceed independently of saved cards.
 
-[freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) publishes SPV payment evidence for peers to check. Harvest embeds this evidence in each order and lets the seller name trusted bridges ([payment.rs](https://github.com/freenet/harvest/blob/9eb4a04ed30e75c478df0b89f38f68044bbd947c/common/src/payment.rs)). Before this becomes implementation work, define real-chain anchoring, trusted bridges, confirmation and reorganization handling, refund behavior, and how a 70-dollar purchase supplies the 0.70-dollar contributor fee. Add matching iOS and Android payment and recovery acceptance cases to that implementation plan.
+[freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) publishes SPV payment evidence for peers to check. Evaluate its proof/bridge authority against the EVY purchase evidence model in [2.12 Listings and purchases](../2-evy-on-freenet/12-listings-and-purchases.md). Before this becomes implementation work, define real-chain anchoring, trusted bridges, confirmation and reorganization handling, refund behavior, and how a 70-dollar purchase supplies the 0.70-dollar contributor fee. Add matching iOS and Android payment and recovery acceptance cases to that implementation plan.
 
 ## Sources
 
 - [freenet-bitcoin #27](https://github.com/freenet/freenet-bitcoin/issues/27): Real-chain anchoring before payment-proof acceptance
 - [Delegated watch keys #30](https://github.com/freenet/freenet-bitcoin/pull/30): Bridge address-watch authority and recovery
-- [Harvest payment.rs](https://github.com/freenet/harvest/blob/9eb4a04ed30e75c478df0b89f38f68044bbd947c/common/src/payment.rs): Order proof verification against seller-selected bridges

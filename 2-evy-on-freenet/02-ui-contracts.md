@@ -8,6 +8,8 @@
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Node and `fdev verify-merge` |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Contract interface and the Rust publisher client |
 
+Implementation starts from the supplied EVY schema/flows and adds signed Freenet publication. [Supplied EVY code and integration scope in 2.1 Hello EVY world](01-hello-evy-world.md#supplied-evy-code-and-integration-scope) records the domain/transport baseline.
+
 ## Purpose
 
 Publish EVY as one Freenet application. One publisher signs a complete UI document containing Home, Hello and Marketplace flows. The iOS and Android native readers use that application's UI contract and receive its signed updates.

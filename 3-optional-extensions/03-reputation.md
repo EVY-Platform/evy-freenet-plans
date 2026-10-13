@@ -6,7 +6,6 @@
 | --- | --- | --- |
 | [evy](https://github.com/EVY-Platform/evy) | Used | Completed purchases in purchase contracts |
 | [ghostkeys](https://github.com/freenet/ghostkeys) | Used | Scoped ghost key signatures |
-| [harvest](https://github.com/freenet/harvest) | Used | Seller complaints and standing |
 | [web](https://github.com/freenet/web) | Used | Ghost key research |
 
 ## Purpose
@@ -20,7 +19,7 @@ Freenet apps use the [Ghostkeys delegate](https://github.com/freenet/ghostkeys#i
 3. It returns a [signature over the message and the caller's identity](https://github.com/freenet/ghostkeys#scoped-signatures), with Bob's ghost key certificate.
 4. The certificate proves a card donation to Freenet through Stripe and records its amount and date ([D1189](https://github.com/freenet/freenet-core/discussions/1189)).
 
-Harvest accepts complaints from paying buyers. The order's receipt key signs each complaint. This identifies the order and keeps the buyer's ghost key private. Harvest's planned seller-standing system uses a donation bond that complaints withdraw from ([harvest#8](https://github.com/freenet/harvest/issues/8)).
+Use verified completed-purchase receipts to define buyer eligibility for complaints under [2.12 Listings and purchases](../2-evy-on-freenet/12-listings-and-purchases.md#the-purchase-contract). The reputation design selects disclosure, consent and seller-standing rules before implementation.
 
 ## When this becomes a plan
 
@@ -30,7 +29,7 @@ Work starts when EVY Marketplace needs evidence of completed purchases or an unl
 
 | Claim | Evidence and privacy requirements |
 | --- | --- |
-| Bob completed 5 pickups in the last 90 days while keeping sellers, items and dates private | Each completed purchase has statuses and a payment-service-signed payment record in a [purchase contract from 2.12 Listings and purchases](../2-evy-on-freenet/12-listings-and-purchases.md#the-purchase-contract). The proof must verify those purchases and hide their details. A ghost key signature proves key possession. Harvest publishes order commitments for counting and proposes [zero-knowledge proofs](https://github.com/freenet/harvest/blob/9eb4a04ed30e75c478df0b89f38f68044bbd947c/docs/design/incentive-mechanism.md#part-8--what-this-publishes-to-the-world) to hide them |
+| Bob completed 5 pickups in the last 90 days while keeping sellers, items and dates private | Each completed purchase has statuses and a payment-service-signed payment record in a [purchase contract from 2.12 Listings and purchases](../2-evy-on-freenet/12-listings-and-purchases.md#the-purchase-contract). The proof must verify those purchases and hide their details. A ghost key signature proves key possession. Evaluate anonymous receipt proofs using [Freenet reputation research #882](https://github.com/freenet/freenet-core/discussions/882) and define commitments that hide purchase details |
 | Bob holds a ghost key while keeping its identity private | The proof must hide the certificate. Ghost key signatures carry the same certificate, which lets services link requests. An "always allow" grant lasts indefinitely; expiry and revocation controls remain open work ([ghostkeys#49](https://github.com/freenet/ghostkeys/issues/49)) |
 
 Zero-knowledge proofs can take seconds to minutes to build ([D882](https://github.com/freenet/freenet-core/discussions/882)). This plan selects a proof system and measures it on both iOS and Android. The iOS test device is the iPhone 13 mini; the Android test devices follow [1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#device-limits).
@@ -44,6 +43,5 @@ A scoped signature identifies its caller by a web app contract or delegate key. 
 - [Unlinkable ghost key presentation, web #25](https://github.com/freenet/web/issues/25): Anonymous credentials (BBS+) hide the signing certificate. Benchmarks show verification exceeds the 5-second Wasm limit above about 13 members. Each service would need a voucher to use this method
 - [One-time ghost key bundles, ghostkeys #2](https://github.com/freenet/ghostkeys/issues/2): One key per action hides the signing ghost key at a lower cost. Closed proposal
 - [Ghost key library, web `rust/gklib`](https://github.com/freenet/web/tree/main/rust/gklib): Ghost key certificates issued with blind RSA signatures (`blind-rsa-signatures`)
-- [Harvest seller standing #8](https://github.com/freenet/harvest/issues/8), [purchase flow PR #21](https://github.com/freenet/harvest/pull/21) and [messaging PR #23](https://github.com/freenet/harvest/pull/23): A proposed donation bond bound to a ghost key, with complaints that withdraw from it. Certificate checks for remote sellers
 - [Rate-limiting nullifiers #601](https://github.com/freenet/freenet-core/discussions/601): The receiving contract enforces per-epoch action limits while hiding membership. Exceeding the limit reveals the key
 - [Anonymous reputation #882](https://github.com/freenet/freenet-core/discussions/882): Anonymous feedback receipts that prove buyer and seller are different people. Proofs take seconds to minutes with RISC Zero

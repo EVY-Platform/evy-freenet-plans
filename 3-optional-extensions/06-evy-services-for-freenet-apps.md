@@ -42,6 +42,4 @@ An implementation plan will define these interfaces and its own release gates on
 ## Sources
 
 - [evy.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/schema/sdui/evy.schema.json) and [sdui.md](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/sdui.md): The `UI_Flow` structure and row types an outside app would publish
-- [client_api.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/server/client_api.rs): The app frame's `connect-src`, limited to the node's own origin
-- [harvest#29](https://github.com/freenet/harvest/issues/29): An outside payment-bridge access case that requires a path compatible with the app frame's `connect-src` rule
-- [Harvest payment.rs](https://github.com/freenet/harvest/blob/9eb4a04ed30e75c478df0b89f38f68044bbd947c/common/src/payment.rs): A Freenet app that embeds payment proof in its own orders
+- [client_api.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/server/client_api.rs): The app frame's `connect-src`, limited to the node's own origin

@@ -8,6 +8,8 @@
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | `FreenetAppKit` Swift package and `org.freenet.appkit` Kotlin library from 1.2 Embedded node and mobile SDK |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Embedded node |
 
+Reuse the supplied SwiftUI reader/data stores on iOS and implement matching Compose behavior on Android. Embedded-node and signed-document integration follows [Supplied EVY code and integration scope in 2.1 Hello EVY world](01-hello-evy-world.md#supplied-evy-code-and-integration-scope).
+
 ## Purpose
 
 EVY on iOS and Android draws Home, Hello and Marketplace from one complete signed application UI document. SwiftUI and Compose use the same row types, actions and document fixtures. GitHub builds and signs both applications from one source commit.

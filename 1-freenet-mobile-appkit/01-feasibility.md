@@ -45,15 +45,19 @@ Every device that ran an operation matched the desktop fixtures for bytes, typed
 
 ### Release-profile evidence
 
-Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
+Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend, Wasm reservation, executor cap, Store replacement limits and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
 
 Repeat the runtime, lifecycle, host, key protection and application tests on the actual release artifacts. Record real iOS and Android phone coverage, every supported Android ABI, battery measurements and supported carrier paths before release. A changed runtime, minimum OS, execution policy or mobile patch revision requires the affected checks again. [1.9 Testing and release](09-testing-and-release.md#release-tests) consumes this matrix.
 
 ## Device limits
 
+The initial iOS and Android release uses the measured fixed-reservation profile: 256 MiB of reserved linear-memory address space per Wasm instance, with iOS Store replacement after 4 instances and at most 2 executors. Pin the measured Android executor and Store limits per ABI in the release support matrix. The table below preserves the recorded prototype measurements; acceptance repeats memory-growth, capacity and lifecycle checks on the actual release artifacts.
+
+After upstream Core ships support for smaller reservations, select its released version, measure the revised profile on iOS and Android and update limits under [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm).
+
 | Limit | Value | Evidence |
 | --- | --- | --- |
-| Memory per Wasm instance | 256 MiB. River's and Atlas's contracts use about 1 MiB | [Reservation finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations). Core set the 256 MiB default in [#3990](https://github.com/freenet/freenet-core/pull/3990) after the same reservation failure on a 4 GB Raspberry Pi ([#3986](https://github.com/freenet/freenet-core/issues/3986)) |
+| Linear-memory reservation per Wasm instance | 256 MiB. River's and Atlas's contracts use about 1 MiB | [Reservation finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations). Core set the 256 MiB default in [#3990](https://github.com/freenet/freenet-core/pull/3990) after the same reservation failure on a 4 GB Raspberry Pi ([#3986](https://github.com/freenet/freenet-core/issues/3986)) |
 | iOS Store limits | Replace each Store after 4 instances, 2 executors. With these, the iPhone stored 300 contracts | Same. Core's default replaces each Store after 500 instances ([#5268](https://github.com/freenet/freenet-core/issues/5268)) |
 | Local updates | About 21 per second, 45 ms each, on every device | [Local update finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#a-local-update-takes-about-45-ms) |
 | Large records | 32 MiB records cross Core, the bindings and the UI intact. On the iPhone a 32 MiB put takes 292 ms and a get 77 ms | [Large-record copying](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#large-record-copying-split-by-layer) |

@@ -29,32 +29,13 @@ During setup, derive the `application-backup/1` master key from the recovery cod
 
 Bind key, setup salt/profile and folder settings to the active EVY identity generation. Confirm the recovery code during setup. Require the phone passcode before folder changes or disabling backups. Files represent their snapshot time, including then-pending records. Forget deletes this master key and folder grants through the global inventory.
 
-## The backup file
+## Backup format and provider access
 
-Automatic backup uses the codec, snapshot barrier and staged activation from [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#the-backup-file). Enable it after that Core implementation and the manual/automatic cross-restore fixtures pass on iOS and Android.
+Use `application-backup/1` and the capture, authentication, inventory and staged-restore interfaces defined by [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#the-backup-file). That plan owns envelope/KDF parameters, byte limits, snapshot barriers, source-generation validation and activation. This plan owns scheduling, protected automatic-backup key setup, folder access, upload evidence and retention.
 
-```text
-EVY backup file
-├── Authenticated header: envelope version, recovery-code derivation settings
-│   and salt, plus the envelope salt and nonce
-└── One encrypted FNSX envelope
-    ├── Manifest: backup ID, snapshot generation, EVY identity and build,
-    │   selected namespaces, component and record digests, lengths and coverage
-    ├── EVY delegate records, Wasm and exact registration parameters
-    └── EVY's declared host records
-```
+Select EVY's complete inventory under [2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#application-data-inventory). Use the shared capture/seal operations and coverage report. Sync recovery creates fresh member/replica credentials under [3.2 Device sync](02-sync.md#recovery-and-mixed-versions) and obeys its two-device replacement workflow.
 
-The file uses the consistent application snapshot and authenticated envelope from [The backup file in 1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#the-backup-file). The export barrier captures the current and supported predecessor namespaces, delegate code and exact registrations, declared host records, migration state and every acknowledged draft and pending operation from one application generation. It resumes the app after the immutable snapshot is durable. Backup encryption and provider writes consume that snapshot.
-
-The host selects the complete inventory from [2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#application-data-inventory). It covers every EVY feature and the EVY delegate. The manifest binds the selection, coverage, identity generation and `application_content_ref` to one backup ID and snapshot generation. Core's extended FNSX export seals the manifest, records, Wasm, exact registrations and host records together. It authenticates the header as associated data. The stored master key and fresh envelope salt derive the sealing key. Manual and automatic exports use identical codec fixtures. [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#export) defines capture and validation.
-
-Device-only sessions, platform grants and sync member credentials follow the exclusions in the coverage report. A sync restore creates fresh device and replica identities under [Recovery and mixed versions in 3.2 Device sync](02-sync.md#recovery-and-mixed-versions).
-
-Core caps one export at 10,000 secrets and 256 MiB of plain text (`MAX_EXPORT_SECRET_COUNT` and `MAX_EXPORT_TOTAL_PLAINTEXT_BYTES` in [secret_export.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/secret_export.rs)). The phone stores each record's current value, and the bundle includes it ([Storage in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#storage)).
-
-Alice picks the folder with the iOS document picker or Android Storage Access Framework. Recheck the session after selection. EVY keeps an identity-bound security-scoped bookmark on iOS or persistable URI permission on Android. The provider's cellular/Wi-Fi setting controls upload. Record file bytes, that setting and available upload evidence, with OS/provider measurement uncertainty. The Backup page states this policy under the accounting interface in [1.11 Cellular data and resource budgets](../1-freenet-mobile-appkit/11-cellular-data-and-resource-budgets.md#accounting-scope-and-external-traffic).
-
-Use the executable backup support proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035) through `crates/mobile`. Export each EVY delegate's code with its records and install and register it during restore, following [The backup file in 1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#the-backup-file).
+Alice picks the folder with the iOS document picker or Android Storage Access Framework. Recheck the session after selection. EVY keeps an identity-bound security-scoped bookmark on iOS or persistable URI permission on Android. The provider's cellular/Wi-Fi setting controls upload. Record file bytes, that setting and available upload evidence, with OS/provider measurement uncertainty. The Backup page states this policy under [1.11 Cellular data and resource budgets](../1-freenet-mobile-appkit/11-cellular-data-and-resource-budgets.md#accounting-scope-and-external-traffic).
 
 ## Running a backup
 
@@ -97,50 +78,41 @@ Persist the generation index and cleanup decisions before deletion. Recheck the 
 
 ## Forget and backup cleanup
 
-Forget uses the application cleanup rules in [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#forget). All EVY features share this identity and backup scope.
+Use the cleanup coordinator and defining Forget suite in [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#forget). Register the automatic-backup resources below in EVY's global inventory so cleanup shares its identity-generation fencing and durable retry journal.
 
-| Step | Cleanup |
+| Resource | Cleanup and verification |
 | --- | --- |
-| 1. Stop | Persist cleanup-pending status, disable automatic and manual backup runs and invalidate the EVY identity generation. Cancel active exports and pending backup setup. Export, folder-picker, verification and post-restore callbacks from that generation discard their results. |
-| 2. Clear key material | Delete EVY's separate backup-key entry from Keychain on iOS or Keystore on Android, and wipe cached key material and plaintext export buffers. |
-| 3. Clear local backup records | Remove EVY's backup settings, salt, last-backup metadata and temporary export files. Stop security-scoped folder access and delete its bookmark on iOS; release EVY's persistable URI permission on Android. Delete the installation's trusted folder-access permission records. |
-| 4. Verify | Verify each deletion and grant release. Keep failures pending for retry after restart. New identity setup and backup enablement wait for cleanup to finish. |
+| Scheduler and active runs | Disable scheduling, cancel captures/provider writes and expire picker, upload and verification callbacks for the removed generation |
+| Protected automatic-backup key | Delete the separate Keychain entry on iOS or Keystore entry on Android and clear controlled cached buffers |
+| Local settings and files | Delete setup salt/profile, folder settings, generation index and temporary snapshots/files after the shared coordinator classifies them |
+| Provider grants | Stop security-scoped access and delete the bookmark on iOS; release persistable URI permission and trusted grant records on Android |
 
-Backup setup, key storage, file publication and Forget use one coordinator for EVY. Each operation checks the active identity generation before committing. If Forget interrupts a run, the run discards its staged file and keeps earlier verified backup files.
-
-The cleanup report lists copies handed to the OS provider. Forget erases the installation KEK and completes verified local-store deletion under the same cleanup journal.
-
-Cloud backup files remain available with their recovery code. After a restore or new identity setup, EVY creates the device's backup key and folder access again. Backup keys, bookmarks, URI grants and cleanup-control records stay on the device only.
+This plan supplies provider-specific deletion/grant evidence to the shared cleanup report. A failed deletion remains pending through restart and gates new backup setup. Earlier cloud files remain recoverable with their recovery code; the report identifies those retained provider copies.
 
 ## Restoring on a new phone
 
-Alice installs EVY on a new iOS or Android phone and taps "Restore from backup" on the first screen, before opening the application.
+The trusted first-run screen on iOS and Android opens the shared restore flow in [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#restore), using EVY's record adapters from [2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#updating-the-evy-delegate). Show snapshot time, coverage and supported path before confirmation. Open EVY after the coordinator reports complete activation; discover purchases through the operator's [Pilot hosting in 2.7 EVY Marketplace](../2-evy-on-freenet/07-marketplace.md#pilot-hosting) inventory.
 
-1. She picks the file and types her recovery code. EVY derives the backup key from the code and the recovery-code derivation settings in the header. It authenticates the complete envelope and header, verifies the manifest, digests, lengths and selected snapshot generation, then allows restore writes.
-2. Core verifies the bundled Wasm and registration against the authenticated bundle. Before writing restored data, EVY checks that its migration adapters and mobile runtime support each generation. It shows the backup time and coverage report and asks Alice to confirm.
-3. `crates/mobile` installs and registers the bundled delegates in an encrypted staging store, then imports their records under the recorded keys with Core's `import_bundle`. EVY restores the declared host records into that same staging generation, migrates supported earlier generations and verifies the restored `root_seed`, addresses and pending records there, following the [staged restore transaction in 1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#staged-restore-transaction).
-4. `crates/mobile` activates the complete restored generation and opens new sessions. The current EVY delegate uses Alice's restored `root_seed`. EVY opens its flows and finds purchases through the listings' admitted live references and retained sale evidence. It reads their purchase contracts and shows Bob's skateboard purchase with its status. Network recovery follows the operator's [Pilot hosting in 2.7 EVY Marketplace](../2-evy-on-freenet/07-marketplace.md#pilot-hosting) inventory and retention period.
-5. After activation, EVY stores the backup key for the current identity generation. Alice chooses the backup folder again. Daily backups start once EVY has stored the key and folder access. If setup fails, the Backup page offers a retry and the restored identity stays active. Forget invalidates pending key-storage and folder-picker results.
+After activation, store the automatic-backup key for the current identity generation and ask Alice to select a folder. A setup failure leaves the restored identity active and offers a retry; daily scheduling starts after both key and folder access verify. The shared Forget coordinator expires delayed setup callbacks.
 
-A backup from a supported earlier EVY delegate build supplies that build's Wasm and exact parameters. Core registers it in staging and restores the records under the recorded key. EVY moves the records to the current EVY delegate in staging, as [Updating the EVY delegate in 2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#updating-the-evy-delegate) describes, then activates the complete generation. Release of this feature requires this restore path to pass on iOS and Android.
-
-To move between iOS and Android phones, Alice picks a provider tested on both platforms. Google Drive is a target provider: release fixtures verify folder selection, persistent access, write/read behavior and recovery from a separate installation through the iOS document picker and Android Storage Access Framework. The provider support table records the tested OS and provider versions and the evidence level each adapter supplies.
+Cross-platform recovery uses a provider tested on iOS and Android. Google Drive is a target provider. Record OS/provider versions, picker and persistent-access results, file IDs/digests, upload evidence and a restore from a separately downloaded generation.
 
 ## Acceptance
 
-- On iOS and Android, opening EVY more than 24 hours after the last locally verified snapshot writes a new generation using the stored backup key when the retention budget permits it.
-- On iOS and Android, a fresh phone restores Alice's EVY keys and pending records from the file, finds Bob's open skateboard purchase through her item, and reads the purchase's status from its purchase contract.
-- On iOS and Android, a file written on an iPhone restores on an Android phone, and a file written on an Android phone restores on an iPhone.
-- On iOS and Android, EVY validates the recovery code and file before writing restored data. Wrong codes and damaged files leave the phone's data intact.
-- On iOS and Android, restoring over an existing EVY identity passes the failure and interruption cases in [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#acceptance). Recovery selects either the complete existing identity and pending records or the complete restored identity and pending records. Service signing and pending-record submission start after activation.
-- On iOS and Android, failure to store the backup key after activation keeps the restored identity usable and shows a retry. Daily backup starts once the key and folder access are stored for the active identity generation.
-- On iOS and Android, backgrounding EVY during an export, a full folder, a removed folder and a damaged new file each keep the last verified file. The Backup page shows the failure until a new file verifies.
-- On iOS and Android, the backup key has the key settings of the node encryption key for each OS version and stays out of device backups. A folder change asks for the phone passcode.
-- On iOS and Android, Forget during export, file verification, backup setup or post-restore key storage deletes the local backup key, settings and temporary files and releases folder access. Backups stay disabled after delayed callbacks and restart. Earlier cloud files restore with the recovery code, and unrelated applications retain their node and backup access.
-- On iOS and Android, interruption or failure during backup-key deletion or folder-grant release keeps cleanup pending and retries it before a new identity enables backups. A successful cleanup verifies both OS stores and local files.
-- On iOS and Android, a fresh installation containing only the latest EVY release restores a backup from each supported earlier delegate build using the file's Wasm and exact parameters, then moves its root seed and pending records to the current delegate. Fixtures cover skipped releases, code or registration mismatches and unsupported generations; validation failures keep the phone's data intact.
+| Defining suite | Evidence consumed by this plan |
+| --- | --- |
+| [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#acceptance) | Complete authenticated snapshots, wrong/damaged files, supported predecessor paths, interruption and atomic activation; manual/automatic cross-restore with EVY adapters |
+| [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#acceptance) | Protected key settings, lock, global Forget, deletion retry and stale-generation rejection |
+| [2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#acceptance) | EVY keys, addresses and exact pending-operation coverage through restore/migration |
 
-- On iOS and Android, export races with draft saves, signing, migration and Forget. Every accepted file contains one acknowledged application snapshot and its matching authenticated manifest. Combining bytes from two backup generations fails validation before restore writes.
+Run these suites on the same iOS and Android artifacts and retain their defining results once. This plan owns the following scheduler/provider checks:
+
+- Opening EVY more than 24 hours after the last locally verified snapshot writes one new generation when the retention budget permits it. Background interruption retries on next open and preserves retained generations.
+- A fresh iOS and Android installation restores a provider-downloaded file, then resolves Bob's open purchase through the hosting inventory. iOS-to-Android and Android-to-iOS runs distinguish private-record recovery from network availability.
+- Failure to store the automatic-backup key or folder grant after activation keeps the identity usable and offers retry. A folder change requires the phone passcode and current identity generation.
+- Full/removed folders, failed writes and damaged new provider files preserve the last verified generation and show the failed run.
+- Forget during provider upload, verification, setup or post-restore key storage supplies the shared cleanup suite with separate-key deletion, grant-release and stale-callback evidence. Interrupted grant/key deletion retries before a new identity enables scheduling. Retained cloud files still open with their recovery code.
+
 - On iOS and Android, provider-local readback alone shows locally verified status. Delayed upload, offline operation, quota failure, provider sign-out and process termination retain the known recoverable predecessor. A supported provider's exact-generation upload confirmation or an independently recovered successor makes predecessor cleanup eligible.
 - On iOS and Android, a provider without upload evidence retains generations within the configured limits, pauses at capacity and shows the available action. Interrupted cleanup and reordered provider callbacks retain a recoverable generation and respect Forget's identity-generation checks.
 - On iOS and Android, a separate installation restores a provider-downloaded generation after the source phone is unavailable. The run records the file identity, digest, provider/OS versions and recovery evidence. Restore tests distinguish private-record recovery from purchase and listing availability on the supported Freenet network.

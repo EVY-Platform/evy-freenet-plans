@@ -25,6 +25,20 @@ flowchart LR
     Net --> B[Bob's Android phone<br>Compose hello screen<br>embedded thin peer]
 ```
 
+## Supplied EVY code and integration scope
+
+EVY supplies its iOS SwiftUI reader, data/draft stores, signed rows and payment services. Its current resource transport is JSON-RPC over WebSocket, backed by PostgreSQL resource adapters: [EVYWebsocket.swift](/Users/glesage/Desktop/Repos/evy/ios/evy/Data/API/EVYWebsocket.swift:57) and [coreResource.ts](/Users/glesage/Desktop/Repos/evy/api/src/data/resources/coreResource.ts:1).
+
+| Owning plan | Milestone 2 (EVY on Freenet) implementation |
+| --- | --- |
+| This plan | Add installation-owned embedded nodes and greeting fixtures in matching iOS SwiftUI and Android Compose builds |
+| [2.2 EVY UI contracts and publishing](02-ui-contracts.md) | Add complete signed UI documents, contract publication and retained identity/provenance |
+| [2.3 Native SDUI readers](03-readers.md) | Connect the existing iOS SwiftUI domain behavior to the SDK and build matching Android Compose behavior |
+| [2.4 SDUI data and actions](04-data-and-actions.md) | Replace resource bindings with verified contract adapters and durable replay while preserving supplied domain semantics |
+| [2.11 EVY delegate and private records](11-delegate-and-private-records.md) | Add local delegate signing, private records, migration and recovery |
+
+The backend service client retains its authenticated JSON-RPC route for approved provider operations. [2.14 Backend operations and recovery](14-backend-operations-and-recovery.md) owns its shared deployment. The prototype work supplies mobile foundation and River validation; the EVY plans own these domain implementations and their acceptance.
+
 ## The hello contract
 
 A new Rust workspace in evy's `freenet/` folder starts with three crates:
@@ -43,7 +57,7 @@ Freenet derives a contract key from the contract's code and its parameter bytes 
 }
 ```
 
-The contract implements the four functions of freenet-stdlib's [contract interface](https://github.com/freenet/freenet-stdlib/blob/fca0848b78b12942f77422309bb07f76108940d6/rust/src/contract_interface/trait_def.rs):
+The contract implements the four functions of freenet-stdlib's [contract interface](https://github.com/freenet/freenet-stdlib/blob/7782c176a622efc3f284ce4710b4f184c4986405/rust/src/contract_interface/trait_def.rs):
 
 | Function | Rule |
 | --- | --- |

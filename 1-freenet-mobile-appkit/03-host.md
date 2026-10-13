@@ -44,7 +44,7 @@ Bind protected calls to the owning application's verified publication, exact rel
 
 The host checks the application's permitted component identities and declared device access before forwarding protected calls. A request retains its target and session through dispatch and result delivery. The [requests, events and errors in 1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors) define request matching and callback generations.
 
-Authenticate the local node WebSocket, including clients that omit Origin ([#3011](https://github.com/freenet/freenet-core/pull/3011), [client API exposure](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/docs/client-api-exposure.md)). Verify the selected application's connection binding under [Session admission #5264](https://github.com/freenet/freenet-core/issues/5264). Test caller-selected identities and equivalent API paths before releasing private data.
+Authenticate the local node WebSocket, including clients that omit Origin ([#3011](https://github.com/freenet/freenet-core/pull/3011), [client API exposure](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/docs/client-api-exposure.md)). Verify the selected application's connection binding under [Session admission #5264](https://github.com/freenet/freenet-core/issues/5264). Test caller-selected identities and equivalent API paths before releasing private data.
 
 ## Browser and native hosts
 
@@ -80,7 +80,7 @@ River's frame posts `__freenet_shell__` messages to Core's shell for anything it
 | `open_url` | Opens an http or https URL in a new tab | Validates the URL and opens it through the approved external-link adapter. Signed backend operations use the owning application's authenticated service client |
 | `navigate` | Moves the frame within the same app, for a selected in-application destination | Keeps the River application identity and validates the room destination |
 
-River's web UI copies invite links with `document.execCommand('copy')` inside its own frame ([util.rs](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/util.rs)), so those copies need no host involvement.
+River's web UI copies invite links with `document.execCommand('copy')` inside its own frame ([util.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/util.rs)), so those copies need no host involvement.
 
 ## Freenet issues being worked on that are required
 
@@ -93,11 +93,11 @@ Application/session binding, private-event routing and permission checks protect
 | Declared, revocable permissions and per-app embedding | [Permissions #4014](https://github.com/freenet/freenet-core/issues/4014), [security discussion #5380](https://github.com/freenet/freenet-core/discussions/5380) | Enforce grants at each permission use, including page-initiated access |
 | Fresh consent for expanded access | [Permissions #4014](https://github.com/freenet/freenet-core/issues/4014) is the open tracker. [#4090](https://github.com/freenet/freenet-core/pull/4090) lists the gaps an implementation must close. [#5730](https://github.com/freenet/freenet-core/pull/5730) is the working precedent for revocable grants | A changed manifest prompts before any new access, and grants remain revocable |
 | Durable, isolated web storage | [Storage #5165](https://github.com/freenet/freenet-core/issues/5165) | Reload and termination preserve only authorized records |
-| Delegate prompts | Core's `RequestUserInput` message in the [stdlib delegate interface](https://github.com/freenet/freenet-stdlib/blob/fca0848b78b12942f77422309bb07f76108940d6/rust/src/delegate_interface.rs). Open prompt bugs are [#5749](https://github.com/freenet/freenet-core/issues/5749), [#5537](https://github.com/freenet/freenet-core/issues/5537) and [#4966](https://github.com/freenet/freenet-core/issues/4966). Core drops a prompt from a delegate that another delegate called ([#5364](https://github.com/freenet/freenet-core/issues/5364)). Core holds a delegate that waits on a prompt off its contract loop, and [#5606](https://github.com/freenet/freenet-core/pull/5606) adds a byte cap and a time limit for those waiting requests. Local mode drops prompts ([#5273](https://github.com/freenet/freenet-core/issues/5273)) | Trusted prompts identify the requester and return only to the authorized request. Each answer binds to its own prompt ([ghostkeys#24](https://github.com/freenet/ghostkeys/issues/24)). Prompt tests run the node in network mode |
+| Delegate prompts | Core's `RequestUserInput` message in the [stdlib delegate interface](https://github.com/freenet/freenet-stdlib/blob/7782c176a622efc3f284ce4710b4f184c4986405/rust/src/delegate_interface.rs). Open prompt bugs are [#5749](https://github.com/freenet/freenet-core/issues/5749), [#5537](https://github.com/freenet/freenet-core/issues/5537) and [#4966](https://github.com/freenet/freenet-core/issues/4966). Core drops a prompt from a delegate that another delegate called ([#5364](https://github.com/freenet/freenet-core/issues/5364)). Core holds a delegate that waits on a prompt off its contract loop, and [#5606](https://github.com/freenet/freenet-core/pull/5606) adds a byte cap and a time limit for those waiting requests. Local mode drops prompts ([#5273](https://github.com/freenet/freenet-core/issues/5273)) | Trusted prompts identify the requester and return only to the authorized request. Each answer binds to its own prompt ([ghostkeys#24](https://github.com/freenet/ghostkeys/issues/24)). Prompt tests run the node in network mode |
 
 ## Activating a release
 
-The host verifies the release reference and build policy before activation.
+The host verifies the release reference and build policy before activation. It uses the installation SDK lifecycle coordinator to pause work, require the selected migration driver's verified completion and activate the complete release/data generation. River supplies its existing migration adapter and journal; native EVY uses the shared Rust runner on iOS and Android under [1.7 Upgrades and migration](07-migration.md#mobile-migration-interface).
 
 | Change | Boundary | Retained work |
 | --- | --- | --- |
@@ -145,7 +145,7 @@ The matching iOS and Android build profile admits declared device adapters. Trus
 | Clipboard and external link | A user tap invokes the declared bounded copy or validated navigation adapter. The host checks authority at dispatch. |
 | Additional device access | The owning plan names the shipping flow, consent trigger and revocation rule before the build profile admits it. |
 
-River's `app_definition.json` declares optional `notifications`. On first run the host saves the answer, then requests the matching OS permission if needed. The notification modal's Enable button and first send receive that saved answer. Native alerts require both consent and OS permission; Bob can change either in the host/system settings. River's [notification modal source](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/components/room_list/notification_modal.rs) supplies the fixture.
+River's `app_definition.json` declares optional `notifications`. On first run the host saves the answer, then requests the matching OS permission if needed. The notification modal's Enable button and first send receive that saved answer. Native alerts require both consent and OS permission; Bob can change either in the host/system settings. River's [notification modal source](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/components/room_list/notification_modal.rs) supplies the fixture.
 
 An unanswered trusted consent prompt expires after 60 seconds and saves no answer. First-run notification consent is offered on the next run. Recheck current session/generation after any native picker or prompt; stale callbacks expire. Delegate capability prompts follow [Background runs and delegate prompts](#background-runs-and-delegate-prompts).
 
@@ -156,7 +156,7 @@ An unanswered trusted consent prompt expires after 60 seconds and saves no answe
 - Require explicit authorization when sharing identity or private records between WebViews and native contexts.
 - Return typed results: granted, denied, unavailable, locked device or expired handle. Bind selected files to the requesting operation and session.
 
-The selected shipping adapters are listed below. Each operation checks caller/session authority, signed context where used and current device consent. River's [notification integration](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/components/app/notifications.rs) is an application fixture. Notification taps validate the target and refresh application state before showing it. Alerts arrive only while the host is in the foreground, as [1.1 Mobile feasibility and supported profiles](01-feasibility.md#message-alerts) confirmed on iOS and Android.
+The selected shipping adapters are listed below. Each operation checks caller/session authority, signed context where used and current device consent. River's [notification integration](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/components/app/notifications.rs) is an application fixture. Notification taps validate the target and refresh application state before showing it. Alerts arrive only while the host is in the foreground, as [1.1 Mobile feasibility and supported profiles](01-feasibility.md#message-alerts) confirmed on iOS and Android.
 
 ### Shipping device adapters
 
@@ -176,15 +176,15 @@ Expansion requires a named application flow, paired iOS and Android fixtures, ex
 
 The host uses the embedder-supplied `UserInputPrompter` interface to show delegate prompts and startup consent in trusted native UI on iOS and Android. Each answer belongs to the requesting session.
 
-A delegate that needs startup runs or wake-ups declares them, with `Background`, in its Wasm manifest ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)). River's chat delegate declares no manifest. It rotates private-room secrets when a room update arrives ([subscription.rs](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/delegates/chat-delegate/src/subscription.rs)), and its room subscriptions survive a node restart ([#5728](https://github.com/freenet/freenet-core/pull/5728)).
+A delegate that needs startup runs or wake-ups declares them, with `Background`, in its Wasm manifest ([stdlib #136](https://github.com/freenet/freenet-stdlib/pull/136)). River's chat delegate declares no manifest. It rotates private-room secrets when a room update arrives ([subscription.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/delegates/chat-delegate/src/subscription.rs)), and its room subscriptions survive a node restart ([#5728](https://github.com/freenet/freenet-core/pull/5728)).
 
 When an app registers a delegate whose manifest lists startup runs or wake-ups, Core raises the `Background` consent itself, through the prompter's `prompt_capability` call. The mobile host answers that call from the installation approval, so the user sees no second prompt.
 
 Manifests can also declare wake-ups ([#5747](https://github.com/freenet/freenet-core/pull/5747)). Core fires a wake-up only while the app holds the `Background` grant. On iOS and Android, wake-ups and other background work run only while the SDK lifecycle keeps the node running.
 
-File a Core issue to expose `UserInputPrompter` through Core's `user_input` module as a public interface the embedder supplies when creating the node. On iOS and Android, configure `p2p_impl.rs` with that prompter. Route delegate prompts and `Background` consent (`prompt_capability`) through it to trusted native screens. Browser hosts use Core's own prompt.
+Core already defines `UserInputPrompter` in `contract/user_input.rs`. The Core mobile integration owner exposes it through node construction and wires it into `p2p_impl.rs` on iOS and Android. Route delegate prompts and `Background` consent (`prompt_capability`) through it to trusted native screens. Browser hosts use Core's own prompt.
 
-Use [p2p_impl.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/node/p2p_impl.rs), [user_input.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/contract/user_input.rs) and [#5749](https://github.com/freenet/freenet-core/issues/5749) as implementation references.
+Use [p2p_impl.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/node/p2p_impl.rs), [user_input.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/contract/user_input.rs) and [#5749](https://github.com/freenet/freenet-core/issues/5749) as implementation references.
 
 Contract notifications, lifecycle runs and wake-ups can also raise prompts ([#5749](https://github.com/freenet/freenet-core/issues/5749)). Show those prompts at once in the same trusted native screen. Identify the app that Core binds to the delegate because these runs have no caller. On iOS and Android, the node runs in the foreground, so the app is open when the prompt appears.
 
@@ -206,7 +206,7 @@ Recovery exports use the authenticated inventory, 10,000-secret/256 MiB ceiling 
 
 ## Diagnostics
 
-Expose per-app connection state, subscription demand, last observation time, pending-operation counts, storage use, verified release, grants and typed failures. Exported reports redact keys, message bodies, session tokens, private references and private records by default. Test redaction of delegate replies, conversation keys, backup secrets and WebSocket query strings using [harvest#94](https://github.com/freenet/harvest/issues/94) and [river#700](https://github.com/freenet/river/pull/700).
+Expose per-app connection state, subscription demand, last observation time, pending-operation counts, storage use, verified release, grants and typed failures. Exported reports redact keys, message bodies, session tokens, private references and private records by default. Test redaction of delegate replies, conversation keys, backup secrets and WebSocket query strings using [River diagnostic redaction #700](https://github.com/freenet/river/pull/700).
 
 ## Acceptance
 

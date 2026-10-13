@@ -10,6 +10,8 @@
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Contract and delegate interfaces |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | `freenet-migrate-build` registry and `migrate_delegate_secrets` |
 
+Reuse EVY resource/draft semantics through the contract adapters defined here. [Supplied EVY code and integration scope in 2.1 Hello EVY world](01-hello-evy-world.md#supplied-evy-code-and-integration-scope) records the JSON-RPC/PostgreSQL baseline and matching iOS and Android implementation scope.
+
 ## Purpose
 
 EVY on iOS and Android resolves data bindings and actions through Freenet contracts and one local EVY delegate. The Hello development fixture gets a guestbook:
@@ -47,8 +49,8 @@ The existing `<service>.<resource>` names and delegate `service` fields identify
 | Component | EVY interface and storage | Owning plan |
 | --- | --- | --- |
 | Collections such as `hello.greetings` and `marketplace.items` | `collection/1` decodes signed records. Contract-specific operations handle item purchase references and publisher-signed lookups | This plan and [2.6 Payments](06-payments.md) |
-| `evy.purchases` | `purchase/1` exposes purchase rows from the common purchase contract, one instance per sale. Rows retain the originating feature, item reference, participant keys, purchase ID and contract key | [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface) |
-| `evy.messages` | `purchase-messages/1` exposes the signed messages of a referenced purchase. Message IDs, parents and participant roles retain their purchase context | [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface) |
+| `evy.purchases` | `purchase/2` exposes purchase rows from the common purchase contract, one instance per sale. Rows retain the originating feature, item reference, participant keys, purchase ID and contract key | [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface) |
+| `evy.messages` | `purchase-messages/2` exposes the signed messages of a referenced purchase. Message IDs, parents and participant roles retain their purchase context | [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface) |
 | `evy.addresses` | `address/1` creates and edits the user's private address book in the EVY delegate. It also exposes address copies decrypted from purchase messages for their authorized recipients | [2.7 EVY Marketplace](07-marketplace.md#shared-messages-addresses-and-files) |
 | `evy.files` | `file/1` exposes file references and fetches their bytes. The first implementation supports photos, with one immutable contract per content hash | [2.7 EVY Marketplace](07-marketplace.md#shared-messages-addresses-and-files) |
 | `evy.delegate` | One delegate per user installation signs and decrypts for every EVY feature, with feature and purchase scopes | [The EVY delegate in 2.11 EVY delegate and private records](11-delegate-and-private-records.md#the-evy-delegate) |
@@ -94,13 +96,13 @@ The complete application document declares these bindings once; Home and Marketp
 ```jsonc
 {
   "evy.purchases": {
-    "adapter": "purchase/1",
+    "adapter": "purchase/2",
     "contract": "purchase",
     "code_hash": "7HpQ...",          // supported purchase Wasm
     "items": "marketplace.items"     // listing binding in this document
   },
   "evy.messages": {
-    "adapter": "purchase-messages/1",
+    "adapter": "purchase-messages/2",
     "purchases": "evy.purchases"
   },
   "evy.addresses": {
@@ -124,12 +126,12 @@ The readers ship the adapter implementations, schemas and supported contract Was
 | Adapter | Read projection | Writes and ownership |
 | --- | --- | --- |
 | `collection/1` | Decodes `records/removed` for author-written collections, or the catalogue's supported lookup schema | `create` and `update` sign author records with the originating feature key. Seller authorization, certified service admission decisions and publisher lookup updates use their contract-specific schemas |
-| `purchase/1` | Projects each verified nested purchase state into one row, identified by its contract key, with its purchase ID and participant roles | `create` creates the purchase and its initial buyer message. Participant actions use the transition rules from [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface). `owns` matches the feature seller key or the purchase-scoped buyer key |
-| `purchase-messages/1` | Projects messages with their purchase contract key, message ID, parent and author role | `create` appends a permitted signed participant message to that purchase. `owns` matches that message's author key |
+| `purchase/2` | Projects each verified nested purchase state into one row, identified by its contract key, with its purchase ID and participant roles | `create` creates the purchase and its initial buyer message. Participant actions use the transition rules from [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface). `owns` matches the feature seller key or the purchase-scoped buyer key |
+| `purchase-messages/2` | Projects messages with their purchase contract key, message ID, parent and author role | `create` saves a signed proposal, obtains a complete certified checkpoint through `admit_message` and submits that checkpoint under [Bounded participant history in 2.12 Listings and purchases](12-listings-and-purchases.md#bounded-participant-history). `owns` matches that message's author key |
 | `address/1` | Projects the user's delegate-held address book and decrypted purchase-address copies with their source purchase and message IDs | `create` and `update` change the user's private address book. Sharing seals a copy into an authorized purchase message. `owns` reflects private-row access; editable address-book rows belong to the local user |
 | `file/1` | Projects file references from owning records and fetches verified content by contract key | Photo selection creates the immutable content contract, then attaches its reference through the owning record's permitted operation. Ownership follows the attachment record's author |
 
-`owns` supplies a UI predicate. Each mutation separately checks the adapter operation, originating feature, target contract and participant role; the contract verifies the signed operation. The trusted native reader supplies the resolved context to the delegate. The delegate checks that context and its signing domain before signing or decrypting. The signed UI binding and submitted fields are inputs to those checks.
+`owns` supplies a UI predicate. Each mutation separately checks the adapter operation, originating feature, target contract and participant role; the contract verifies the signed operation. The trusted native host supplies the actual reader-build identity and the reader resolves contract bindings into the purchase runtime context under [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface). Keep those signed source fields with the pending operation; later caller authorization uses the current session separately. The trusted native reader supplies the resolved context to the delegate. The delegate checks that context and its signing domain before signing or decrypting. The signed UI binding and submitted fields are inputs to those checks.
 
 Both readers index projections by resource binding and contract context. Updating one purchase replaces that purchase's rows and dependent message and address rows. EVY's data layer owns one subscription per required contract on its connection and bounds that set by the mobile budget. Views observe the resulting application state. Every projected row retains its source identity for routing and verification.
 
@@ -194,20 +196,26 @@ Contracts enforce record rules. Backend services perform work that needs an exte
 | --- | --- |
 | Validate a record | The resource contract checks every record on every peer in `validate_state` and `update_state`. The guestbook follows [The guestbook contract](#the-guestbook-contract) |
 | Report a refused write | The writer's node rejects the UPDATE. The SDK returns a [typed error from 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#requests-events-and-errors), and the reader shows its reason in EVY's error alert |
-| Run external work after a write | The backend service runs its own Freenet node, subscribes to the resource contract with freenet-stdlib's TypeScript client and acts on each new record. It signs result records with its own key. Hello needs record validation only |
+| Run external work after a write | The owning module uses the shared backend node adapter and freenet-stdlib's TypeScript client to subscribe and act on each new record. It signs results under its distinct domain role. [2.14 Backend operations and recovery](14-backend-operations-and-recovery.md#operating-the-services) owns deployment and node sharing. Hello needs record validation only |
+
+Purchase/message actions use the certified checkpoint route in [2.12 Listings and purchases](12-listings-and-purchases.md#bounded-participant-history). Their durable record contains participant proposal, admission-request bytes, operation ID and any returned checkpoint/receipt. Resume missing admission, hosted UPDATE and readback steps with those same identities. A budget/authority/backend outage retains the proposal and exposes the pending reason through the shared optimistic projection.
 
 ## Offline writes
 
-Core merges a local UPDATE into the node's stored copy and sends it to peers when the phone reconnects ([Sending updates in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#sending-updates)). Before the node's first join, Core answers UPDATE with `PeerNotJoined` and the SDK holds the UPDATE until the join ([Start, stop and reconnect in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#start-stop-and-reconnect)).
+Use the durable-queue release profile from [Offline startup in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#offline-startup). The EVY delegate saves each exact signed operation and replay context before returning it for submission. The reader shows the optimistic row as "Sending" while its adapter verifies acceptance in the target state.
 
-This plan uses the Core build's retention and propagation behavior. Reconnect tests retain the contract state within Core's hosting budget. Durable offline delivery across contract eviction belongs to the separate upstream work in [Core retention and offline delivery in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#core-retention-and-offline-delivery).
+Before the first join since startup, retain pending operations in the delegate and defer submission until the node is ready. On restart and reconnect, recover pending operations, restore required demand, read target state and replay missing operations with the same signed identity. The contracts' merge rules reconcile concurrent state; resource adapters interpret domain outcomes and preserve drafts that need user action.
+
+After local contract acceptance, propagation follows the selected Core build's hosting budget. Durable recovery from retained pending records and availability of evicted contract state have separate acceptance scope under [Core retention and offline delivery in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#core-retention-and-offline-delivery).
 
 | Alice's phone when she taps "Sign" | What happens to "Hi from Alice" |
 | --- | --- |
-| Joined earlier, offline now | Core merges the entry into its stored guestbook and answers. The entry shows at once. With the guestbook state retained within Core's hosting budget, Bob gets it after Alice reconnects |
-| Not joined yet since the app started | The SDK holds the UPDATE. The entry shows as "Sending" until the join |
-| EVY closes before the entry reaches the contract | The entry waits in the EVY delegate as `pending/hello/<id>`. On the next start the reader gets it from `ListPending` and sends the same signed bytes again. The contract keeps one copy |
-| The contract refuses the entry | The reader removes the entry, calls `ClearPending` and shows the reason |
+| Joined earlier, offline now | The delegate saves the signed entry. The reader shows "Sending" until the adapter verifies contract acceptance. Pending submission resumes when the node is ready; accepted retained state propagates on reconnect |
+| Before the first join since startup | Save the signed entry in the delegate and show "Sending". Submit it after joining |
+| EVY closes before acceptance is verified | The entry remains at `pending/hello/<id>`. On the next start, `ListPending` restores it; the adapter checks target state and replays the same signed operation if needed |
+| The operation save fails | Keep the recoverable draft, show the storage error and retry saving before submission |
+| Bob updates the guestbook while Alice's entry is queued | The contract merges both valid entries and deduplicates replay of Alice's signed operation under its collection rules |
+| The contract refuses the entry | Preserve the draft with the refusal reason, remove the optimistic row and clear the pending operation under the adapter's definitive-refusal rule |
 
 ## Acceptance
 
@@ -218,7 +226,7 @@ This plan uses the Core build's retention and propagation behavior. Reconnect te
 - Updates to one purchase refresh only its projected rows. The application data layer deduplicates demand for the same instance and releases it under [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#subscriptions-and-application-demand). Views observe projections; pending operations retain their demand after views close. An interrupted dynamic operation resumes with its saved target, parameters, scope and signed bytes.
 - On iOS and Android, Alice writes "Hi from Alice" in the guestbook on her iPhone, and Bob's Android phone shows it within 30 seconds. Bob replies "Hi Alice, from Bob", and Alice sees it. Each entry's `author` is the writer's hello key.
 - On iOS and Android, Alice edits her entry and Bob sees the new revision. A change to Alice's entry from Bob's phone, an empty message and a 281-character message are each refused on the writer's phone, and the reader shows the reason.
-- On iOS and Android, each case in [Offline writes](#offline-writes) passes, and the guestbook holds one copy of each entry. When the EVY publisher removes an entry with `evyctl record remove`, both phones drop it.
+- On iOS and Android, each case in [Offline writes](#offline-writes) passes, including a restart before the first join, failed durable save, lost acknowledgement, concurrent remote updates and duplicate replay. The guestbook holds one copy of each accepted entry. When the EVY publisher removes an entry with `evyctl record remove`, both phones drop it.
 - A two-peer contract test starts with different valid signed records for the same ID and revision. Their summaries contain different hashes. Summary and delta exchange converges both peers to the record with the higher hash, with either exchange order. A repeated exchange produces an empty delta. Fixtures also cover a higher revision with a lower hash and a signed removal arriving alongside a record.
 - Shared fixtures give the same contract keys, records, `record_hash` bytes and action traces for `create`, `update`, `select`, `copy_to_clipboard`, `navigate`, `navigate_route` and `show` in the SwiftUI and Compose readers.
 - Delegate signing, private-record and migration suites from [2.11 EVY delegate and private records](11-delegate-and-private-records.md#acceptance) pass through the adapters in this plan.
