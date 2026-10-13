@@ -5,8 +5,8 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | Mobile API, bindings, key stores and Wasm profiles |
-| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Swift and Kotlin SDK packages |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Modified | Public browser delegate calls, request serialization and reply-correlation fixes demonstrated by mobile fixtures |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | New implementation | Swift SDK package for iOS, Kotlin SDK package for Android and mobile test suites |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Modified | Public browser delegate calls, request serialization and reply-correlation fixes validated by fixtures built in this plan |
 
 ## Purpose
 
@@ -16,16 +16,18 @@ Each application installation owns one embedded node and supplies its storage pa
 
 ## What to build
 
-Integrate the [mobile prototype in the Core fork](https://github.com/glesage/freenet-core/tree/571ad1acba9e6f6bddc71156d7d2791fc9a1bf65/crates/mobile) into upstream Core as `crates/mobile`, giving iOS and Android one maintained interface for node lifecycle and contract operations.
+Implement `crates/mobile` in upstream Core, giving iOS and Android one maintained interface for node lifecycle and contract operations. Build the Swift bindings for iOS, Kotlin bindings for Android, SDK packages, platform adapters and test suites as new work in this plan.
 
-| Operations needed | Existing Freenet support | New concept for Freenet? | Required behavior |
+The table lists upstream Freenet primitives as existing support. Implement and validate the mobile interface to each primitive in this plan.
+
+| Operations needed | Existing Freenet support | Work to build | Required behavior |
 | --- | --- | --- | --- |
-| Start, stop and status | Core runtime and mobile prototype bindings | Extension: mobile lifecycle | Serialize lifecycle transitions for the application's node, define repeated-call results and integrate the prototype upstream. |
-| Get and put | Core/stdlib contract operations | Existing | Validate code, original parameter bytes and returned instance identity. |
-| Update by delta or full state | Both input forms in stdlib | Existing | Match the result to its request and preserve an uncertain outcome after submission timeout. Peer-to-peer delta work follows [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#client-update-deltas). |
-| Subscribe and connection cleanup | Core/stdlib subscriptions, notifications and disconnect | Existing | Deliver updates to the application's data layer; restore its bounded contract set after reconnect using [Ending subscriptions](#ending-subscriptions). |
+| Start, stop and status | Core runtime | New mobile lifecycle API and bindings | Implement the lifecycle coordinator and Swift/iOS and Kotlin/Android bindings, serialize transitions for the application's node and define repeated-call results. |
+| Get and put | Core/stdlib contract operations | New mobile API for existing operations | Validate code, original parameter bytes and returned instance identity. |
+| Update by delta or full state | Both input forms in stdlib | New mobile API for existing operations | Match the result to its request and preserve an uncertain outcome after submission timeout. Peer-to-peer delta work follows [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#client-update-deltas). |
+| Subscribe and connection cleanup | Core/stdlib subscriptions, notifications and disconnect | New mobile API for existing operations | Deliver updates to the application's data layer; restore its bounded contract set after reconnect using [Ending subscriptions](#ending-subscriptions). |
 | Application demand policy | Contract subscriptions and cached state | New application workflow | Keep one demand entry per contract, retain pending-operation dependencies and prioritize work under [Application demand policy](#application-demand-policy). |
-| Register, unregister and message delegates | Core/stdlib delegate request types | Existing | Expose browser and native calls, authenticate the owning application and check its permitted component identities and current session. |
+| Register, unregister and message delegates | Core/stdlib delegate request types | New mobile API for existing operations | Expose browser and native calls, authenticate the owning application and check its permitted component identities and current session. |
 | Delegate startup and prompts | Core lifecycle manifests, Background grants and user-input messages | Extension: native host integration | Route installation, startup and permission decisions through trusted host UI. |
 | Application-driven delegate migration | freenet-migrate's Rust runner and application adapters | Extension: mobile interface to an existing library | Expose the runner and adapters to Swift and Kotlin under [1.7 Upgrades and migration](07-migration.md#mobile-migration-interface). Verify successor records before normal calls resume. |
 | Stage and activate a restore | Secret import and per-secret snapshot restore | New Core capability: complete-generation activation | Expose isolated staging, migration, atomic activation and crash recovery under [1.10 Backup and restore](10-backup-and-restore.md#staged-restore-transaction). Recover one complete application generation before opening a session. |
@@ -33,13 +35,13 @@ Integrate the [mobile prototype in the Core fork](https://github.com/glesage/fre
 | Forget | Delegate/storage cleanup and key-backend deletion | New host workflow: recoverable installation cleanup | Fence work, stop the node, delete application records and keys, verify deletion and resume interrupted cleanup under [1.5 Identity, keys and local protection](05-identity.md#forget). |
 | Permission requests | Core capability grants and prompts | New host policy: application device consent | Combine stored application decisions with OS permission status and return granted, denied or unavailable under [1.3 Single-application host](03-host.md#asking-for-a-permission). |
 | Lock and unlock | Encrypted secret storage and key loading | New Core capability: secret-store lock lifecycle | Expose `SecretsStore` lock/unlock, fence private work, wipe controlled keys/buffers and open fresh sessions under [1.5 Identity, keys and local protection](05-identity.md#locking-and-unlocking). |
-| Node key backends | Core's key-backend interface | Extension: iOS Keychain and Android Keystore | Package and test both backends and their platform settings under [Keys](#keys) and [1.5 Identity, keys and local protection](05-identity.md#node-encryption-key). |
+| Node key backends | Core's key-backend interface | Extension: iOS Keychain and Android Keystore | Implement, package and test both backends and their platform settings under [Keys](#keys) and [1.5 Identity, keys and local protection](05-identity.md#node-encryption-key). |
 | Read traffic counters | Core's cumulative send and authenticated-receive counters | Extension: raw receive measurement and mobile accounting | Expose counters, measurement layers, path/generation metadata and durable allowance accounting under [Traffic-counter interface](#traffic-counter-interface). |
-| Events and cancellation | Core replies, notifications and error types | Extension: SDK request/session lifecycle | Identify the request and current connection/session generation, return [typed errors](#typed-errors), preserve submission uncertainty and dispatch callbacks to the platform executor ([callback finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#callbacks-run-on-the-nodes-own-threads)). |
+| Events and cancellation | Core replies, notifications and error types | Extension: SDK request/session lifecycle | Identify the request and current connection/session generation, return [typed errors](#typed-errors), preserve submission uncertainty and dispatch callbacks to the platform executor. |
 
 Existing primitives are defined by the [stdlib client API](https://github.com/freenet/freenet-stdlib/blob/fca0848b78b12942f77422309bb07f76108940d6/rust/src/client_api/client_events.rs), [Core delegate capabilities](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/contract/delegate_capabilities.rs), [Core secret export/import](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/secret_export.rs) and [freenet-migrate](https://github.com/freenet/freenet-migrate/blob/74aed27eaec8a4347b47fa2665ea511d2fd14175/freenet-migrate/src/lib.rs). Application recovery extends those primitives with the `application-backup/1` codec, executable-inclusive snapshots and a durable activation record. Implement the complete-generation transaction around Core's per-entry import writes.
 
-[UniFFI](https://mozilla.github.io/uniffi-rs/latest/) generates Swift and Kotlin bindings. Include build scripts for iOS and Android.
+Define the mobile API and generate Swift bindings for iOS and Kotlin bindings for Android with [UniFFI](https://mozilla.github.io/uniffi-rs/latest/). Implement build scripts for both platforms.
 
 Set `telemetry-enabled = false` and keep `otel-telemetry-enabled` off on every start. Core persists both settings in `config.toml` ([#2466](https://github.com/freenet/freenet-core/pull/2466), [#5512](https://github.com/freenet/freenet-core/pull/5512)).
 
@@ -151,15 +153,15 @@ Each prompt and private result is bound to the originating request and current s
 
 ### Running Wasm
 
-The memory-address change lets the mobile runtime use smaller reservations while keeping contract and delegate results valid after guest memory grows. Switching iOS and Android to Core's default executor and Store limits requires the implementation and passing device fixtures below.
+Implement the memory-address change below so the mobile runtime can use smaller reservations while keeping contract and delegate results valid after guest memory grows. Validate Core's default executor and Store limits on iOS and Android with device fixtures built in this plan.
 
-The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). iOS and Android release builds use interpreted execution with data-only memory mappings. This supports iOS App Store distribution and Android Google Play's interpreter exception ([distribution review](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/distribution-review.md)). Both platforms run one backend and the same test fixtures.
+The node runs standard contract and delegate Wasm on the phone. Release builds for iOS and every Android ABI (arm64-v8a, armeabi-v7a and x86_64) run it through the [Pulley interpreter](https://docs.wasmtime.dev/examples-pulley.html). iOS and Android release builds use interpreted execution with data-only memory mappings. Validate the release configuration against iOS App Store and Android Google Play distribution requirements. Both platforms run one backend and the same test fixtures.
 
-Wasmtime tests and maintains the Pulley interpreter, but its iOS and Android builds need platform-specific testing and maintenance ([Wasmtime support tiers](https://docs.wasmtime.dev/stability-tiers.html)). We run the appkit conformance suite on iOS and every supported Android ABI using the Wasmtime version resolved in the selected Core commit's `Cargo.lock`. The results record that Core commit and Wasmtime version. This check runs for the initial selected build and repeats whenever the resolved Wasmtime version changes. Release requires passing results for the version actually included in the build. We also validate 32-bit ARM Android support ourselves.
+Wasmtime tests and maintains the Pulley interpreter, but its iOS and Android builds need platform-specific testing and maintenance ([Wasmtime support tiers](https://docs.wasmtime.dev/stability-tiers.html)). Build an AppKit conformance suite and run it on iOS and every supported Android ABI using the Wasmtime version resolved in the selected Core commit's `Cargo.lock`. The results record that Core commit and Wasmtime version. This check runs for the initial selected build and repeats whenever the resolved Wasmtime version changes. Release requires passing results for the version actually included in the build. We also validate 32-bit ARM Android support ourselves.
 
 | Limit | Core default | Mobile |
 | --- | --- | --- |
-| Memory per Wasm instance | 256 MiB ([#3990](https://github.com/freenet/freenet-core/pull/3990)) | 256 MiB. River and Atlas used about 1 MiB in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) |
+| Memory per Wasm instance | 256 MiB ([#3990](https://github.com/freenet/freenet-core/pull/3990)) | 256 MiB. Measure River and Atlas memory use on iOS and Android under [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) |
 | Concurrent Wasm executors | One per CPU core, from 1 to 16 (`FREENET_RUNTIME_POOL_SIZE`) | iOS: 2.<br>Android: Same as Core |
 | Store replacement | After 500 instances, after 4 hours, or when retired instance memory reaches `clamp(RAM / 8 / executors, 4 MiB, 256 MiB)` ([#5324](https://github.com/freenet/freenet-core/pull/5324)) | iOS: after 4 instances.<br>Android: Same as Core |
 | State per contract | 50 MiB | Same as Core |
@@ -167,13 +169,13 @@ Wasmtime tests and maintains the Pulley interpreter, but its iOS and Android bui
 | Compile cache on disk | `clamp(RAM / 8, 128 MiB, 512 MiB)` in the data folder, within the hosting disk budget ([#5328](https://github.com/freenet/freenet-core/pull/5328)) | Same as Core, bounded by the hosting disk budget in [Storage](#storage) |
 | Wasm execution time | 5 seconds of wall-clock time, including time spent in host calls such as secret reads ([#5593](https://github.com/freenet/freenet-core/pull/5593), [#5594](https://github.com/freenet/freenet-core/issues/5594)) | 5 seconds of wall-clock time |
 
-The mobile limits above account for the iPhone's refusal of the 23rd address-space reservation ([reservation finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations)).
+Validate the mobile limits above with repeated Wasm instantiation and address-space pressure tests on iOS and Android.
 
-File a Core issue to read each instance's memory address again after every contract and delegate call returns. Follow the host-function handling in [#3248](https://github.com/freenet/freenet-core/issues/3248) and [#3270](https://github.com/freenet/freenet-core/pull/3270), using [contract.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/contract.rs) as the implementation reference.
+File a Core issue and implement a change to read each instance's memory address again after every contract and delegate call returns. Follow the host-function handling in [#3248](https://github.com/freenet/freenet-core/issues/3248) and [#3270](https://github.com/freenet/freenet-core/pull/3270), using [contract.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/contract.rs) as the implementation reference.
 
-The lookup lets each instance reserve only the memory it uses. Test the fix on iOS and Android with Core's default executors and Store replacement limits. Use these defaults on both platforms after the tests pass ([memory address recommendation](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#recommendation-core-re-reads-the-memory-address-after-each-guest-call)).
+The lookup lets each instance reserve only the memory it uses. Test the fix on iOS and Android with Core's default executors and Store replacement limits. Use these defaults on both platforms after the tests pass.
 
-The host enforces application limits for concurrent requests, response size and delegate event frequency. [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measured about 21 local updates per second, 45 ms each, on every tested device ([local update finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#a-local-update-takes-about-45-ms)). A serving peer accepts about 10 UPDATEs per second for one contract from one sender address and silently drops the rest ([#4285](https://github.com/freenet/freenet-core/pull/4285)). The dropped updates reach peers later through Core's state summary comparison. Phones behind one carrier NAT share a sender address, so they share that limit.
+The host enforces application limits for concurrent requests, response size and delegate event frequency. Measure local update throughput and latency on iOS and Android under [1.1 Mobile feasibility and supported profiles](01-feasibility.md), and use the results to set application limits. A serving peer accepts about 10 UPDATEs per second for one contract from one sender address and silently drops the rest ([#4285](https://github.com/freenet/freenet-core/pull/4285)). The dropped updates reach peers later through Core's state summary comparison. Phones behind one carrier NAT share a sender address, so they share that limit.
 
 Core's on-disk compile cache keys each compiled module by its Wasm bytes and the engine config, so an engine update recompiles it ([#3476](https://github.com/freenet/freenet-core/pull/3476)). The SDK keeps that cache on. Check that timeouts, memory limits, cancellation and shutdown return the same bytes and errors on phones as on desktop.
 
@@ -187,9 +189,9 @@ One coordinator owns the application's node store and encryption key. River and 
 | --- | --- | --- |
 | Data, config and log folders | From the operating system | From the host |
 | Unpacked web-app cache | The OS cache folder, or `FREENET_WEBAPP_CACHE_DIR`. On Android this falls back to a temporary folder the app cannot write to ([#2394](https://github.com/freenet/freenet-core/pull/2394)). Every node one user runs shares it ([#5706](https://github.com/freenet/freenet-core/issues/5706)) | A folder in the app's cache directory on iOS and Android, one per store. The OS may clear it, and Core unpacks the web app again from contract state |
-| Hosted state (`max-hosting-storage`) | `clamp(RAM / 8, 128 MiB, 1 GiB)` | Set explicitly. The iPhone's stores used 6.1 MiB in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) |
+| Hosted state (`max-hosting-storage`) | `clamp(RAM / 8, 128 MiB, 1 GiB)` | Set explicitly using storage measurements on iOS and Android under [1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) |
 | Hosting disk (`hosting-disk-pct`) | 50% of the disk space available to Freenet, up to 32 GiB | Set explicitly. Core's disk count leaves out redb free space and the web-app cache until [#5033](https://github.com/freenet/freenet-core/pull/5033) lands, so the setting leaves room for both |
-| Log folder (`FREENET_LOG_DIR_MAX_BYTES`) | 512 MiB ([#5404](https://github.com/freenet/freenet-core/pull/5404)) | Set explicitly. The iPhone wrote 3.2 MiB of logs |
+| Log folder (`FREENET_LOG_DIR_MAX_BYTES`) | 512 MiB ([#5404](https://github.com/freenet/freenet-core/pull/5404)) | Set explicitly using log-volume measurements on iOS and Android |
 | Secret snapshots (`FREENET_DISABLE_SECRET_SNAPSHOTS`) | Up to about 62 versions and 3 MiB per secret, kept for up to 2 years ([secrets at rest](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/docs/secrets-at-rest.md)) | Off. Use the export in [1.10 Backup and restore](10-backup-and-restore.md#export-and-import) for recovery |
 
 ### Start, stop and reconnect
@@ -215,11 +217,11 @@ On stop, the SDK drops callbacks and releases the port, runtime and store locks 
 
 Core returns errors for a poisoned redb store or a fatal listener exit. The host process keeps running ([#4604](https://github.com/freenet/freenet-core/issues/4604)). The coordinator detects both, stops the node and starts it again on the same port.
 
-The SDK watches the phone's network path with `NWPathMonitor` on iOS and `ConnectivityManager` network callbacks on Android. It tells the app whether the phone is online from that path, because Core keeps reporting its peers during an outage ([peer count finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-peer-count-stays-up-during-an-outage)). Core has no connectivity status for clients ([#2967](https://github.com/freenet/freenet-core/issues/2967)).
+The SDK watches the phone's network path with `NWPathMonitor` on iOS and `ConnectivityManager` network callbacks on Android. Use the OS network path to report connectivity to the app. Test connectivity reporting during outages on both platforms. Core has no connectivity status for clients ([#2967](https://github.com/freenet/freenet-core/issues/2967)).
 
 When Alice's phone moves from Wi-Fi to cellular, the SDK:
 
-1. Restarts the node's transport, because Core keeps its connections on the Wi-Fi addresses ([cellular finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-node-does-not-move-to-cellular-on-its-own)).
+1. Restarts the node's transport on the cellular network path.
 2. Rejoins the network.
 3. Restores her subscription to "Skate club".
 4. Fetches the latest room state.
@@ -229,19 +231,19 @@ When Alice's phone moves from Wi-Fi to cellular, the SDK:
 
 Deferred gateway resolution and background index fetching let a network-mode node open stored rooms while offline and join when connectivity returns. Offline-start acceptance requires the selected build to pass the iOS and Android fixtures.
 
-File a Core issue for these changes so Alice can open River and read stored "Skate club" messages while offline:
+File a Core issue and implement these changes so Alice can open River and read stored "Skate club" messages while offline:
 
 - Start the node with its local data. Move hostname resolution from `NodeConfig::new` into the join loop. Resolve each hostname just before trying that gateway, retry with backoff when the network returns, and join once a lookup succeeds.
 - Fetch the [public gateway index](https://github.com/freenet/web/blob/main/hugo-site/static/keys/gateways.toml), which lists hostnames, at each start without blocking offline startup.
 - Build the fallback DNS resolver (`hickory-resolver`) after an online lookup fails on iOS and Android. Exclude its `system-config` feature from Android builds.
 
-Sources: [node.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/node.rs) (`parse_socket_addr`), [#1119](https://github.com/freenet/freenet-core/pull/1119), [offline startup findings](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-node-cannot-start-offline-in-network-mode) and [community mobile gateway findings](https://github.com/freenet/river/issues/319).
+Sources: [node.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/node.rs) (`parse_socket_addr`), [#1119](https://github.com/freenet/freenet-core/pull/1119) and [community mobile gateway findings](https://github.com/freenet/river/issues/319).
 
 ### Local operations before the first join
 
 Local reads, merges and subscriptions before the first handshake let Alice use stored rooms and queue messages during an offline first start. The selected build's capability determines the SDK behavior in the table below.
 
-File a Core issue to allow local operations on stored contracts before the first network handshake:
+File a Core issue and implement support for local operations on stored contracts before the first network handshake:
 
 - Read contracts.
 - Merge updates.
@@ -285,7 +287,7 @@ Sources: [TN3179 Understanding local network privacy](https://developer.apple.co
 
 ### Keys
 
-The SDK packages the iOS Keychain and Android Keystore backends, plus any signing adapter. [1.5 Identity, keys and local protection](05-identity.md#node-encryption-key) owns what they protect, the key settings for each Android version and when keys may leave the device. Test these cases on real iOS and Android devices against [Apple Keychain item accessibility](https://developer.apple.com/documentation/security/restricting-keychain-item-accessibility), [Android Keystore](https://developer.android.com/privacy-and-security/keystore) and [`setUnlockedDeviceRequired`](https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUnlockedDeviceRequired(boolean)):
+Implement and package the iOS Keychain and Android Keystore backends, plus any signing adapter. [1.5 Identity, keys and local protection](05-identity.md#node-encryption-key) owns what they protect, the key settings for each Android version and when keys may leave the device. Test these cases on real iOS and Android devices against [Apple Keychain item accessibility](https://developer.apple.com/documentation/security/restricting-keychain-item-accessibility), [Android Keystore](https://developer.android.com/privacy-and-security/keystore) and [`setUnlockedDeviceRequired`](https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUnlockedDeviceRequired(boolean)):
 
 - The device is locked.
 - A key was invalidated, for example after the user enrolls a new fingerprint or face.
@@ -302,7 +304,7 @@ The SDK packages the iOS Keychain and Android Keystore backends, plus any signin
 - An iPhone and an Android phone share a Wi-Fi network with a gateway on the Wi-Fi subnet. If the user allows the local-network prompt, the node joins through that gateway. If the user denies it, the node joins through public gateways. Run this on real devices, where iOS shows the prompt. On Android, run it with a build that targets API 37 or later.
 - On an iPhone and an Android phone, 300 stored contracts and 200 updates to one contract pass with the mobile limits in [Running Wasm](#running-wasm).
 - A slow Swift listener on iOS and a slow Kotlin listener on Android delay neither other notifications nor request replies.
-- On an iPhone and an Android phone, measure River's contract and delegate run times under Pulley, because the emulator's compute case ran 3 to 16 times slower under Pulley than under Cranelift. River's largest room state stays under 50 MiB, and its slowest delegate call finishes within 5 seconds, counting its secret reads and other host calls.
+- On an iPhone and an Android phone, measure River's contract and delegate run times under Pulley. River's largest room state stays under 50 MiB, and its slowest delegate call finishes within 5 seconds, counting its secret reads and other host calls.
 - On iOS and Android, fixtures produce each failure in [Typed errors](#typed-errors), and the SDK returns the matching error. A test peer that requires a newer Core gives "update the app", and the app process keeps running.
 - On iOS and Android, a fixture poisons the redb store, and the coordinator restarts the node on the same port.
 - River's browser fixtures and EVY's Swift/Kotlin fixtures verify authenticated access, request matching, keyless errors, late replies, cancellation, connection reset and private-event routing. Each adapter rejects earlier connection/session generations. Equivalent local API paths enforce the owning application's component policy.
