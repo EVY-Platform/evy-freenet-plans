@@ -22,7 +22,7 @@ EVY fits with Freenet perfectly as it's peer network distributes applications an
 
 ### Milestone 1 (Freenet mobile AppKit)
 
-Use River as the AppKit test application on iOS and Android. Its signed web UI runs in one WebView served by the installation's embedded node. Its existing room contracts and chat delegate exercise the mobile lifecycle, network, permissions and recovery paths.
+Deliver the embedded node, Swift SDK for iOS and Kotlin SDK for Android. Test the SDKs with native fixtures and the WebView host with River. River's signed web UI, room contracts and chat delegate exercise lifecycle, network, permissions and recovery.
 
 ```mermaid
 flowchart LR
@@ -46,7 +46,7 @@ flowchart LR
 
 ### Milestone 2 (EVY on Freenet)
 
-Build EVY as one published Freenet application on iOS and Android, with native SDUI readers. MVP of EVY Developer editor is also part of this milestone, along with attribution and remuneration.
+Build EVY's SwiftUI reader on iOS and Compose reader on Android using the SDKs from milestone 1 (Freenet mobile AppKit). Implement signed SDUI documents, EVY data and actions, the EVY Developer editor, attribution and remuneration.
 
 ```mermaid
 flowchart LR
@@ -89,12 +89,12 @@ New adds mobile, application or tooling functionality. **Change** modifies share
 
 | Today | Type | Proposal |
 | --- | --- | --- |
-| [Core](https://github.com/freenet/freenet-core) runs a node and provides client APIs for contract operations. | New | Add a mobile crate with node lifecycle and contract APIs, plus Swift bindings for iOS and Kotlin bindings for Android. [1.2](1-freenet-mobile-appkit/02-sdk.md#what-to-build) |
-| [The browser client](https://github.com/freenet/freenet-stdlib) has contract calls and delegate message formats. | **Change** | Add public browser methods to register, unregister and message delegates, and match replies to the requesting call. [1.2](1-freenet-mobile-appkit/02-sdk.md#application-connections) |
+| [Core](https://github.com/freenet/freenet-core) runs a node and provides client APIs for contract operations. | New | Add a mobile crate with node lifecycle and contract APIs, plus Swift bindings for iOS and Kotlin bindings for Android. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#sdk-interface-and-packages) |
+| [The browser client](https://github.com/freenet/freenet-stdlib) has contract calls and delegate message formats. | **Change** | Add public browser methods to register, unregister and message delegates, and match replies to the requesting call. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#requests-events-and-errors) |
 | [Core](https://github.com/freenet/freenet-core) authenticates connections and sends delegate notifications to local clients that have messaged the delegate. | **Change** | Bind calls and private replies to the verified app and current session, with component access and permissions users can revoke. [1.3](1-freenet-mobile-appkit/03-host.md#freenet-issues-being-worked-on-that-are-required) |
 | [Core](https://github.com/freenet/freenet-core) handles delegate prompts and startup consent through its own prompter. | New | Expose a host-supplied prompter so iOS and Android apps show delegate prompts and startup consent in trusted native screens. [1.3](1-freenet-mobile-appkit/03-host.md#background-runs-and-delegate-prompts) |
-| [Core](https://github.com/freenet/freenet-core) resolves gateway hostnames during node startup. | **Change** | Move gateway lookups into the join loop so River opens saved rooms offline and connects when a signal returns. [1.2](1-freenet-mobile-appkit/02-sdk.md#gateway-hostnames) |
-| [Core](https://github.com/freenet/freenet-core) returns `PeerNotJoined` for updates, writes and subscriptions before joining Freenet. | **Change** | Allow local reads, message updates and subscriptions before the first join; send saved changes when Freenet connects. [1.2](1-freenet-mobile-appkit/02-sdk.md#local-operations-before-the-first-join) |
+| [Core](https://github.com/freenet/freenet-core) resolves gateway hostnames during node startup. | **Change** | Move gateway lookups into the join loop so River opens saved rooms offline and connects when a signal returns. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#offline-startup) |
+| [Core](https://github.com/freenet/freenet-core) returns `PeerNotJoined` for updates, writes and subscriptions before joining Freenet. | **Change** | Allow local reads, message updates and subscriptions before the first join; send saved changes when Freenet connects. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#offline-startup) |
 | [Core](https://github.com/freenet/freenet-core) loads and runs contract and delegate Wasm code. | **Change** | Enforce each iOS and Android build's permitted code, parameters and roles before execution, including code used for upgrades and recovery. [1.4](1-freenet-mobile-appkit/04-bundles.md#execution-policy) |
 | [Core](https://github.com/freenet/freenet-core) stores its node encryption key in a file, systemd credential or desktop keyring. | New | Add iOS Keychain and Android Keystore backends for the node encryption key that protects private records. [1.5](1-freenet-mobile-appkit/05-identity.md#node-encryption-key) |
 | [Core](https://github.com/freenet/freenet-core) keeps loaded encryption keys in memory; River's page holds signing keys and decrypted records. | **Change** | Add a lock/unlock API that stops signing, clears controlled keys and plaintext, and opens fresh sessions after unlock. [1.5](1-freenet-mobile-appkit/05-identity.md#locking-and-unlocking) |

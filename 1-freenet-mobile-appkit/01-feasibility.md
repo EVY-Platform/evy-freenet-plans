@@ -18,7 +18,7 @@
 
 ## Purpose
 
-Show that River runs in an AppKit WebView on iOS and Android through its embedded Core node. Measure the workloads that set device limits and establish the native SDK profile used by EVY in milestone 2 (EVY on Freenet). Each installation owns its node, store and encryption key.
+Show that River runs in an AppKit WebView on iOS and Android through its embedded Core node. Measure device limits and test the Swift and Kotlin SDKs on both platforms. Each installation owns its node, store and encryption key.
 
 ## Supported profiles
 
@@ -26,10 +26,10 @@ Show that River runs in an AppKit WebView on iOS and Android through its embedde
 | --- | --- |
 | River WebView on iOS | iOS 16 and later, arm64 devices, Pulley, with the iOS Store limits in [Device limits](#device-limits) |
 | River WebView on Android | Android 9 (API 28) and later, the first level with the node key setting in [Node encryption key in 1.5 Identity, keys and local protection](05-identity.md#node-encryption-key). Release builds run Pulley on arm64-v8a, armeabi-v7a and x86_64 ([Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)) |
-| EVY native SDK on iOS and Android | Put, get, update and subscribe on the same targets. [1.2 Embedded node and mobile SDK](02-sdk.md) adds delegate calls and the per-connection request queue |
+| Native SDK fixtures on iOS and Android | Put, get, update and subscribe on the same targets. [1.2 Embedded node and mobile SDK](02-sdk.md) adds delegate calls and the per-connection request queue |
 | Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers until [1.8 Thin-peer protocol](08-thin-peer.md) lands |
 
-River's and Atlas's web clients use freenet-stdlib 0.8.5 and run against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#protocol-compatibility)). The Atlas demos are additional protocol and device measurements. River is the release test application; EVY's native iOS and Android readers use the SDK profile and the gates in [2.10 Testing and release](../2-evy-on-freenet/10-testing-and-release.md).
+River's and Atlas's web clients use freenet-stdlib 0.8.5 and run against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#protocol-compatibility)). The Atlas demos provide additional protocol and device measurements. River is the release test application on iOS and Android.
 
 ## Support matrix
 
@@ -45,7 +45,7 @@ Every device that ran an operation matched the desktop fixtures for bytes, typed
 
 ### Release-profile evidence
 
-Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. The iOS and Android release profiles use the targets in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm).
+Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
 
 Repeat the runtime, lifecycle, host, key protection and application tests on the actual release artifacts. Record real iOS and Android phone coverage, every supported Android ABI, battery measurements and supported carrier paths before release. A changed runtime, minimum OS, execution policy or mobile patch revision requires the affected checks again. [1.9 Testing and release](09-testing-and-release.md#release-tests) consumes this matrix.
 
@@ -127,12 +127,12 @@ The dated iOS and Android prototype runs record their Core/runtime revisions in 
 
 | Requirement | Apply in |
 | --- | --- |
-| Run Wasm through the Pulley interpreter on iOS and every Android ABI. Run the conformance suite (contract round trips, out-of-bounds traps, backend refusal) on every backend. | [runtime in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
-| Own one process-wide async runtime in the mobile crate and build the node inside it. Let the host handle process signals and aborts. Stop the node through an explicit call. | [1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
+| Run Wasm through the Pulley interpreter on iOS and every Android ABI. Run the conformance suite (contract round trips, out-of-bounds traps, backend refusal) on every backend. | [Wasm runtime and storage in 1.2 Embedded node and mobile SDK](02-sdk.md#wasm-runtime-and-storage) |
+| Own one process-wide async runtime in the mobile crate and build the node inside it. Let the host handle process signals and aborts. Stop the node through an explicit call. | [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) |
 | Use the node's loopback WebSocket as the client API. Reuse the last port to preserve the web origin and storage. If that port is taken, select a free loopback port. Report the selected port to the host and pass it explicitly ahead of persisted configuration. Stop waits for the port to become free. | [start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect), [1.3 Single-application host](03-host.md#browser-and-native-hosts) |
-| Take data, config and log directories from the host. Keep local-mode and network-mode stores apart and discard a persisted config whose data directory, mode or gateway source differs. | [storage paths in 1.2 Embedded node and mobile SDK](02-sdk.md#runtime-packaging-and-lifecycle) |
+| Take data, config and log directories from the host. Keep local-mode and network-mode stores apart and discard a persisted config whose data directory, mode or gateway source differs. | [Storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage) |
 | Pass each gateway override to Core's `--gateway` option as `ip:port,hex-public-key`. Use an IP address to avoid a DNS lookup. Fetch the public gateway index when network mode has no overrides. | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| Wait for at least one connected peer before the first network request, then retry reads for a bounded window. | [events in what to build in 1.2 Embedded node and mobile SDK](02-sdk.md#what-to-build) |
+| Wait for at least one connected peer before the first network request, then retry reads for a bounded window. | [Offline startup in 1.2 Embedded node and mobile SDK](02-sdk.md#offline-startup) |
 | Use JSON commands and events in the WebView bridge. The Wasm client opens its own WebSocket to the loopback API. Serve a fixed set of bundle files and verify each file against a SHA-256 manifest. The manifest carries a protocol version; the host ignores unknown keys. Keep message handling in `crates/mobile` so iOS and Android use the same implementation. | [1.3 Single-application host](03-host.md#browser-and-native-hosts), [archive in 1.4 Application bundles](04-bundles.md#the-archive-and-its-definition) |
 | Test concurrent requests through one node actor, a two-peer contract exchange, leak thresholds tuned to measured noise, the update key-learning fallback and binding generation in CI. | [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) |
 

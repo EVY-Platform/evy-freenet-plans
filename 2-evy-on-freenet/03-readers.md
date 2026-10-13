@@ -19,6 +19,24 @@ flowchart LR
   UI --> Android[Android Compose reader]
 ```
 
+## Installation lifecycle and device access
+
+Each EVY installation owns one node, store, encryption key and host session. Home, Hello and Marketplace share that node and one EVY delegate. iOS uses SwiftUI and the Swift SDK; Android uses Compose and the Kotlin SDK. Test and production builds use separate application IDs and stores.
+
+At startup, verify the build policy and UI/delegate identities, recover or migrate private records, register the delegate and wait for its reply. Then restore application demand and open Home. Use the lifecycle interfaces from [1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#trusted-calls).
+
+On lock or suspension, end the session and dispose of private view state, decrypted records and controlled native buffers. Reopening after unlock creates fresh views and a fresh session. Test cleanup and rejected stale callbacks on iOS and Android under [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#locking-and-unlocking).
+
+The build policy admits each device adapter. Check current session authority and device consent at dispatch and after a picker returns.
+
+| Adapter | EVY flow and checks |
+| --- | --- |
+| Clipboard | Copy action after a user tap; size and rate limits |
+| Photos | Marketplace Select photo; iOS and Android system pickers, validated bytes and an operation/session-scoped result |
+| External link | Stripe onboarding or support; validated HTTPS target and navigation authority |
+| Maps | Marketplace pickup map; signed public point and supported map SDK |
+| Internal route | Home and Marketplace navigation; application identity, target and arguments |
+
 ## Reading the application UI contract
 
 Each build includes `ui.evy` in `types/freenet/contract-keys.json`, under [2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-contract). Both readers ship EVY's internal resource adapters and supported contract codecs from [2.4 SDUI data and actions](04-data-and-actions.md#evy-resource-catalogue).
@@ -37,7 +55,9 @@ Each build includes `ui.evy` in `types/freenet/contract-keys.json`, under [2.2 E
 | Flow returns to an idle boundary | Activate the highest compatible queued document before starting the next flow. |
 | Reader upgrade required | Keep a drawable document and show Update EVY; save the verified newer observation for the next compatible build. |
 
-The application data layer owns one UI subscription and the bounded data-contract set needed by its features. Views read its verified projections; subscription lifetime follows [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#ending-subscriptions).
+The application data layer owns one UI subscription and the bounded data-contract set needed by its features. Views read its verified projections; subscription lifetime follows [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#subscriptions-and-application-demand).
+
+Document activation keeps the host session and application subscriptions. Track document and host-session generations separately. A reader, code or permission-policy upgrade uses matching iOS and Android builds, required migration and a fresh session. Commit activation atomically so interruption selects a complete document or build/data generation.
 
 ### First open and offline
 
@@ -64,7 +84,7 @@ Measure cache bytes and use the installation storage budget in [1.11 Cellular da
 
 ## Report and Block actions
 
-Both readers implement `report(resource, id)` and `block(resource, id)` with the verified projected target and signing scope. Report opens the feature’s reason form and signs/submits its report contract record. Block records the declared scope in encrypted host storage and refreshes every matching projection. [2.7 EVY Marketplace](07-marketplace.md#moderation-and-seller-admission) owns authority, schemas, consent text, retention and production flow coverage. Add these actions to versioned schemas/grammar and raise the minimum reader version. Shared iOS and Android semantic/action fixtures test restored blocks, target substitution and retained payment/dispute access.
+Both readers implement `report(resource, id)` and `block(resource, id)` with the verified projected target and signing scope. Report opens the feature's reason form and signs/submits its report contract record. Block records the declared scope in encrypted host storage and refreshes every matching projection. [2.7 EVY Marketplace](07-marketplace.md#moderation-and-seller-admission) owns authority, schemas, consent text, retention and production flow coverage. Add these actions to versioned schemas/grammar and raise the minimum reader version. Shared iOS and Android semantic/action fixtures test restored blocks, target substitution and retained payment/dispute access.
 
 ## The SwiftUI reader
 
@@ -75,7 +95,7 @@ The iOS SwiftUI reader and Android Compose reader use the same accepted UI docum
 | Flow source | `EVYUIContractSource` reads the UI contract through the `FreenetAppKit` Swift package, following [Reading the application UI contract](#reading-the-application-ui-contract). Wire it into [EVY+Sync.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Core/EVY+Sync.swift) and [EVYAPIManager.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Data/EVYAPIManager.swift) |
 | Stored records | `EVYUIContractSource` splits each accepted document into flat flow, page and row records, then stores them by application document version and activates the compatible generation while retaining records referenced by active flows. `EVYFlowStore`, `EVYPageStore` and `EVYRowStore` read them from `EVYDataStore` ([EVYFlowStore.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Core/EVYFlowStore.swift)) |
 | Entry point | [ContentView.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/ContentView.swift) opens the activated EVY document's Home entry route and uses `NavigationStack` for routes |
-| Drawing and actions | Use `EVYPage`, `EVYRow`, the row views in [ios/evy/UI/Rows](https://github.com/EVY-Platform/evy/tree/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/UI/Rows), [EVYActionRunner.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/UI/EVYActionRunner.swift) and [interpreter.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Utils/interpreter.swift). The SDK delivers node callbacks to the main actor, where `EVYUIContractSource` applies each document ([1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#what-to-build)) |
+| Drawing and actions | Use `EVYPage`, `EVYRow`, the row views in [ios/evy/UI/Rows](https://github.com/EVY-Platform/evy/tree/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/UI/Rows), [EVYActionRunner.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/UI/EVYActionRunner.swift) and [interpreter.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Utils/interpreter.swift). The SDK delivers node callbacks to the main actor, where `EVYUIContractSource` applies each document ([1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#requests-events-and-errors)) |
 
 ## The Compose reader
 
@@ -168,13 +188,16 @@ Both outputs must equal the expected file, so VoiceOver and TalkBack read the sa
 
 ### Build and channel evidence
 
-The workflow invokes [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#store-build-checks) with application `EVY`, iOS deployment target 17, Android API 28, EVY’s admitted contract/delegate hashes, merge-law checks for every EVY contract and EVY’s declared delegate ciphers. It records signing, packaged-artifact digests, execution-policy digest, reader version and delivery receipt for each platform.
+The workflow invokes [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#store-build-checks) with application `EVY`, iOS deployment target 17, Android API 28, EVY's admitted contract/delegate hashes, merge-law checks for every EVY contract and EVY's declared delegate ciphers. It records signing, packaged-artifact digests, execution-policy digest, reader version and delivery receipt for each platform.
 
 Pilot delivery uses TestFlight on iOS and Play internal testing on Android. Production promotion submits the tested store-variant artifacts to the iOS App Store and Android Google Play production channel after [2.10 Testing and release](10-testing-and-release.md#production-completion) passes. Record both store approvals, production URLs, installed build numbers and fresh-install/update evidence. The workflow owns build/sign/delivery; the release plan owns launch gates.
 
 ## Acceptance
 
 - On iOS and Android, start from the one EVY application UI contract and navigate Home, Hello and Marketplace within its complete document.
+- On iOS and Android, restart during delegate registration or migration. Resume startup once and open Home after verified completion.
+- On iOS and Android, lock or suspend during signing and device access. Release private view state and controlled buffers; reject stale picker results and callbacks after reopening.
+- Photo, map, copy, external-link and internal-route fixtures pass their consent and target checks on iOS and Android.
 - A compatible publication reaches both running readers within 30 seconds. Both produce matching semantic snapshots and action traces.
 - On iOS and Android, restart offline after a successful read and show the saved compatible document. Fresh offline installation shows Connecting to Freenet until the application becomes available.
 - On iOS and Android, start a form or purchase, publish a new application version, navigate within the retained document and return. Drafts, resource context and exact action/purchase UI identity remain intact. An idle boundary activates the queued compatible document.

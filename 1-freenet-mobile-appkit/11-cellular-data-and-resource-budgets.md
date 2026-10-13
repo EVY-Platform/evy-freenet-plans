@@ -9,26 +9,25 @@
 
 ## Purpose
 
-Measure and enforce one installation’s Freenet traffic, storage and subscription budgets on iOS and Android. [1.8 Thin-peer protocol](08-thin-peer.md) owns terminal connections and serving peers.
+Measure and enforce one installation's Freenet traffic, storage and subscription budgets on iOS and Android. [1.8 Thin-peer protocol](08-thin-peer.md) owns terminal connections and serving peers.
 
 Owner: AppKit network lead. Measure cap values and reserves for release-profile acceptance.
 
 ## Accounting scope and external traffic
 
-The hard cap covers every cellular network-layer byte sent or received by the installation’s Freenet node, including framing, failed decryption, bootstrap, repair, retries, leases and teardown. Compare socket-level counters with packet/platform evidence and reserve for delayed accounting. Charge protocol overhead once to the application total.
+The hard cap covers every cellular network-layer byte sent or received by the installation's Freenet node, including framing, failed decryption, bootstrap, repair, retries, leases and teardown. Compare socket-level counters with packet/platform evidence and reserve for delayed accounting. Charge protocol overhead once to the application total.
 
 | Traffic | Policy and measurement |
 | --- | --- |
-| Freenet UI/assets, contract state, photos and sync | Node hard upload/download caps and reserves |
-| Stripe/payment/backend HTTPS | User-initiated payment traffic; preserve reconciliation when the node is capped. Record application/provider bytes separately and disclose that the Freenet cap governs node traffic. |
-| OS backup-provider upload | Provider’s cellular/Wi-Fi setting controls upload. EVY records file bytes, provider setting and available upload evidence; record OS/provider usage uncertainty separately. |
-| Optional external downloads | Ask through the flow’s declared consent and display expected size where known; use explicit adapter limits |
+| Freenet website/assets and contract state | Node hard upload/download caps and reserves |
+| Application HTTPS and OS file-provider traffic | Record bytes separately where measurable. Show the applicable application/provider network policy and measurement uncertainty. |
+| Optional external downloads | Ask through the flow's declared consent and display expected size where known; use explicit adapter limits |
 
-Release measurements show node bytes, external application/provider bytes and estimated total application usage separately. The backup and payment UI names their applicable network policy.
+Release measurements show node bytes, external application/provider bytes and estimated total application usage separately. Host settings explain which traffic the node cap covers.
 
 ## Resource budgets
 
-Each release profile records measured installation storage, document-cache retention, predecessor retention, subscription demand and pending-operation queue limits. The profile supplies numeric ceilings and capture/shutdown reserves before acceptance. Keep exact dependencies of pending operations and purchase verification. A capacity failure preserves durable data and reports cleanup/update actions. Add feature sub-budgets when measured priority/fairness requires them; all views share one application allowance.
+Each release profile records installation storage, website-cache retention, predecessor retention, subscription demand and pending-operation queue limits. Set numeric ceilings and capture/shutdown reserves from measurements before acceptance. Keep the releases and artifacts that saved drafts and pending messages require. A capacity failure preserves durable data and reports cleanup/update actions. All views share one application allowance.
 
 ## Cellular budget contract
 
@@ -48,8 +47,8 @@ Counting packets before decryption and ending serving-peer delivery lets the ins
 | Cost | Traffic to measure | Workloads that count it |
 | --- | --- | --- |
 | Client UPDATE | Core forwards the full post-merge state to its peer ([#4072](https://github.com/freenet/freenet-core/pull/4072)). Each message Bob sends to "Skate club" costs the whole room state | Active use, reconnect |
-| Update rate limit | A serving peer silently drops more than about 10 UPDATEs per second for one sender address and contract ([Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)). Phones behind one carrier NAT share that limit | Active use, reconnect |
-| Subscription lease | After Core sends Unsubscribe upstream, a GET or PUT in the previous 8 minutes keeps delivery going until that lease ends ([Ending subscriptions in 1.2 Embedded node and mobile SDK](02-sdk.md#ending-subscriptions)) | Cap enforcement reserve |
+| Update rate limit | A serving peer silently drops more than about 10 UPDATEs per second for one sender address and contract ([Core update rate limit](https://github.com/freenet/freenet-core/pull/4285)). Phones behind one carrier NAT share that limit | Active use, reconnect |
+| Subscription lease | After Core sends Unsubscribe upstream, a GET or PUT in the previous 8 minutes keeps delivery going until that lease ends ([Core subscription lease](https://github.com/freenet/freenet-core/issues/4738)) | Cap enforcement reserve |
 | Contract code in transfers | PUT and GET resend contract Wasm that the receiver already holds. Behind a mobile hotspot this was over 95% of PUT bytes ([#5707](https://github.com/freenet/freenet-core/issues/5707)) | Active use, reconnect |
 | River reconnect | River re-subscribes each room with a full-state `Put { subscribe: true }` and holds outbound updates until each PUT reply arrives ([river#561](https://github.com/freenet/river/issues/561)) | Reconnect, serving-peer loss |
 | Large-GET retries | A stalled stream restarts from its first fragment ([#4800](https://github.com/freenet/freenet-core/issues/4800)) | Reconnect, serving-peer loss |
@@ -102,4 +101,4 @@ Sources: [#4072](https://github.com/freenet/freenet-core/pull/4072) deferred the
 - On iOS and Android, idle, active, reconnect, serving-peer loss and accounting-overhead workloads meet the upload/download caps. Publish devices, carriers, durations, cap values, reserves and packet traces.
 - With remote publishers sending continuously, exhaust upload and download allowances separately. Subscription release and connection shutdown end delivery within measured byte/time reserves.
 - Restart, foreground resume and Wi-Fi/cellular changes preserve exhausted allowances and pending operations. A new allowance resumes reconciliation once.
-- Storage and demand fixtures keep retained releases, predecessor artifacts, purchase evidence and subscription leases within the installation budget.
+- Storage and demand fixtures keep retained website releases, predecessor artifacts, drafts, pending signed messages and subscription leases within the installation budget.

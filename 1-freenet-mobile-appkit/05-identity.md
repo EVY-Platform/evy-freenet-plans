@@ -33,7 +33,7 @@ The app goes to public users only after backup and restore pass the tests in [Ac
 
 | Change | Why | How |
 | --- | --- | --- |
-| [Keep the node encryption key in the iOS Keychain or Android Keystore](#node-encryption-key) | Protect the key separately from the encrypted secrets | [1.2 Embedded node and mobile SDK](02-sdk.md#keys) packages and tests the backends and platform settings defined in this plan |
+| [Keep the node encryption key in the iOS Keychain or Android Keystore](#node-encryption-key) | Protect the key separately from the encrypted secrets | [1.2 Embedded node and mobile SDK](02-sdk.md#keys-and-locking) packages and tests the backends and platform settings defined in this plan |
 | [Lock the key when the phone locks](#locking-and-unlocking) | Protect Alice's encrypted data while the phone is locked | Core wipes the key from memory when the phone locks and reads it again on unlock. Delegate calls in between return `Locked`. A missing key returns `KeyLost` |
 | [One encrypted backup file in 1.10 Backup and restore](10-backup-and-restore.md#export-and-import) | Recover all of Alice's rooms and DMs from one file | Core's encrypted delegate backup (FNSX) uses a recovery code the app generates for Alice as its passphrase. One file holds the keys for all her rooms and her DMs |
 | [New sessions after a restore in 1.10 Backup and restore](10-backup-and-restore.md#export-and-import) | Bind each session to the receiving installation | Export leaves out session tokens. Import opens new sessions through [1.3 Single-application host](03-host.md) |
@@ -47,7 +47,7 @@ Keeping the installation key in platform-protected storage supports private reco
 
 Add persistent iOS Keychain and Android Keystore backends to Core's closed `KekBackendKind` enum. File a Core sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137) for these backends and Android's rejection of keyring's in-memory mock backend. Use [kek.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/config/kek.rs) and [#4140](https://github.com/freenet/freenet-core/issues/4140) as implementation references.
 
-On first start, `crates/mobile` creates one encryption key for the node installation and stores it with the backend defined in this plan. Each River or EVY installation has its own node encryption key. EVY's feature records are held by one EVY delegate, following [Application node and key scope in 1.3 Single-application host](03-host.md#application-node-and-key-scope):
+On first start, `crates/mobile` creates one encryption key for the node installation and stores it with the backend defined in this plan. Each installation has its own key, following [Application node and key scope in 1.3 Single-application host](03-host.md#application-node-and-key-scope).
 
 | Platform | Where the key lives | Key setting |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ On first start, `crates/mobile` creates one encryption key for the node installa
 
 - `setUnlockedDeviceRequired` needs Android 9 (API 28), which sets the Android floor in [supported profiles in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#supported-profiles).
 - On iOS, Android 9 to 11 and Android 15 and later, the node can read the key only while the phone is unlocked. On Android 12 to 14, the Keystore key also works while the phone is locked. [Locking and unlocking](#locking-and-unlocking) wipes the key from memory on every version.
-- [Keys in 1.2 Embedded node and mobile SDK](02-sdk.md#keys) tests each row with and without a lock screen.
+- [Keys and locking in 1.2 Embedded node and mobile SDK](02-sdk.md#keys-and-locking) tests each row with and without a lock screen.
 - Core records the backend in `secrets_dir/kek_backend` and loads the key only from that backend. The host reports a missing key as `KeyLost`.
 - `crates/mobile` sets the umask to `0o077` before it starts any thread, as Core's `freenet` binary does ([#4219](https://github.com/freenet/freenet-core/pull/4219)).
 - Keep the key on its owning phone. Exclude the encrypted storage from iCloud and Google device backups. Use app-specific export for recovery because the encrypted files require their installation's key.
@@ -77,7 +77,7 @@ Core derives a separate key for each delegate from the node encryption key. The 
 
 ### Locking and unlocking
 
-Platform key protection also needs runtime fencing and controlled-buffer cleanup after a key has been loaded. River and EVY release requires the Core lock lifecycle and the matching host cleanup fixtures on iOS and Android.
+Platform key protection also needs runtime fencing and controlled-buffer cleanup after a key has been loaded. River release requires the Core lock lifecycle and matching host cleanup fixtures on iOS and Android.
 
 File a Core issue to add `lock` and `unlock` to `SecretsStore`, using [store.rs](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/wasm_runtime/secrets_store/store.rs).
 
@@ -86,7 +86,7 @@ File a Core issue to add `lock` and `unlock` to `SecretsStore`, using [store.rs]
 | Phone locks | `protectedDataWillBecomeUnavailable` | `ACTION_SCREEN_OFF` | Fence new signing and private-data operations, finish in-flight recovery writes within the shutdown budget, invalidate sessions and destroy application WebViews. Release app-owned plaintext copies and wipe controlled buffers, the KEK and every derived key |
 | Phone unlocks | `protectedDataDidBecomeAvailable` | `ACTION_USER_PRESENT` | Core reloads the KEK and derived keys through the Keychain or Keystore. The host opens fresh sessions and application contexts and reloads approved application state |
 
-River holds room signing keys and decrypted records in its web UI for local signing. Follow the cleanup requirements in [1.3 Single-application host](03-host.md#opening-suspending-and-reopening-an-app). Use the [application connections in 1.2 Embedded node and mobile SDK](02-sdk.md#application-connections) to replace the application session generation, close private-event routes and cancel prompts.
+River holds room signing keys and decrypted records in its web UI for local signing. Follow the cleanup requirements in [1.3 Single-application host](03-host.md#opening-suspending-and-reopening-an-app). Use the [requests, events and errors in 1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors) to replace the application session generation, close private-event routes and cancel prompts.
 
 Inventory each plaintext copy and its owner. On iOS and Android, lock the phone with a River signing key already loaded in page memory. Test session fencing, object disposal and controlled-buffer wiping. Verify Core's zeroizing wrappers with owned test buffers and drop observers ([#5599](https://github.com/freenet/freenet-core/issues/5599)).
 
@@ -126,21 +126,20 @@ A new identity receives a new installation key and fresh sessions. Test Forget d
 
 ## Application data inventory
 
-Each matching iOS and Android build compiles a trusted `application-inventory/1` registry for River and EVY. The signed release references its inventory ID and schema version; the build policy admits that ID and exact component identities. Export, migration, restore and Forget use this registry.
+Each matching iOS and Android build compiles its application's trusted `application-inventory/1` registry. Test the registry with River. The signed release references its inventory ID and schema version; the build policy admits that ID and exact component identities. Export, migration, restore and Forget use this registry.
 
 Each record-set entry declares `id`, `owner`, `schema_version`, storage namespace, export adapter, required coverage, device-only classification and Forget action. Each delegate entry declares exact code/parameters, admitted role and supported generations. The backup manifest authenticates the registry digest and the captured coverage. Missing required sets or substituted registrations fail before staging.
 
 | Record set | Owner and coverage | Export and Forget |
 | --- | --- | --- |
 | River room identities, room secrets and outbound DMs | Chat delegate; every indexed room and supported predecessor namespace | Export/import; delete and unregister on Forget |
-| EVY root seed, private addresses and exact pending signed operations | EVY delegate; every declared feature/purchase scope | Export/import; delete and unregister on Forget |
 | Identity/release metadata and migration checkpoints | Host lifecycle coordinator; one complete generation | Export/import compatible state; delete on Forget |
-| Drafts, preferences, watched-room/listing demand, block lists and terms/consent choices | Host/reader; identity-bound application records | Export/import; delete on Forget |
+| Drafts, exact pending signed messages, preferences, watched-room demand, block lists and terms/consent choices | Chat delegate or host, as declared by River; identity-bound records | Export/import; delete on Forget |
 | User publisher approvals and key choices | Trusted host; user-selected trust records | Export/import subject to current build policy; delete on Forget |
 | Host lifecycle checkpoints | Host; snapshot, activation and pending-operation reconciliation references | Export recoverable references; receiving installation recreates local transaction/control journals |
-| Device credentials | Host/platform; KEK, node keys, sessions, sync member/coordinator keys, backup master key, folder grants | Coverage report marks device-only; Forget deletes keys/grants and local copies |
+| Device credentials | Host/platform; KEK, node keys, sessions, backup master key, folder grants | Coverage report marks device-only; Forget deletes keys/grants and local copies |
 | Build-supplied publisher configuration | Signed native build; public publisher keys, permitted code and inventory definitions | Installed build supplies it; retained through identity reset |
-| Public contract caches and UI documents | Node/data layer; release dependencies of drafts, purchases and pending operations | Manifest declares required retained evidence; Forget clears local caches |
+| Public contract caches and website releases | Node/data layer; release dependencies of drafts and pending messages | Manifest declares required retained evidence; Forget clears local caches |
 
 Delegate pending records own signed operation bytes and replay context. Host checkpoints own lifecycle progress and reference those operation IDs/digests. Cross-record verification checks both; receiving installations recreate local authority and transaction handles. [1.10 Backup and restore](10-backup-and-restore.md) defines capture and staged activation.
 

@@ -10,9 +10,9 @@
 
 ## Purpose
 
-Define one versioned backup codec, consistent snapshot and staged restore for River and EVY on iOS and Android. [1.5 Identity, keys and local protection](05-identity.md) owns platform keys, lock and Forget. [3.1 Automated backup](../3-optional-extensions/01-backup.md) owns scheduling, providers and retention.
+Define a versioned application backup codec, consistent snapshot and staged restore. Test them with River on iOS and Android. [1.5 Identity, keys and local protection](05-identity.md) owns platform keys, lock and Forget.
 
-Owner: AppKit recovery lead. Complete this plan before River test delivery and EVY production release.
+Owner: AppKit recovery lead. Complete this plan before River test delivery on iOS and Android.
 
 ## Export and import
 
@@ -28,7 +28,7 @@ Generate 32 random bytes and encode them as 52 uppercase RFC 4648 base32 charact
 
 Passkey wrapping gives users a way to recover the same backup master key. Admission requires the iOS and Android interoperability and trusted-context fixtures below.
 
-Owner: AppKit recovery lead. Track [Core #5764](https://github.com/freenet/freenet-core/issues/5764), checked 2026-10-09, as optional interoperability work. Trusted recovery UI uses a dedicated top-level loopback context at `http://localhost:<recovery-port>`, RP ID `localhost`, separate from River’s `127.0.0.1` application context. Only the recovery coordinator opens it; validate origin, challenge, RP ID and current recovery generation.
+Owner: AppKit recovery lead. Track [Core #5764](https://github.com/freenet/freenet-core/issues/5764), checked 2026-10-09, as optional interoperability work. Trusted recovery UI uses a dedicated top-level loopback context at `http://localhost:<recovery-port>`, RP ID `localhost`, separate from River's `127.0.0.1` application context. Only the recovery coordinator opens it; validate origin, challenge, RP ID and current recovery generation.
 
 Matching native iOS and Android interfaces expose `CreateRecoveryCredential` and `UnwrapRecoveryMasterKey` to that trusted context. PRF output wraps the same backup master key; the versioned header names the credential wrapping method and authenticated parameters. Recovery codes are the default recovery method. Enable the passkey method after shared iOS/Android fixtures prove PRF availability, restored synced credentials, cross-platform unwrap, changed recovery port and rejection of application-frame calls. Record API/provider versions and format/signature vectors before admitting the method.
 
@@ -47,11 +47,11 @@ River backup file
 
 Extend Core's FNSX payload to seal the complete application snapshot captured by [Export](#export). The `application-backup/1` codec derives a 32-byte master key with Argon2id from the canonical recovery-code bytes and a 16-byte random setup salt: 64 MiB memory, 3 iterations, parallelism 1. The header records that versioned profile. For each export, generate a fresh 16-byte envelope salt and 24-byte nonce; derive a 32-byte envelope key with HKDF-SHA256(master key, envelope salt, info `freenet.application-backup/1`). Encrypt the complete payload once with XChaCha20-Poly1305. The header is authenticated associated data. Core and host records enter the same envelope before sealing, with one encryption layer. Decode only bounded header fields before authentication.
 
-Manual export derives the master key from the recovery code. Automatic export uses that same master key from protected device storage. Core’s sealing interface takes the derived envelope key directly; its versioned adapter specifies this exact key derivation. Shared fixtures fix code bytes, setup salt, envelope salt, nonce, header and payload and require identical encrypted bytes across Rust, Swift and Kotlin. Each export uses fresh randomness outside deterministic fixtures. Accept only declared KDF profiles and bounded header lengths before authentication; test tampered parameters, unknown profiles and manual/automatic cross-restores on iOS and Android.
+Manual export derives the master key from the recovery code. Automatic export uses that same master key from protected device storage. Core's sealing interface takes the derived envelope key directly; its versioned adapter specifies this exact key derivation. Shared fixtures fix code bytes, setup salt, envelope salt, nonce, header and payload and require identical encrypted bytes across Rust, Swift and Kotlin. Each export uses fresh randomness outside deterministic fixtures. Accept only declared KDF profiles and bounded header lengths before authentication; test tampered parameters, unknown profiles and manual/automatic cross-restores on iOS and Android.
 
 The codec header declares format `application-backup/1`, KDF profile ID, 16-byte setup salt, 16-byte envelope salt, 24-byte nonce and ciphertext length. Wire fields use fixed-width lengths and raw salt/nonce bytes; the exact encoded header is authenticated associated data. The payload uses canonical manifest bytes plus length-prefixed Core/host record sets. Shared codec vectors fix field ordering, integer endianness and header/payload bytes before Core implementation is admitted. The profile is an implementation requirement of this plan; acceptance proves its Core/FNSX adapter and iOS/Android interoperability.
 
-Capture uses the lower of the installation profile’s measured snapshot budget and 256 MiB/10,000 secrets. The profile declares a numeric barrier deadline and recovery-chunk size before acceptance. The host recovery coordinator supplies bounded-chunk export/import authority for River and EVY. EVY’s delegate capability checks are defined in [2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#trusted-recovery-and-migration-access).
+Capture uses the lower of the installation profile's measured snapshot budget and 256 MiB/10,000 secrets. The profile declares a numeric barrier deadline and recovery-chunk size before acceptance. The host recovery coordinator supplies export/import authority bound to the application, operation, source/target identities, session generation and expiry. Test bounded chunks and rejected ordinary application calls with River and native SDK fixtures on iOS and Android.
 
 The canonical manifest binds these fields to the authenticated payload:
 
@@ -67,7 +67,7 @@ The canonical manifest binds these fields to the authenticated payload:
 
 Authenticate the whole envelope and verify every declared length, digest, namespace and component before staging. This binds the coverage report, host records and executable artifacts to the same secrets and snapshot.
 
-Implement the executable backup export and import proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035), open and unassigned as checked on 2026-10-07. Core exports each selected delegate's Wasm, code hash, full delegate key and exact registration parameters from the snapshot. `crates/mobile` exposes snapshot capture and sealing to the host. Store device-only credentials in host-owned device credential storage outside the export selection: session tokens, node keys, sync member/coordinator private credentials, OS grants and local backup keys. They stay with their installation. The coverage report lists these exclusions; restore creates or provisions replacements through each owning protocol.
+Implement the executable backup export and import proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035), open and unassigned as checked on 2026-10-07. Core exports each selected delegate's Wasm, code hash, full delegate key and exact registration parameters from the snapshot. `crates/mobile` exposes snapshot capture and sealing to the host. Keep device-only credentials in host-owned storage: session tokens, node keys, OS grants and local backup keys. The coverage report lists these exclusions; restore creates or provisions replacements through each owning protocol.
 
 ### Export
 
@@ -93,11 +93,11 @@ Set byte and time limits for the barrier and staging snapshot. On timeout or sto
 4. River runs its supported delegate migrations in staging and verifies the resulting records. The host activates the complete generation through the [staged restore transaction](#staged-restore-transaction).
 5. River checks each restored signing key against Alice's member entry in "Skate club", then fetches messages, members and bans. The host opens new sessions and shows Alice the coverage report.
 
-A backup from a supported earlier River release supplies that release's chat delegate Wasm and exact parameters. Core registers it in staging and restores its secrets under the recorded key. River carries those secrets forward to the current chat delegate in staging, as [1.7 Upgrades and migration](07-migration.md#delegate-secret-export-and-import) describes. River test delivery and EVY production delivery require their supported restore paths to pass on iOS and Android.
+A backup from a supported earlier River release supplies that release's chat delegate Wasm and exact parameters. Core registers it in staging and restores its secrets under the recorded key. River carries those secrets forward to the current chat delegate in staging, as [1.7 Upgrades and migration](07-migration.md#delegate-secret-export-and-import) describes. River test delivery requires supported restore paths to pass on iOS and Android.
 
 ### Staged restore transaction
 
-Restore updates code, secrets and host records as one generation, so a crash recovers a complete usable identity. River test delivery and EVY production release require the restore transaction and failure-injection fixtures on iOS and Android.
+Restore updates code, secrets and host records as one generation, so a crash recovers a complete usable identity. River test delivery requires the restore transaction and failure-injection fixtures on iOS and Android.
 
 File a Core issue for isolated restore stores and a durable activation record that selects one application's complete data generation. Core and `crates/mobile` expose the transaction to Swift and Kotlin. Build on the executable-inclusive backup capability proposed in [#4035](https://github.com/freenet/freenet-core/issues/4035).
 
@@ -120,7 +120,7 @@ On iOS and Android, inject write failures, full storage, migration failures and 
 
 - On iOS and Android, River's backup file restores Alice's signing keys, room secrets and DMs onto a fresh installation.
 - On iOS and Android, a fresh installation containing only the latest River release restores a backup from a supported earlier delegate build using the file's Wasm and exact parameters, then migrates its keys and records to the current delegate. Fixtures cover skipped releases, code or registration mismatches and unsupported generations; validation failures keep the phone's data intact.
-- Host records River declares round-trip through the backup file. Device-local backup keys, sync member/coordinator private credentials, session tokens, node keys, folder-access grants and cleanup-control records stay with their owning installation.
+- Host records River declares round-trip through the backup file. Device-local backup keys, session tokens, node keys, folder-access grants and cleanup-control records stay with their owning installation.
 - On iOS and Android, export while signing, saving drafts, cleaning pending operations, changing identity, migrating or updating application components. Every accepted backup restores one consistent snapshot, including all writes acknowledged before its barrier, matching keys and records, and a resumable migration checkpoint.
 - On iOS and Android, alter the manifest or header, mix record sets from two backups, remove a part, substitute a namespace or code artifact, and change a length or digest. Authentication or validation rejects each case before restore writes.
 - On iOS and Android, terminate capture and sealing, fill snapshot storage and exceed the barrier deadline. Application work resumes or recovers, the previous completed backup remains usable, and incomplete snapshots are reclaimed.
@@ -128,4 +128,4 @@ On iOS and Android, inject write failures, full storage, migration failures and 
 - On iOS and Android, staged delegates produce network effects only after activation. A successful restore opens new sessions, rejects callbacks from superseded sessions and reclaims staging files after recovery.
 - Tests cover wrong recovery codes, damaged or cut-off files, unknown format versions, oversized fields, interrupted imports, reinstall and full storage.
 - A restore opens new sessions and passes application identity and session-generation checks. A copied backup file opens only with its recovery code.
-- Require passing identity, backup and restore tests for River test delivery and EVY production release.
+- River test delivery requires passing identity, backup and restore tests on iOS and Android.

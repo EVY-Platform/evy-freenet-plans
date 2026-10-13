@@ -21,7 +21,7 @@ The [installation interface in 1.4 Application bundles](04-bundles.md#release-ve
 | Harvest | [migrate.rs](https://github.com/freenet/harvest/blob/9eb4a04ed30e75c478df0b89f38f68044bbd947c/ui/src/migrate.rs) for contracts, [delegate_migrate.rs](https://github.com/freenet/harvest/blob/9eb4a04ed30e75c478df0b89f38f68044bbd947c/ui/src/delegate_migrate.rs) for the delegate | 0.6 |
 | Atlas | The publisher's CLI, [main.rs](https://github.com/freenet/atlas/blob/051e38033e81a4232341ffa4360af94232e7809b/cli/src/main.rs) and [migration.rs](https://github.com/freenet/atlas/blob/051e38033e81a4232341ffa4360af94232e7809b/cli/src/migration.rs) | 0.6 |
 
-Keep predecessor data until successor readback proves the migration complete. It then retires the old version as in [Retiring the old version](#retiring-the-old-version). While a migration runs, the app shows a migrating state, as River's room list does with `RoomListDisplay::Migrating` ([River room-list source](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/components/room_list.rs)). Delta’s [#52](https://github.com/freenet/delta/issues/52) and [#53](https://github.com/freenet/delta/pull/53) provide separate application migration examples. The publisher's CLI migrates publisher-owned data, such as the Atlas index, before publishing the release.
+Keep predecessor data until successor readback proves the migration complete. It then retires the old version as in [Retiring the old version](#retiring-the-old-version). While a migration runs, the app shows a migrating state, as River's room list does with `RoomListDisplay::Migrating` ([River room-list source](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/ui/src/components/room_list.rs)). Delta's [#52](https://github.com/freenet/delta/issues/52) and [#53](https://github.com/freenet/delta/pull/53) provide separate application migration examples. The publisher's CLI migrates publisher-owned data, such as the Atlas index, before publishing the release.
 
 ## Component identity and re-keying
 
@@ -60,17 +60,17 @@ Handle these registry cases:
 
 ### Supported backup generations
 
-The River registry checked on 2026-10-09 lists chat delegates V1–V3 and V7–V31, and room contracts V1–V32. These are candidate automatic-migration fixtures. The release build declares tested source/target pairs, exact artifacts and backup format `application-backup/1` in its compiled inventory; admission requires passing iOS and Android readback evidence for each declared pair. EVY starts with delegate generation 1 and adds each tested predecessor pair when its code changes.
+The River registry checked on 2026-10-09 lists chat delegates V1–V3 and V7–V31, and room contracts V1–V32. These are candidate automatic-migration fixtures. The release build declares tested source/target pairs, exact artifacts and backup format `application-backup/1` in its compiled inventory; admission requires passing iOS and Android readback evidence for each declared pair.
 
 River room recovery for V4–V6 delegates uses a valid invite and is a separate recovery fixture. Report that coverage explicitly alongside automatic migration. Shared backup coverage lists current generation plus every admitted predecessor; skipped-version tests verify the declared pairs before public release.
 
 ### Walk policies
 
-Declare walk policy for River room/chat components and the EVY delegate. Atlas, Delta and Harvest remain source/regression examples. The default policies stop at an unresponsive predecessor.
+Declare walk policy for River's room contract and chat delegate. Atlas, Delta and Harvest provide source and regression examples. The default policies stop at an unresponsive predecessor.
 
 | Policy | Part | What the walk does | Trade-off | Used by |
 | --- | --- | --- | --- | --- |
-| `NewestSnapshotWins` (default) | Delegate secrets | Takes the newest generation that answers and stops at the first one that stays silent | Protects against rollback. Generations behind a silent one stay stranded | EVY |
+| `NewestSnapshotWins` (default) | Delegate secrets | Takes the newest generation that answers and stops at the first one that stays silent | Protects against rollback. Generations behind a silent one stay stranded | SDK policy fixture |
 | `NewestSnapshotWinsContinuePastUnresponsive(RollbackRiskAck)` (0.7.0) | Delegate secrets | Walks past a silent generation | Gives up rollback protection | None |
 | `UnionAllGenerations` | Delegate secrets | Merges every generation that answers | Can bring back secrets that were deleted by leaving them out. River limits this with ranked tombstones ([river#590](https://github.com/freenet/river/issues/590)) | River, Delta, Harvest |
 | `NewestFirstWins` (default) | Contract state | Takes the newest real state and stops at an unknown newer generation, unless the app passes `RollbackRiskAck` to `continue_past_unknown` | Protects against rollback | River's room contract |
@@ -78,7 +78,7 @@ Declare walk policy for River room/chat components and the EVY delegate. Atlas, 
 
 ### Delegate secret export and import
 
-Move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River, Delta and Harvest do. Read through each predecessor's messages and write through the successor's handler. Mark the pair complete after verification. EVY uses its `ExportRecords` and `ImportRecords` adapters through the [mobile migration interface](#mobile-migration-interface). The SDK builds against the [compatible migration library](#compatible-migration-library).
+Move delegate secrets with freenet-migrate's `migrate_delegate_secrets`, as River, Delta and Harvest do. Read through each predecessor's messages and write through the successor's handler. Mark the pair complete after verification. Native SDK fixtures on iOS and Android exercise application-supplied adapters through the [mobile migration interface](#mobile-migration-interface). The SDK builds against the [compatible migration library](#compatible-migration-library).
 
 [Core-assisted migration](#core-assisted-migration) defines the adoption checks for the proposed Core-mediated secret transfer.
 
@@ -133,15 +133,15 @@ The runner:
 
 After verification, the app follows [Retiring the old version](#retiring-the-old-version).
 
-iOS and Android fixtures cover normal upgrades, skipped supported generations, interruption, failed imports, successor readback and rejection of records outside the application inventory. [2.11 EVY delegate and private records](../2-evy-on-freenet/11-delegate-and-private-records.md#updating-the-evy-delegate) supplies EVY fixtures preserving `root_seed`, derived public keys, addresses and exact pending signed operations.
+iOS and Android fixtures cover normal upgrades, skipped supported generations, interruption, failed imports, successor readback and rejection of records outside the application inventory. River fixtures preserve room identities, keys, drafts and exact pending signed messages.
 
 ### Core-assisted migration
 
-Evaluate [Core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) after Core implements and tests author-bound delegate provenance and Core-mediated secret transfer to a successor. Adoption tests verify provenance, secret deposit and preservation of application records. EVY uses [application-driven migration](#delegate-secret-export-and-import).
+Evaluate [Core RFC #5255](https://github.com/freenet/freenet-core/issues/5255) after Core implements and tests author-bound delegate provenance and Core-mediated secret transfer to a successor. Adoption tests verify provenance, secret deposit and preservation of application records. River uses [application-driven migration](#delegate-secret-export-and-import).
 
 ### Retiring the old version
 
-Reclaim predecessor copies within the installation’s measured storage budget and declared supported-predecessor retention in [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#resource-budgets). Test River's 27 delegate generations as the workload ([river#586](https://github.com/freenet/river/issues/586)).
+Reclaim predecessor copies within the installation's measured storage budget and declared supported-predecessor retention in [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#resource-budgets). Test River's 27 delegate generations as the workload ([river#586](https://github.com/freenet/river/issues/586)).
 
 After migration completes, retire each predecessor delegate in this order:
 
@@ -153,9 +153,9 @@ After migration completes, retire each predecessor delegate in this order:
 
 ### Pointer records
 
-Publisher tooling uses signed pointer records to locate update candidates and check publication freshness. River’s `river.room-contract` and `river.chat-delegate` records identify its components ([pointer-records.toml](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/pointer-records.toml)). CI checks retention and increasing versions ([river#677](https://github.com/freenet/river/issues/677)).
+Publisher tooling uses signed pointer records to locate update candidates and check publication freshness. River's `river.room-contract` and `river.chat-delegate` records identify its components ([pointer-records.toml](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/pointer-records.toml)). CI checks retention and increasing versions ([river#677](https://github.com/freenet/river/issues/677)).
 
-An installed mobile build runs exact identities admitted by [1.4 Application bundles](04-bundles.md#execution-policy). Runtime pointer lookup starts when a named River or EVY update-discovery flow needs it. That flow verifies publisher signature and version floor, records the candidate, checks build admission and migrates through declared adapters. Discovery never expands execution authority. [freenet-migrate#33](https://github.com/freenet/freenet-migrate/issues/33) and [river#695](https://github.com/freenet/river/issues/695) supply candidate-resolution evidence.
+An installed mobile build runs exact identities admitted by [1.4 Application bundles](04-bundles.md#execution-policy). Runtime pointer lookup starts when a named River update-discovery flow needs it. That flow verifies publisher signature and version floor, records the candidate, checks build admission and migrates through declared adapters. Discovery never expands execution authority. [freenet-migrate#33](https://github.com/freenet/freenet-migrate/issues/33) and [river#695](https://github.com/freenet/river/issues/695) supply candidate-resolution evidence.
 
 ## Acceptance
 

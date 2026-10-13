@@ -91,11 +91,28 @@ The contract, Swift and Kotlin readers, local editor and CLI share identity, sig
 
 The contract validates its envelope and signature. Publisher validation checks full flow, route, resource and action semantics before signing. Run merge-law fixtures with `fdev verify-merge`.
 
+### Release references
+
+Implement the `evy-ui/1` adapter for the shared `application_content_ref` interface in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#release-references).
+
+| Field | EVY value |
+| --- | --- |
+| `format` | `evy-ui/1` |
+| `application_key` | Full application UI contract key |
+| `version` | Signed application version; maps to purchase `ui_version` |
+| `digest` | Base58 BLAKE3 of the complete RFC 8785 signed document, including signature; maps to purchase `ui_digest` |
+
+Hosts, backup manifests and the attribution archive verify references against the exact retained document. Decode base58 before comparing raw `state_hash` bytes. [2.6 Payments](06-payments.md#financial-policy-identity) defines the separate policy digest.
+
+[Release-reference encoding vectors](../fixtures/release-reference-encodings.json) fix the public test seed, Ed25519 signature, canonical signed bytes, BLAKE3 hash, base58 encodings and purchase-field mapping. Verify the signature over the stated domain and unsigned bytes, then hash the complete signed bytes. Full UI validation uses complete documents from this plan.
+
+Matching iOS and Android builds carry `ui.evy`, the EVY publisher key, supported data-contract code and the EVY delegate. Their build policy admits those components. Compatible UI publications update the document using admitted code.
+
 ### Size cap
 
 The 512 KiB cap applies to the complete application document. Measure the assembled Home, Hello and Marketplace fixture on each release. Marketplace's existing two-flow fixture is 69,264 bytes; that measurement is input evidence for the combined-document test.
 
-Both the publisher and contract enforce the cap. Each UI update transfers one complete application document. Record its bytes in the [cellular budget in 1.11 Cellular data and resource budgets](../1-freenet-mobile-appkit/11-cellular-data-and-resource-budgets.md#cellular-budget-contract). The 512 KiB bound is EVY’s application document cap. Carrier evidence in [1.8 Thin-peer protocol](../1-freenet-mobile-appkit/08-thin-peer.md#carrier-evidence) describes NAT transfer failures for larger states. Release fixtures measure complete-document cold fetch and update traffic on supported carriers.
+Both the publisher and contract enforce the cap. Each UI update transfers one complete application document. Record its bytes in the [cellular budget in 1.11 Cellular data and resource budgets](../1-freenet-mobile-appkit/11-cellular-data-and-resource-budgets.md#cellular-budget-contract). The 512 KiB bound is EVY's application document cap. Carrier evidence in [1.8 Thin-peer protocol](../1-freenet-mobile-appkit/08-thin-peer.md#carrier-evidence) describes NAT transfer failures for larger states. Release fixtures measure complete-document cold fetch and update traffic on supported carriers.
 
 ### The home flow
 
@@ -139,6 +156,7 @@ Active forms, drafts and purchases retain the exact application version and reso
 - Publishing a compatible application version updates both running readers within 30 seconds. A later version adds Marketplace flows and their routes together.
 - Both publisher and contract reject a complete application document over 512 KiB. Report assembled fixture size and update bytes.
 - Signature, identity, canonical encoding, version ordering, duplicates and equal-version hash conflicts produce identical results in Rust, TypeScript, Swift and Kotlin.
+- The `evy-ui/1` adapter passes the encoding vectors and verifies an archived document after the live contract advances.
 - Invalid route targets, duplicate IDs, unsupported adapters and malformed actions fail publisher validation at matching JSON paths.
 - Concurrent local publication jobs serialize through one journal; retries use the reserved version and exact signed bytes. Archive failure retains the pending release.
 - Independent readback confirms the submitted release. A higher competing tuple stops replay and reports the winner.

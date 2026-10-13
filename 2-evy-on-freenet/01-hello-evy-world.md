@@ -110,7 +110,7 @@ sequenceDiagram
     Data-->>Screen: Verified greeting projection
 ```
 
-The application data layer owns the greeting subscription. The screen observes its verified state; leaving the screen ends that observation. Subscription cleanup follows [Ending subscriptions in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#ending-subscriptions).
+The application data layer owns the greeting subscription. The screen observes its verified state; leaving the screen ends that observation. Subscription cleanup follows [Subscriptions and application demand in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#subscriptions-and-application-demand).
 
 ### Offline and before the first read
 
@@ -123,7 +123,7 @@ Until the node first joins, Core answers a GET without subscribe from the node's
 | Offline or not joined yet, with a stored copy | The stored message and "Offline. Received 10:42" |
 | Offline or not joined yet, nothing stored | "Connecting to Freenet". The message appears once the node joins |
 | The network has no copy of the contract | "The greeting is not available right now" and a Retry button |
-| Peers need a newer Core than the app ships | "Update EVY", with a link to the App Store or Google Play, from the "update the app" error in [typed errors in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#typed-errors) |
+| Peers need a newer Core than the app ships | "Update EVY", with a link to the App Store or Google Play, from the "update the app" error in [typed errors in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#requests-events-and-errors) |
 
 ## Publishing a new greeting
 

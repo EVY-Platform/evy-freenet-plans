@@ -14,7 +14,7 @@
 
 Use River as the end-to-end AppKit test application on real iOS and Android phones in the thin-peer role from [1.8 Thin-peer protocol](08-thin-peer.md). River runs its signed web UI in one WebView, served by the installation's embedded node. Its room contracts and chat delegate prove joining, messaging, recovery and upgrades.
 
-Deliver signed River test builds through TestFlight on iOS and Play internal testing on Android. Release the [developer package](#developer-package) when the tests pass. EVY's native application coverage and production gates belong to [2.10 Testing and release](../2-evy-on-freenet/10-testing-and-release.md).
+Deliver signed River test builds through TestFlight on iOS and Play internal testing on Android. Release the [developer package](#developer-package) when the tests pass.
 
 ## River scope
 
@@ -52,7 +52,7 @@ Use a separate test contract for destructive migration cases. Use bounded River 
 
 ## Developer package
 
-Provide these materials for River test builds and EVY native integration on iOS and Android:
+Provide these materials for River test builds and native SDK integration on iOS and Android:
 
 - A River WebView starter, and Swift and Kotlin SDK examples for native screens
 - The supported-version matrix and dependencies
@@ -73,11 +73,9 @@ Deliver River to controlled testers through TestFlight on iOS and Play internal 
 | Privacy | The testing checklist records public room data, peer-visible keys and IP addresses, private device records, and the declarations required by the distribution channel. |
 | Encryption | The checklist records X25519, AES-GCM, ChaCha20, XChaCha20-Poly1305, Ed25519, BLAKE3, HKDF-SHA256 and SHA-256, following [Encryption export regulations](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations). Record distribution territories and any required declarations. |
 
-EVY's application moderation, payment and production launch requirements are defined in [2.10 Testing and release](../2-evy-on-freenet/10-testing-and-release.md#store-requirements).
-
 ### Store build checks
 
-This plan owns the shared iOS and Android build-check interface. Pass application name, minimum OS values, exact component/code policy, merge-law contract set and cipher inventory from the consuming application. River uses iOS 16/Android API 28; EVY uses iOS 17/Android API 28. Fail packaging if an enabled check fails and record dated store/SDK requirement evidence before each submission.
+This plan owns the shared iOS and Android build-check interface. Pass application name, minimum OS values, exact component/code policy, merge-law contract set and cipher inventory from the consuming application. Test with River at iOS 16 and Android API 28. Fail packaging if an enabled check fails and record dated store/SDK requirement evidence before each submission.
 
 | Check | iOS | Android |
 | --- | --- | --- |
@@ -85,11 +83,11 @@ This plan owns the shared iOS and Android build-check interface. Pass applicatio
 | No file sharing | `Info.plist` has no `UIFileSharingEnabled` | – |
 | [16 KB pages](https://developer.android.com/guide/practices/page-sizes) | – | `zipalign -c -P 16 -v 4` passes on the APK, and every LOAD segment of each 64-bit `.so` has 16 KB alignment (`llvm-objdump -p`) |
 | Build SDK | Xcode 26 and the iOS 26 SDK ([upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)) | `targetSdk` is 36 or later ([target API](https://support.google.com/googleplay/android-developer/answer/11926878)) |
-| Minimum OS | Deployment target iOS 16, as in [supported profiles in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#supported-profiles) | `minSdk` is 28 (Android 9) |
+| Minimum OS | Supplied deployment target; River uses iOS 16 under [1.1 Mobile feasibility and supported profiles](01-feasibility.md#supported-profiles) | Supplied `minSdk`; River uses 28 (Android 9) |
 | Release signing | Distribution certificate | Upload key, with Play App Signing |
 | Privacy and encryption | `PrivacyInfo.xcprivacy` is in the `.app`, and `Info.plist` sets `ITSAppUsesNonExemptEncryption` | – |
 | No test harness | The binary has no `appkit.scenario` or `APPKIT_RESULT` | `classes*.dex` and native libraries have no `appkit.scenario` or `APPKIT_RESULT` |
-| Merge laws | `fdev verify-merge` passes on the application’s declared contract set (River room; every EVY contract) | Same |
+| Merge laws | `fdev verify-merge` passes on the application's supplied contract set; River declares its room contract | Same |
 | Core version | The release checklist records the Core version and the network's `min-compatible-version` | Same |
 
 From 2027-02-01, Play blocks app updates that lack 16 KB page support. The merge-law check follows [sending updates in 1.6 Application protocols, data and operations](06-data-and-operations.md#sending-updates). [#5725](https://github.com/freenet/freenet-core/issues/5725) tracks `fdev verify-merge` reporting a rejected merge of two valid states as inconclusive.
@@ -100,7 +98,7 @@ Peers refuse a node whose Core version is below the network's `min-compatible-ve
 
 - Each iOS and Android store build records its Core version and the network's `min-compatible-version`.
 - A new iOS and Android store build ships before the network's minimum passes the Core version.
-- A phone that falls behind gets "update the app" from the SDK ([typed errors in 1.2 Embedded node and mobile SDK](02-sdk.md#typed-errors)). River tells the user to install the new store build.
+- A phone that falls behind gets "update the app" from the SDK ([typed errors in 1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors)). River tells the user to install the new store build.
 
 ## Release tests
 
@@ -111,7 +109,7 @@ Run every release test on iOS and Android with the phone in the thin-peer role.
 | Independent build | A second developer builds and installs River from the starter instructions on iOS and Android. |
 | River | The join, read, send, reconnect, restart and interrupted-upgrade cases in [River acceptance cases](#river-acceptance-cases) pass through River's UI and real chat delegate. |
 | Thin role and budgets | The [acceptance in 1.8 Thin-peer protocol](08-thin-peer.md#acceptance) passes on the Core build. |
-| Safety and durability | Browser WebSocket and native SDK paths pass the caller-authority, reply-correlation, cancellation and connection-generation tests in [1.2 Embedded node and mobile SDK](02-sdk.md#application-connections). Locking destroys the application WebView and releases controlled plaintext copies. Consistent, authenticated backup snapshots, fallback-port storage, offline sends, staged restore and policy-admitted migrations pass their owning plans. |
+| Safety and durability | Browser WebSocket and native SDK paths pass the caller-authority, reply-correlation, cancellation and connection-generation tests in [1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors). Locking destroys the application WebView and releases controlled plaintext copies. Consistent, authenticated backup snapshots, fallback-port storage, offline sends, staged restore and policy-admitted migrations pass their owning plans. |
 | Local network | The local-network case in the [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) passes with River. |
 | Device limits and accessibility | Startup, memory, battery, storage exhaustion, keyboard, focus, large text and screen-reader tests pass on the declared devices. The [release-profile evidence in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence) records the exact release artifacts, runtime, ABI and real-device/carrier coverage. |
 | Distribution | The TestFlight and Play internal-testing builds of River pass review for the actual bridge capability table and execution policy, and every [store requirement](#store-requirements) holds. Review evidence identifies the enabled adapters and consent rules. |

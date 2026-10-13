@@ -11,9 +11,9 @@
 
 ## Purpose
 
-Each River or EVY installation accounts for its own embedded node, storage and traffic. Its application data layer owns the bounded set of active contract subscriptions. [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md) owns that installation’s accounting and resource limits.
+Each application installation accounts for its own embedded node, storage and traffic. Its application data layer owns the bounded set of active contract subscriptions. [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md) owns that installation's accounting and resource limits.
 
-Run the phone’s node as a negotiated thin peer on iOS and Android. River is the first app. When Bob reads and posts in "Skate club" on his phone:
+Run the phone's node as a negotiated thin peer on iOS and Android. River is the first app. When Bob reads and posts in "Skate club" on his phone:
 
 ```mermaid
 flowchart LR
@@ -42,7 +42,7 @@ Use the thin role for these reasons:
 - At 60 KiB/s, one hour of traffic uses about 210 MiB each way and consumes battery power.
 - Google Play allows an app to relay traffic for others only when relaying is the app's main purpose ([Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/16559646)). River's iOS and Android release uses the thin role to send the user's own traffic. Chat is River's main purpose.
 
-Development fixtures and dated feasibility runs may select a full-peer profile. Release-profile acceptance for River and EVY requires negotiated thin support on iOS and Android. Record the profile and exact protocol/build in every result.
+Development fixtures and dated feasibility runs may select a full-peer profile. River release acceptance requires negotiated thin support on iOS and Android. Record the profile and exact protocol/build in every result.
 
 | Part | Section |
 | --- | --- |

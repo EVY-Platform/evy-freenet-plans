@@ -32,6 +32,19 @@ The EVY delegate, alias `evy.delegate`, holds the user's EVY keys for every EVY 
 | Authorized callers | The delegate accepts EVY's native calls over the [trusted path in 1.3 Single-application host](../1-freenet-mobile-appkit/03-host.md#trusted-calls). It rejects a web app or another delegate as `MessageOrigin` ([delegate_interface.rs](https://github.com/freenet/freenet-stdlib/blob/fca0848b78b12942f77422309bb07f76108940d6/rust/src/delegate_interface.rs)) |
 | Private fields | The resource's `private` list names fields for selected readers. The reader sends them in `Seal`; the delegate encrypts them to the author and each X25519 key in `readers`, using HPKE ([RFC 9180](https://www.rfc-editor.org/rfc/rfc9180), X25519, HKDF-SHA256 and ChaCha20-Poly1305). The record stores ciphertext in `sealed`. `Open` decrypts fields sealed to the local user |
 
+## Application data inventory
+
+Define EVY's `application-inventory/1` registry using [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md#application-data-inventory). Matching iOS and Android builds admit its digest and exact component identities. Export, migration, restore and Forget use the complete inventory.
+
+| Record set | Owner and coverage |
+| --- | --- |
+| Root seed, private addresses and exact pending signed operations | EVY delegate; every feature and purchase scope |
+| Drafts, preferences, watched-listing demand, blocks and terms/consent choices | Host and readers; identity-bound records |
+| Identity, release and migration checkpoints | Host coordinator; one complete generation |
+| UI documents and verification evidence | Data layer; exact dependencies of drafts, purchases and pending operations |
+
+Each installation has its own node encryption key. Delegate records and host checkpoints reference the same operation IDs and digests. Backup authenticates both; restore recreates local sessions and transaction handles. Inventory fixtures on iOS and Android verify coverage, device-only exclusions and Forget for every record set.
+
 ## Trusted recovery and migration access
 
 | Operation | Caller and lifecycle state | Required checks |
@@ -70,6 +83,8 @@ Messages are JSON, with schemas in `freenet/common/`:
 ## Updating the EVY delegate
 
 A new EVY delegate build has a new key. The iOS and Android apps move Alice's records from the predecessor to the new delegate. EVY follows [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md#delegate-secret-export-and-import):
+
+Start with delegate generation 1. Each build declares tested predecessor/successor pairs and backup format `application-backup/1`. Admit a pair after iOS and Android restore and successor-readback fixtures pass.
 
 | Step | Who | What happens |
 | --- | --- | --- |

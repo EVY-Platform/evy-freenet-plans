@@ -10,7 +10,7 @@
 
 ## Purpose
 
-Package and publish an application's web UI, contract and delegate artifacts, and host metadata. River's web UI is the AppKit test application on iOS and Android. EVY's SwiftUI and Compose builds use one EVY application UI identity and its supported components.
+Package and publish an application's web UI, contract and delegate artifacts, and host metadata. River's web UI is the AppKit test application on iOS and Android.
 
 Build contracts, archive the web directory, sign it and store it in a Freenet website container. Add metadata, publication evidence and installation checks for the mobile host.
 
@@ -79,7 +79,7 @@ River website releases carry these identity values. [Release references](#releas
 - The container identity is the full container `ContractKey`. It derives from the container Wasm and the publisher's verifying key. fdev embeds a stock container Wasm that can change between fdev versions, so the packaging CLI passes each app's container Wasm with `--contract-wasm` on every publication ([dapp-builder skill](https://github.com/freenet/freenet-agent-skills/blob/890ad1b20c03ee99dd0a0ae89ec3e3b17c19eac4/skills/dapp-builder/references/web-container-contract.md)). For River that file is the committed [`published-contract/web_container_contract.wasm`](https://github.com/freenet/river/tree/8cf54dd7799514851da7eab051e4cc43f797208d/published-contract), so every River release keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv`. Check container identity across releases using [mail#200](https://github.com/freenet/mail/issues/200) and [raven#45](https://github.com/freenet/raven/issues/45) as regression cases.
 - The container version is an unsigned 32-bit integer covered by the publisher signature. The packaging CLI assigns each new publication a version higher than every version it has reserved and the verified version read from the network. Unix seconds provide a starting floor, as defined under [Publishing and evidence](#publishing-and-evidence). Retries retain the prepared publication's version.
 
-A bundle carries web code, contracts and delegates. Changes to the native iOS or Android app ship as a new release through the App Store or Google Play.
+A bundle carries web code, contracts and delegates. Native app changes ship through matching iOS App Store and Android Google Play releases.
 
 ### Release references
 
@@ -88,11 +88,8 @@ A bundle carries web code, contracts and delegates. Changes to the native iOS or
 | Format | Published identity | Release bytes |
 | --- | --- | --- |
 | `website/1` | River's full website container key | Signed website container state and its verified archive |
-| `evy-ui/1` | EVY's full application UI contract key | Complete signed application document from [2.2 EVY UI contracts and publishing](../2-evy-on-freenet/02-ui-contracts.md#the-ui-contract) |
 
-Each release reference identifies one format and one application. The host, backup manifest and attribution archive resolve it using that format's validation rules.
-
-EVY's matching iOS and Android builds include `ui.evy`, the EVY publisher key, supported data-contract code and the EVY delegate. Its signed application document declares flows, resource bindings and compatible reader versions. Native component policy ships with the mobile build; compatible UI publications use that permitted code and update the application's document version.
+Each release reference identifies one format and one application. A format adapter verifies the publication's identity, signature, version and digest. The host and backup manifest use that adapter to resolve the reference. This plan implements `website/1` and tests it with River.
 
 ### Reference adapter and digest encodings
 
@@ -101,33 +98,19 @@ Shared vectors let hosts, publishers and backups identify the same release and d
 | Value | Algorithm and exact byte input | Wire encoding and consumers |
 | --- | --- | --- |
 | `application_content_ref.digest`, `website/1` | BLAKE3 of complete signed website container state | Base58 of 32 raw bytes; host verification and backup manifest |
-| `application_content_ref.digest`, `evy-ui/1` | BLAKE3 of complete RFC 8785 signed UI document, including signature | Base58 of 32 raw bytes; maps directly to `ui_digest` in purchases and archive evidence |
 | `publication_ref.archive_digest` | SHA-256 of exact tar.xz archive bytes | Base58 of 32 raw bytes; packaging journal and release verification |
 | Policy and native build digests | SHA-256 of canonical build execution-policy bytes or exact packaged build bytes | Base58 of 32 raw bytes; build admission and recovery |
 | File-manifest digest | SHA-256 of exact unpacked file bytes | Base58 of 32 raw bytes; packaging and host file checks |
 
-The `evy-ui/1` adapter maps `application_key` to the full UI contract key, `version` to `ui_version` and `digest` to `ui_digest`. The UI contract compares raw `state_hash` bytes; decoders convert base58 before comparison. [2.2 EVY UI contracts and publishing](../2-evy-on-freenet/02-ui-contracts.md#the-ui-contract) owns signed UI bytes and [2.6 Payments](../2-evy-on-freenet/06-payments.md#financial-policy-identity) owns the policy digest, which uses BLAKE3 of exact signed policy bytes.
-
-Each metadata field has a consumer: host requirements and permissions feed admission; artifact/parameters/protocols feed Core validation and migration; component roles and inventory ID feed backup/restore; name/description feed trusted River screens; startup owner feeds fixed setup. Versioned metadata changes update those consumers’ shared fixtures together.
+Each metadata field has a consumer: host requirements and permissions feed admission; artifact/parameters/protocols feed Core validation and migration; component roles and inventory ID feed backup/restore; name/description feed trusted River screens; startup owner feeds fixed setup. Versioned metadata changes update those consumers' shared fixtures together.
 
 ### Encoding fixture
 
-[Release-reference encoding vectors](../fixtures/release-reference-encodings.json) supply a valid Ed25519 signature, canonical signed-byte input, raw BLAKE3 hash, base58 digests and exact `application_content_ref` → purchase-field mapping. The fixture uses a public test seed and a test identity. It tests encoding and reference adaptation; complete UI/schema validation uses the full documents in [2.2 EVY UI contracts and publishing](../2-evy-on-freenet/02-ui-contracts.md#the-ui-document).
-
-```json
-{
-  "format": "evy-ui/1",
-  "application_key": "7AWybYjMDx4et5rR2YVLwAXGzf6hq9A3eLzcMzkgPdqR",
-  "version": 1,
-  "digest": "BZrdEy9bFxPuuhnbUe7LmMccU9WwSzpeVVLYaJqv2wQd"
-}
-```
-
-The fixture’s padded base64 signature is `H16M/sdLuuwbSuNpbeJscxMi79HfJjO7MqQWHkmL/A1ArGnoRmB0z2n+qJJhHXx+3jofF4Dtu/FI+qkortINBg==`. Verify it over the stated domain and canonical unsigned bytes, then compute the signed-state digest over the retained complete bytes.
+Use prepared River releases as website encoding fixtures. Verify the publisher signature, full container key, version, complete signed-state BLAKE3 digest and archive SHA-256 digest. Rust, Swift and Kotlin must produce the same reference bytes.
 
 ### Signed file manifest
 
-River’s signed archive contains `file_manifest.json`: format version, unique relative path, byte length and SHA-256/base58 digest for every other file. The signed container authenticates the manifest and its files. Packaging validates it before signing; the host repeats path, size and digest checks before serving bytes. Include Wasm embedded inside the UI in executable admission checks. Shared iOS and Android fixtures cover altered assets, duplicate paths, omitted files and modified manifests.
+River's signed archive contains `file_manifest.json`: format version, unique relative path, byte length and SHA-256/base58 digest for every other file. The signed container authenticates the manifest and its files. Packaging validates it before signing; the host repeats path, size and digest checks before serving bytes. Include Wasm embedded inside the UI in executable admission checks. Shared iOS and Android fixtures cover altered assets, duplicate paths, omitted files and modified manifests.
 
 ### River release metadata
 
@@ -153,12 +136,11 @@ Adding a code hash or expanding its role requires matching iOS and Android store
 
 ## Setup
 
-Use fixed startup sequences for River and EVY. Component metadata names the owning startup code and preserves exact artifact, parameters and protocol identity for verification and recovery.
+Use a fixed startup sequence for River. Component metadata names the owning startup code and preserves exact artifact, parameters and protocol identity for verification and recovery.
 
 | Application | Startup sequence |
 | --- | --- |
 | River | Verify the website release and room/chat artifacts, open the authorized session, register the chat delegate with empty parameters, wait for its reply, then load rooms. Room creation uses the selected room contract and exact owner parameters. |
-| EVY | Verify build policy and UI/delegate identities, recover or migrate the complete private generation, register the admitted EVY delegate, wait for its reply, then restore application demand and open Home. |
 
 Registration carries the cipher/nonce fields; Core derives delegate protection from the installation KEK ([#4146](https://github.com/freenet/freenet-core/pull/4146), [#5265](https://github.com/freenet/freenet-core/issues/5265), [#5472](https://github.com/freenet/freenet-core/pull/5472)). Persist each startup checkpoint and resume idempotently after interruption. Features open after required component verification and registration replies ([river#709](https://github.com/freenet/river/issues/709), [river#710](https://github.com/freenet/river/pull/710)).
 
@@ -276,7 +258,7 @@ The publisher keeps a tested backup of its signing key file, `~/.config/freenet/
 - Every fixture prepares and submits through the separate fdev capabilities with its container Wasm. River keeps the key `raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv` across releases. Two releases within one second receive increasing versions, including after clock rollback or journal recovery.
 - CLI/CI rejects unsafe paths, hash mismatches, unsupported metadata, invalid parameter fixtures and releases that exceed the selected profile's limits. The install check accepts River's archive with the Wasm copies its UI embeds.
 - A failed save in step 2 stops submission. Timeout and termination fixtures replay exactly the saved signed state, archive and version after readback. Termination after reservation consumes that version. Concurrent jobs for one container serialize through the same journal. Same-version conflict and a higher network version retain evidence and require a new publication at a higher version. Step 4 issues references only after exact readback through another node.
-- A consumer verifies a `publication_ref` against the saved copy after the live container advances. An EVY `evy-ui/1` reference verifies against the exact signed application document. Each native build reference verifies against its packaged build and execution-policy digests.
+- A consumer verifies `publication_ref` and `website/1` references against the saved copy after the live container advances. Each iOS and Android build reference verifies against its packaged build and execution-policy digests.
 - On iOS and Android, test current, supported predecessor and migration-only hashes through direct browser WebSocket and native SDK paths. An unknown hash requires a matching store build; embedded Wasm and backup-supplied code receive the same checks. Migration-only code runs only the admitted staging adapters. A changed delegate and a skipped-version restore pass on the policy that declares them.
 - Setup resumes after termination. The app waits for the delegate's registration reply before sending messages to it. Changed delegates and new access pass the host's consent checks before activation.
 - A restored backup of the publisher's key file signs a valid update to the same container.

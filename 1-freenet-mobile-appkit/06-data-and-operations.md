@@ -20,7 +20,7 @@ Bob types "Skate session Saturday?" in the "Skate club" room:
 3. After Core saves the room, River checks that its state contains the message.
 4. After an interruption, River recovers the last acknowledged draft or pending message. Reconnect tests check that an independent peer receives the message.
 
-Test River's web UI through its direct WebSocket session adapter and a native SDK fixture on iOS and Android after outages, restarts and release changes. Both use the [application transport adapter in 1.2 Embedded node and mobile SDK](02-sdk.md#application-connections).
+Test River's web UI through its direct WebSocket session adapter and a native SDK fixture on iOS and Android after outages, restarts and release changes. Both use the [application transport adapter in 1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors).
 
 | Deliverable | Section |
 | --- | --- |
@@ -35,7 +35,7 @@ Test River's web UI through its direct WebSocket session adapter and a native SD
 | --- | --- |
 | River | Read the room, sign the message, save recovery records and show the result |
 | Host | Check River's session, permission and room target, and route private replies |
-| Application transport adapter | Queue requests and match replies to the current connection under [1.2 Embedded node and mobile SDK](02-sdk.md#application-connections). The host supplies caller authority. |
+| Application transport adapter | Queue requests and match replies to the current connection under [1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors). The host supplies caller authority. |
 | Chat delegate | Store the draft and pending message, and check who may read or change them |
 | Room contract | Check the signature and merge the message into room state |
 
@@ -116,7 +116,7 @@ The mobile API records when Bob's phone receives the room state and passes that 
 | Room list and conversation read the same room | Each screen receives its own result through [reply matching in 1.2 Embedded node and mobile SDK](02-sdk.md#matching-replies-to-requests) |
 | Read also requests room updates | River waits for subscription confirmation before relying on update notifications ([#2501](https://github.com/freenet/freenet-core/pull/2501)) |
 | Open River before the node joins | River reads the saved room through [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) |
-| Close one screen while another watches the room | The remaining screen keeps its subscription through [1.2 Embedded node and mobile SDK](02-sdk.md#ending-subscriptions) |
+| Close one screen while another watches the room | The remaining screen keeps its subscription through [1.2 Embedded node and mobile SDK](02-sdk.md#subscriptions-and-application-demand) |
 
 ### Where River saves data
 
@@ -151,7 +151,7 @@ Contract pinning, persistence and demand restoration support recovery when deman
 
 Core stores contract state and sends it to peers. This plan tests cached reads, acknowledged delegate saves and reconnect delivery while Core retains the room state. Storage tests fill the Core build's hosting budget and record which room copies it retains or evicts.
 
-Core work will address offline delivery after contract eviction. Reconnect tests for milestone 1 (Freenet mobile AppKit) and milestone 2 (EVY on Freenet) retain room state within the Core build's hosting budget. Both milestones and [3.2 Device sync](../3-optional-extensions/02-sync.md#traffic-and-lifecycle) will adopt stronger Core retention and delivery guarantees when released, including data availability while all linked mobile nodes are stopped.
+Reconnect tests retain room state within the Core build's hosting budget. Adopt stronger Core retention and offline delivery guarantees after eviction and restart tests pass, including availability while all mobile nodes holding the data are stopped.
 
 | Thread | Scope | Status checked 2026-10-07 |
 | --- | --- | --- |
@@ -185,7 +185,7 @@ Test Core's response timing with forwarding to a peer blocked. Core must answer 
 | River stops after the message reaches the locally stored room | With the room state retained within Core's hosting budget, River reads it back after restart and checks that a peer receives it after reconnecting |
 | River stops before the send result arrives | River checks the room and retries any saved signed message with the same bytes. An interrupted save leaves the last acknowledged draft save |
 | The same signed message arrives twice | The room contains one copy. River's message ID derives from its signature ([message.rs](https://github.com/freenet/river/blob/8cf54dd7799514851da7eab051e4cc43f797208d/common/src/room_state/message.rs)) |
-| Validation or storage fails | River keeps the recoverable draft and shows the error returned through [1.2 Embedded node and mobile SDK](02-sdk.md#typed-errors) |
+| Validation or storage fails | River keeps the recoverable draft and shows the error returned through [1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors) |
 
 Test the save completion, version checks and cleanup order in [How a send works](#how-a-send-works).
 
@@ -193,10 +193,10 @@ Test the save completion, version checks and cleanup order in [How a send works]
 
 - Subscribe to each room Bob uses. Restore client subscriptions on every start and reconnect. Test River's reconnect flow, which submits the saved room with `Put { subscribe: true }` and resumes sends after the PUT reply ([river#561](https://github.com/freenet/river/issues/561), [#4785](https://github.com/freenet/freenet-core/issues/4785)). Room retention follows the storage budget in [1.2 Embedded node and mobile SDK](02-sdk.md#storage).
 - Read a room absent from the node before updating it. If Core returns `NotFound`, keep the draft and report the room unavailable. An owner with a saved copy uses [Lost network state](#lost-network-state). Test this first-send case ([#5724](https://github.com/freenet/freenet-core/issues/5724), [Harvest's first-message fix](https://github.com/freenet/harvest/pull/126)).
-- Test the selected first-join path from [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). Core builds with [Local operations before the first join in 1.2 Embedded node and mobile SDK](02-sdk.md#local-operations-before-the-first-join) must save the message before joining and share it on join. Releases using the SDK queue must keep acknowledged drafts and submit queued sends on join.
+- Test the selected first-join path from [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). Core builds with [Offline startup in 1.2 Embedded node and mobile SDK](02-sdk.md#offline-startup) must save the message before joining and share it on join. Releases using the SDK queue must keep acknowledged drafts and submit queued sends on join.
 - After reopening or release activation, read saved drafts and pending messages from the delegate and read each room from the node. Confirm recovery after those reads complete.
 
-Test reconnect delivery through Core's [state comparison](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/ring/interest.rs). Cellular traffic follows [1.8 Thin-peer protocol](08-thin-peer.md); update rate limits follow [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm).
+Test reconnect delivery through Core's [state comparison](https://github.com/freenet/freenet-core/blob/e7d0b06c9326f377d250bf8344baaac2ba2658c6/crates/core/src/ring/interest.rs). Cellular traffic follows [1.8 Thin-peer protocol](08-thin-peer.md); update rate limits follow [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#cellular-budget-contract).
 
 ### Conflicting changes
 
