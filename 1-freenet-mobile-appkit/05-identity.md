@@ -4,21 +4,21 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [freenet-core](https://github.com/freenet/freenet-core) | Modified | Key protection, backup and restore |
-| [river](https://github.com/freenet/river) | Used | Identity export fixture |
+| [freenet-core](https://github.com/freenet/freenet-core) | Modified | A host-supplied KEK backend with load, store and delete callbacks through UniFFI. Host records under a reserved namespace in the secret store |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Keychain (Swift, iOS) and Keystore (Kotlin, Android) callbacks; `KeyLost` and Forget screens |
+| [river](https://github.com/freenet/river) | Used | River's delegate records and room keys under test |
 
 ## Purpose
 
-Encrypt an app's keys and private data on iOS and Android, and let the user back them up, restore them and delete them. River is the first app:
+Protect River's keys and private data on iOS and Android, and let Alice delete them:
 
-- River encrypts Alice's identity key, her "Skate club" room secret and the DMs she sent on her phone. The iOS Keychain or Android Keystore protects the key that unlocks them.
-- Alice exports them to an encrypted backup file. She opens it with her confirmed recovery code.
-- On a new iPhone or Android phone, she imports the file. The app lists what it restored and what the file left out.
-- Alice can delete her private records. The app verifies deletion and reports the result.
+- River keeps Alice's signing key for "Skate club" and the DMs she sent in its chat delegate. Core encrypts them with the node encryption key (KEK).
+- The iOS Keychain or the Android Keystore holds the KEK.
+- When Alice locks her phone, River goes to the background. The node stops and the KEK leaves memory.
+- If the KEK is gone, the host reports `KeyLost`.
+- Alice can Forget River. The host deletes the KEK first, then wipes River's data.
 
-The app goes to public users only after backup and restore pass the tests in [Acceptance](#acceptance).
-
-## Application and key identities
+## Keys
 
 | Key | What it is | Who controls it |
 | --- | --- | --- |
@@ -27,129 +27,96 @@ The app goes to public users only after backup and restore pass the tests in [Ac
 | User | Alice's signing key for "Skate club". River makes one per room and stores it in its chat delegate | Alice |
 | Delegate | River's chat delegate key, a hash of its code. Its secret store holds Alice's signing keys and the DMs she sent | Nobody holds it. Anyone can recompute it |
 | Node network key | The key Alice's node uses to connect to other peers. Core creates it on first run and saves it as `transport_keypair` in its secrets directory | Alice's node |
-| Node encryption key | The key that encrypts every delegate's secret store. Core calls it the KEK and keeps it in a systemd credential, a file, or the macOS or Windows keyring | Alice's node |
+| Node encryption key (KEK) | The key that encrypts every delegate's secret store | Alice's node, through the Keychain or Keystore |
 
-## What this plan adds
+## Node encryption key
 
-| Change | Why | How |
-| --- | --- | --- |
-| [Keep the node encryption key in the iOS Keychain or Android Keystore](#node-encryption-key) | Protect the key separately from the encrypted secrets | [1.2 Embedded node and mobile SDK](02-sdk.md#keys-and-locking) packages and tests the backends and platform settings defined in this plan |
-| [Lock the key when the phone locks](#locking-and-unlocking) | Protect Alice's encrypted data while the phone is locked | Core wipes the key from memory when the phone locks and reads it again on unlock. Delegate calls in between return `Locked`. A missing key returns `KeyLost` |
-| [One encrypted backup file in 1.10 Backup and restore](10-backup-and-restore.md#export-and-import) | Recover all of Alice's rooms and DMs from one file | Core's encrypted delegate backup (FNSX) uses a recovery code the app generates for Alice as its passphrase. One file holds the keys for all her rooms and her DMs |
-| [New sessions after a restore in 1.10 Backup and restore](10-backup-and-restore.md#export-and-import) | Bind each session to the receiving installation | Export leaves out session tokens. Import opens new sessions through [1.3 Single-application host](03-host.md) |
-| [Forget](#forget) | Remove the application identity and local data | Stop the application, clear its store and host records, delete its encryption and backup keys, and verify cleanup |
+Core gains one generic KEK backend that the host supplies. It has three callbacks through UniFFI: load, store and delete. [1.2 Embedded node and mobile SDK](02-sdk.md) builds and packages the bindings.
 
-## Protected keys and records
+- Swift implements the callbacks with the iOS Keychain.
+- Kotlin implements them with the Android Keystore.
+- File a Core sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137) for the backend. Use [kek.rs](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/config/kek.rs) and [#4140](https://github.com/freenet/freenet-core/issues/4140) as references.
 
-### Node encryption key
-
-Keeping the installation key in platform-protected storage supports private records across restarts and gives lock, key-loss and deletion checks a defined backend. Both platform backends and their device fixtures are release requirements.
-
-Add persistent iOS Keychain and Android Keystore backends to Core's closed `KekBackendKind` enum. File a Core sub-issue of [#4137](https://github.com/freenet/freenet-core/issues/4137) for these backends and Android's rejection of keyring's in-memory mock backend. Use [kek.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/config/kek.rs) and [#4140](https://github.com/freenet/freenet-core/issues/4140) as implementation references.
-
-On first start, `crates/mobile` creates one encryption key for the node installation and stores it with the backend defined in this plan. Each installation has its own key, following [Application node and key scope in 1.3 Single-application host](03-host.md#application-node-and-key-scope).
+On first start, `crates/mobile` creates one KEK for the installation and stores it through the callbacks.
 
 | Platform | Where the key lives | Key setting |
 | --- | --- | --- |
 | iOS | A Keychain item | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` |
 | Android 9 to 11 | A file in the app's storage, encrypted with an Android Keystore AES key | [`setUnlockedDeviceRequired(true)`](https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUnlockedDeviceRequired(boolean)) |
-| Android 12 to 14 | The same file and Keystore key | Omit the unlocked-device setting to preserve the key when the user removes the lock screen and to allow creation without a lock screen |
+| Android 12 to 14 | The same file and Keystore key | No unlocked-device setting. The key survives when Alice removes her lock screen, and the app can create it on a phone with no lock screen |
 | Android 15 and later | The same file and Keystore key | `setUnlockedDeviceRequired(true)` |
 
-- `setUnlockedDeviceRequired` needs Android 9 (API 28), which sets the Android floor in [supported profiles in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#supported-profiles).
-- On iOS, Android 9 to 11 and Android 15 and later, the node can read the key only while the phone is unlocked. On Android 12 to 14, the Keystore key also works while the phone is locked. [Locking and unlocking](#locking-and-unlocking) wipes the key from memory on every version.
-- [Keys and locking in 1.2 Embedded node and mobile SDK](02-sdk.md#keys-and-locking) tests each row with and without a lock screen.
-- Core records the backend in `secrets_dir/kek_backend` and loads the key only from that backend. The host reports a missing key as `KeyLost`.
+- `setUnlockedDeviceRequired` needs Android 9 (API 28). This sets the Android floor in [supported profiles in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#supported-profiles).
+- Core records the backend in `secrets_dir/kek_backend` and loads the key only from that backend.
 - `crates/mobile` sets the umask to `0o077` before it starts any thread, as Core's `freenet` binary does ([#4219](https://github.com/freenet/freenet-core/pull/4219)).
-- Keep the key on its owning phone. Exclude the encrypted storage from iCloud and Google device backups. Use app-specific export for recovery because the encrypted files require their installation's key.
-- Alice moves her data to a new phone with the backup file from [Export and import in 1.10 Backup and restore](10-backup-and-restore.md#export-and-import).
+- The KEK stays on its phone. Exclude River's encrypted storage from iCloud and Google device backups.
+- iOS keeps Keychain items after an app is deleted. At first start after a reinstall, the host deletes a leftover Keychain key that has no matching data, then creates a new one.
 
-### What the key protects
+## What the key protects
 
-Core derives a separate key for each delegate from the node encryption key. The host derives one more key the same way for its own private records. `crates/mobile` turns off Core's secret snapshots ([Storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage)), so the phone keeps only each secret's current value.
+Core derives a separate key for each delegate from the KEK. No derived key leaves Core.
 
-| Record | Where it lives | Protected by | After a restore |
-| --- | --- | --- | --- |
-| Alice's signing key, room secrets and membership proof for "Skate club" | River's chat delegate store, under `room:<owner key>` | The chat delegate's derived key | Back from the backup file |
-| DMs Alice sent | River's chat delegate store | The chat delegate's derived key | Back from the backup file |
-| Records the app declares | Host records | The host's derived key | Back from the backup file |
-| "Skate club" messages, members and bans | Room contract state on the network | The [room secret](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/README.md#privacy-model) and member signatures | The app fetches them from the network |
+The host keeps its own private records, such as River's notification choice, as secrets in Core's encrypted secret store. They live under a reserved host namespace. `crates/mobile` turns off Core's secret snapshots ([storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage)), so the phone keeps only each secret's current value.
 
-### Locking and unlocking
+River's records:
 
-Platform key protection also needs runtime fencing and controlled-buffer cleanup after a key has been loaded. River release requires the Core lock lifecycle and matching host cleanup fixtures on iOS and Android.
+| Record | Where it lives | Protected by |
+| --- | --- | --- |
+| `room:<owner key>`: Alice's signing key, member records and nickname for "Skate club" | River's chat delegate | The delegate's derived key |
+| `rooms_meta`: current room, notification settings and room order | River's chat delegate | The delegate's derived key |
+| DMs Alice sent | River's chat delegate | The delegate's derived key |
+| Host records, such as the notification choice | Core's secret store, reserved host namespace | Core's derived key |
+| "Skate club" messages, members and bans | Room contract state on the network | The [room secret](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/README.md#privacy-model) and member signatures |
 
-File a Core issue to add `lock` and `unlock` to `SecretsStore`, using [store.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/wasm_runtime/secrets_store/store.rs).
+River's record keys come from [chat_delegate.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/components/app/chat_delegate.rs) and [room_data.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/room_data.rs).
 
-| Event | iOS signal | Android signal | What happens |
-| --- | --- | --- | --- |
-| Phone locks | `protectedDataWillBecomeUnavailable` | `ACTION_SCREEN_OFF` | Fence new signing and private-data operations, finish in-flight recovery writes within the shutdown budget, invalidate sessions and destroy application WebViews. Release app-owned plaintext copies and wipe controlled buffers, the KEK and every derived key |
-| Phone unlocks | `protectedDataDidBecomeAvailable` | `ACTION_USER_PRESENT` | Core reloads the KEK and derived keys through the Keychain or Keystore. The host opens fresh sessions and application contexts and reloads approved application state |
+## Locking and unlocking
 
-River holds room signing keys and decrypted records in its web UI for local signing. Follow the cleanup requirements in [1.3 Single-application host](03-host.md#opening-suspending-and-reopening-an-app). Use the [requests, events and errors in 1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors) to replace the application session generation, close private-event routes and cancel prompts.
+Locking the phone sends River to the background. The host tears down River's WebView and completes the task teardown in [Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect). All node-owned tasks release their key references before shutdown completes. Core drops and zeroizes the KEK and derived keys through their owned wrappers; the tests below check those buffers.
 
-Inventory each plaintext copy and its owner. On iOS and Android, lock the phone with a River signing key already loaded in page memory. Test session fencing, object disposal and controlled-buffer wiping. Verify Core's zeroizing wrappers with owned test buffers and drop observers ([#5599](https://github.com/freenet/freenet-core/issues/5599)).
+| Event | What happens |
+| --- | --- |
+| Alice locks her phone or leaves River | The host stops the node and destroys River's WebView. The KEK and derived keys leave memory |
+| Alice unlocks and opens River | The node starts and loads the KEK through the Keychain or Keystore. The host opens a fresh WebView |
+| The KEK is not found at start | The host reports `KeyLost` |
+| The Keychain or Keystore returns an error | The host reports the error and keeps all data. It tries again at the next start |
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Locked: phone starts
-    Locked --> Ready: Alice unlocks, key found
-    Locked --> KeyLost: Alice unlocks, key missing
-    Ready --> Locked: Alice locks her phone
-    KeyLost --> Ready: Alice imports her backup file
-    KeyLost --> [*]: Alice forgets the application
+    [*] --> Stopped
+    Stopped --> Ready: River opens, KEK found
+    Stopped --> KeyLost: River opens, KEK not found
+    Ready --> Stopped: Alice locks her phone or leaves River
+    KeyLost --> Stopped: Host wipes River's data and creates a new KEK
 ```
 
-| State | What the host does |
-| --- | --- |
-| `Locked` | Returns `Locked` to delegate calls until Alice unlocks. The chat delegate's room secret rotation for rooms Alice owns also waits for the unlock |
-| `KeyLost` | Report the missing installation key, retain the encrypted generation and offer application backup restore or Forget. |
+`KeyLost` means River's encrypted data can no longer be read. The host tells Alice, wipes River's data directory and creates a new KEK. River then starts with no rooms.
 
-When the key is lost, the host quarantines the encrypted generation, creates a replacement installation key in Keychain or Keystore, and stages a supported backup under that key. Persist the quarantine and activation record before opening the restored application. A failed restore retains the quarantined files for retry.
+Verify Core's zeroizing wrappers with owned test buffers and drop observers when the node stops ([#5599](https://github.com/freenet/freenet-core/issues/5599)).
 
-### Forget
+## Forget
 
-Forget resets the application's local installation. The host shows the affected identity, records, keys and backup credentials before the user confirms.
+Forget resets River on this phone. Before Alice confirms, the host shows what she will lose: her rooms, her keys and the DMs she sent.
 
-Keep a nonsecret cleanup journal outside the data generation being deleted. The application's lifecycle coordinator:
+1. The host stops the node and destroys River's WebView.
+2. The host deletes the KEK through the delete callback. From now on River's encrypted data cannot be read.
+3. The host wipes River's app data directory.
 
-1. Records cleanup pending, disables backup runs, fences new work and invalidates the identity/session generation.
-2. Stops delegates, network connections and the node. Releases the WebView, native private buffers, signing keys and derived-key caches.
-3. Deletes current and predecessor delegate records, registrations, declared host records, local backup keys, folder-access grants, temporary exports, snapshots and local public contract caches.
-4. Deletes the installation KEK through Core's `KekBackend::delete` and clears node credentials and storage.
-5. Verifies deletion in application storage, Keychain or Keystore and host records. Resumes unfinished cleanup on restart before creating a new identity.
-6. Reports deletion failures and retained off-device data, then completes the journal after verification.
+If River stops between steps 2 and 3, the next start finds no KEK. The host then finishes the wipe, as for `KeyLost`.
 
-Erasing the KEK makes retained copies of its encrypted files unreadable. Public room messages remain on Freenet, exported backups remain usable with their recovery code, and the user's other devices keep their own identities. Alice needs her backup to regain an owner key for a room she controls.
+After Forget:
 
-A new identity receives a new installation key and fresh sessions. Test Forget during backup setup, export and restore; earlier callbacks remain fenced.
-
-## Application data inventory
-
-Each matching iOS and Android build compiles its application's trusted `application-inventory/1` registry. Test the registry with River. The signed release references its inventory ID and schema version; the build policy admits that ID and exact component identities. Export, migration, restore and Forget use this registry.
-
-Each record-set entry declares `id`, `owner`, `schema_version`, storage namespace, export adapter, required coverage, device-only classification and Forget action. Each delegate entry declares exact code/parameters, admitted role and supported generations. The backup manifest authenticates the registry digest and the captured coverage. Missing required sets or substituted registrations fail before staging.
-
-| Record set | Owner and coverage | Export and Forget |
-| --- | --- | --- |
-| River room identities, room secrets and outbound DMs | Chat delegate; every indexed room and supported predecessor namespace | Export/import; delete and unregister on Forget |
-| Identity/release metadata and migration checkpoints | Host lifecycle coordinator; one complete generation | Export/import compatible state; delete on Forget |
-| Drafts, exact pending signed messages, preferences, watched-room demand, block lists and terms/consent choices | Chat delegate or host, as declared by River; identity-bound records | Export/import; delete on Forget |
-| User publisher approvals and key choices | Trusted host; user-selected trust records | Export/import subject to current build policy; delete on Forget |
-| Host lifecycle checkpoints | Host; snapshot, activation and pending-operation reconciliation references | Export recoverable references; receiving installation recreates local transaction/control journals |
-| Device credentials | Host/platform; KEK, node keys, sessions, backup master key, folder grants | Coverage report marks device-only; Forget deletes keys/grants and local copies |
-| Build-supplied publisher configuration | Signed native build; public publisher keys, permitted code and inventory definitions | Installed build supplies it; retained through identity reset |
-| Public contract caches and website releases | Node/data layer; release dependencies of drafts and pending messages | Manifest declares required retained evidence; Forget clears local caches |
-
-Delegate pending records own signed operation bytes and replay context. Host checkpoints own lifecycle progress and reference those operation IDs/digests. Cross-record verification checks both; receiving installations recreate local authority and transaction handles. [1.10 Backup and restore](10-backup-and-restore.md) defines capture and staged activation.
-
-On iOS and Android, inventory fixtures enumerate every required record set, test backup coverage and verify the declared Forget rule for user trust records and build-supplied public configuration.
+- Public room messages stay on Freenet.
+- Alice's other devices keep their own identities.
+- A new identity gets a new KEK.
 
 ## Acceptance
 
-- On Android 9 to 11 and Android 15 and later, the node key has `setUnlockedDeviceRequired(true)`. On Android 12 to 14 it does not, and Alice keeps River's data after she removes her lock screen.
-- On iOS and Android, locking fences signing, destroys application WebViews, releases native private-data caches and wipes controlled Core/plaintext buffers. Delegate calls return `Locked` until unlock. Tests verify owned-buffer wiping, key-wrapper disposal and stale-session rejection, then obtain fresh contexts and protected state on unlock. A missing key returns `KeyLost` and keeps the encrypted store until import or forget.
-- On iOS and Android, Forget during export, backup setup or post-restore key storage fences earlier callbacks. Termination during cleanup resumes the remaining deletions before a new identity starts. Key or folder-grant deletion failures remain visible and retryable.
-- On iOS and Android, Forget stops the application, clears local public/private stores and registrations, deletes the KEK and backup keys, and verifies platform cleanup. Retained KEK-encrypted copies become unreadable.
-- On iOS and Android, restore one application backup after key loss and restart during recovery. Startup selects the complete restored generation and preserves the quarantine until cleanup is verified.
-- The backup integration suite in [1.10 Backup and restore](10-backup-and-restore.md#acceptance) passes with the platform key, lock and Forget suite in this plan.
+- On iOS and Android, the KEK callbacks pass Core's backend tests for load, store and delete.
+- On Android 9 to 11 and 15 and later, the Keystore key has `setUnlockedDeviceRequired(true)`. On Android 12 to 14 it does not.
+- On Android 9 to 11, 12 to 14 and 15 and later, Alice removes her lock screen. River keeps its data, or reports `KeyLost` if the platform deleted the key.
+- On iOS, a reinstall leaves a Keychain key with no data. The first start deletes it and creates a new one.
+- On iOS and Android, locking the phone with a River signing key loaded in page memory stops the node and destroys the WebView. The zeroizing check passes. Unlocking and opening River loads the KEK and opens a fresh WebView.
+- On iOS and Android, a missing KEK gives `KeyLost`, and the host wipes the unreadable data. A Keychain or Keystore error keeps all data.
+- On iOS and Android, Forget deletes the KEK before it wipes the data directory. Stopping River between the two steps finishes the wipe on the next start.
+- Host records live in the reserved host namespace and no derived key leaves Core.

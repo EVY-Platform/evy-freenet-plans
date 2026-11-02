@@ -4,151 +4,387 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Home search rows and Marketplace flows in the complete application document `freenet/ui/evy.json`, published to `ui.evy`. Marketplace's lookups and photo contracts in `freenet/contracts/` and `evyctl lookups publish`. Items carry EVY's item schema and purchase references. SwiftUI and Compose readers derive availability from certified listing decisions and retained sale evidence |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | The listing contract in `freenet/contracts/listing/`, the purchase contract in `freenet/contracts/purchase/` and the photo contract in `freenet/contracts/photo/`. The search index as a collection instance. The listing authority role in `api/src/modules/payment`. `listing/1`, `purchase/2`, `purchase-messages/2`, `address/1` and `file/1` adapters in the SwiftUI and Compose readers. UI versions 3 and 4 in `freenet/ui/evy.json`. Marketplace lookups and the seller list, sent with `evyctl lookups publish`. Report, Block and terms flows |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Node, `fdev execute` for `evyctl`, `fdev verify-merge`, and the EVY backend node that hosts Marketplace contracts |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Contract interface |
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Swift package and Kotlin library in the EVY app |
 
 ## Purpose
 
-Marketplace is a feature inside the EVY application. Its listing, purchase and photo contracts store data; its Home search, View Item and Create item flows are part of the complete signed EVY UI document. Purchases use [2.6 Payments](06-payments.md).
+Marketplace is a feature inside the EVY app. This plan builds its contracts and flows and runs the skateboard sale end to end on Freenet:
 
-Publish EVY application version 7 containing Marketplace flows, internal routes and resource bindings under [2.2 EVY UI contracts and publishing](02-ui-contracts.md#application-routes-and-compatible-updates). Matching iOS and Android readers activate that complete document and navigate within it.
+- one listing contract per seller
+- one search index for all of EVY
+- one purchase contract per purchase, with one message list signed by the payment service key
+- the listing authority: the payment module's role that accepts requests, holds one reservation per item and permits one sale
+- UI version 3, the Marketplace test item: a test page that binds `marketplace.items` to a test listing contract. This plan's contract tests use it
+- UI version 4, the Marketplace flows and Home search
+
+UI version 4 adds these flows to the one signed EVY UI document:
+
+- Home search, with the "For you", "From you" and "Scheduled" tabs and the "Sell something" button
+- "View Item", where a buyer reads an item and asks to buy it
+- "Create item", where a seller lists an item
+
+This plan uses:
+
+- stable routes from [Application routes and compatible updates in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#application-routes-and-compatible-updates)
+- `signed-register/1`, the collection contract and resource bindings from [2.4 SDUI data and actions](04-data-and-actions.md)
+- the EVY delegate from [The EVY delegate in 2.4 SDUI data and actions](04-data-and-actions.md#the-evy-delegate), for keys, signing, sealing, the address book and pending operations
+- the payment module, payment records and payment key revocation from [2.6 Payments](06-payments.md)
+
+Example: Alice lists her skateboard for 70 dollars on her iPhone. Bob finds it in Home search on his Android phone, asks to pick it up on Saturday and pays 71.48 dollars in Stripe's payment sheet. The sale runs under UI version 4 and policy 1. Both phones show `available`, `pickup_pending` and `sold`, and an independent peer reads the same item and purchase.
+
+```mermaid
+flowchart LR
+    Search[Search index] --> Listing[Alice's listing contract]
+    Listing -->|Decision lists purchase keys| Purchase[Purchase contract]
+    Authority[Listing authority in the payment module] -->|Signed decisions| Listing
+    Authority -->|Signed message list| Purchase
+    Pay[Payment module] -->|Payment record| Purchase
+    Phones[EVY on iOS and Android] --> Search
+    Phones -->|register_purchase, admit_message| Authority
+```
 
 ## What is cloned
 
-| Marketplace component | Storage or implementation |
+| Marketplace component | On Freenet |
 | --- | --- |
-| Items, `marketplace.items` ([item.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/schema/item.schema.json)) | The items contract from [The purchase contract in 2.12 Listings and purchases](12-listings-and-purchases.md#the-purchase-contract), with service ID `marketplace` and EVY's item schema |
-| Lookups: `selling_reasons`, `conditions`, `durations` and `areas` ([lookup.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/schema/lookup.schema.json)) | One lookups contract, signed by the EVY publisher key from [2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key) and seeded from [service_data.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/services/service_data.json). The EVY publisher updates it with `evyctl lookups publish --service marketplace <file>` |
-| Item statuses, `marketplace.item_statuses` ([status.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/status.ts)) | Both readers derive item availability from the verified listing decision, reservation and retained sale evidence, using [Item availability](#item-availability) |
-| Requests and replies between buyer and seller, `evy.messages` ([purchase.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/purchase.ts)) | The shared message adapter projects signed messages from the common purchase contract in [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface) |
-| Payment calls and `item_payment_intents` ([payments.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/payments.ts)) | `api/src/modules/payment` under [2.6 Payments](06-payments.md) |
-| Pickup address, `evy.addresses` | The shared address adapter projects the private field of Alice's `accept` message after her EVY delegate seals it to the purchase participants and their reader decrypts it in the verified purchase context |
-| Photos, `evy.files` named in `photo_ids` | The shared file adapter reads one immutable photo contract per content hash |
-| "View Item" flow (page "Item details") and "Create item" flow (pages "Create listing", "Describe item", "Pickup and delivery" and "Payment options") ([service_sdui.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/services/service_sdui.json)) | The complete EVY UI document, published with `evyctl ui publish` ([Publishing a UI version in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#publishing-a-ui-version)) |
-| Item search, the "For you", "From you" and "Scheduled" tabs and the "Sell something" button on EVY's SDUI home page ([evy_sdui.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/evy/evy_sdui.json)) | Home rows inside the complete EVY document. Search results and "Sell something" open Marketplace's "View Item" and "Create item" flows by the internal application routes `marketplace.view-item` and `marketplace.create-item`; Marketplace returns through `entry` |
-| Checks on items and messages ([validation.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/validation.ts), purchase.ts) | Checks in the items and purchase contracts ([Service rules in 2.4 SDUI data and actions](04-data-and-actions.md#service-rules)) |
+| Items, `marketplace.items` ([item.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/schema/item.schema.json)) | Each seller's items live in that seller's [listing contract](#the-listing-contract). Items keep EVY's item schema |
+| Item search | `marketplace.search`, the [search index](#the-search-index) |
+| Lookups: `selling_reasons`, `conditions`, `durations` and `areas` ([lookup.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/schema/lookup.schema.json)) | One lookups contract, signed by EVY's publishing key and seeded from [service_data.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/services/service_data.json). It also holds the seller list |
+| Item statuses, `marketplace.item_statuses` ([status.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/status.ts)) | Readers derive them under [Item availability](#item-availability) |
+| Requests and replies, `evy.messages` ([purchase.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/purchase.ts)) | Signed messages in each [purchase contract](#the-purchase-contract) |
+| Payment calls and `item_payment_intents` ([payments.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/payments.ts)) | `api/src/modules/payment` from [2.6 Payments](06-payments.md) |
+| Pickup address, `evy.addresses` | Alice's private address book in her EVY delegate. Her `accept` message carries a copy sealed to Alice and Bob |
+| Photos, `evy.files`, named in `photo_ids` | One immutable [photo contract](#photo-contracts) per JPEG |
+| "View Item" flow (page "Item details") and "Create item" flow (pages "Create listing", "Describe item", "Pickup and delivery" and "Payment options") ([service_sdui.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/services/service_sdui.json)) | Flows in the EVY UI document, published with `evyctl ui publish` |
+| Home search, tabs and "Sell something" ([evy_sdui.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/evy/evy_sdui.json)) | Home rows in the same document. Search results open `marketplace.view-item`; "Sell something" opens `marketplace.create-item`; Marketplace returns through `entry` |
+| Checks on items and messages ([validation.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/validation.ts), purchase.ts) | Contract checks, under [Record rules in 2.4 SDUI data and actions](04-data-and-actions.md#record-rules) |
 
-The complete application document's `resources` map declares `marketplace.items` and the shared `evy.purchases`, `evy.messages`, `evy.addresses` and `evy.files` bindings from [Resource bindings in 2.4 SDUI data and actions](04-data-and-actions.md#resource-bindings). Home and Marketplace views use the same EVY data-store projections and source instances.
+## Contracts
 
-## Shared messages, addresses and files
+| Contract | Parameters | Holds | Writers |
+| --- | --- | --- | --- |
+| Listing contract | Alice's Marketplace seller key, and the text `marketplace.items` | Alice's items, one listing decision per item and removal markers | Alice writes items. The listing authority writes decisions. EVY's publishing key writes removal markers |
+| Search index | The UI root key, and the text `marketplace.search` | One entry per listed item | Anyone. EVY's publishing key removes entries |
+| Purchase contract | 80 bytes: seller key, buyer purchase key and purchase ID (16 UUID bytes) | Buyer-signed terms, the message list, the payment record and the dispute summary | Bob writes the terms. The payment service key writes the rest |
+| Photo contract | The JPEG's BLAKE3 hash | The JPEG | The seller's app, once. The state never changes |
 
-| Resource | Interface in Home and Marketplace |
-| --- | --- |
-| `evy.purchases` | A purchase row retains its originating item and contract key. Either view opens the selected purchase and observes the same status |
-| `evy.messages` | Purchase messages retain their purchase key and parent ID. Actions sign with the actor's verified buyer or seller role and update that purchase |
-| `evy.addresses` | Create item saves or edits Alice's address in the delegate's private address book and retains its `address_id` in her item. Acceptance reads that owner-held address and seals a copy for Alice's feature encryption key and Bob's purchase-scoped encryption key, with the service, resource, purchase key and message ID bound as authenticated context. `Open` checks that context and exposes a received copy to a permitted recipient. Home and Marketplace use the same address adapter |
-| `evy.files` | Photo selection, validation, immutable publication, local caching and fetch use one shared adapter in the iOS and Android readers. The owning item's signed `photo_ids` supplies the references and write permission |
+- The listing and purchase contracts compile in the UI root key and the payment root key. They accept removal markers only from certified publishing keys, and service records only from certified payment service keys.
+- The seller key is Alice's EVY key for the `marketplace` feature. Bob's EVY delegate derives his buyer key with `GetPublicKeys { feature: "marketplace", scope: "purchase:<purchase ID>" }`, so each purchase has its own key.
+- The iOS and Android apps create purchase IDs as UUIDs, following EVY's message-ID generation ([EVY+Mutations.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Core/EVY+Mutations.swift)).
+- Every signed state and record uses `signed-register/1`. This plan names only domains and payload fields.
+- Contracts limit only the size of the whole state, under Core's 50 MB limit.
 
-These adapters are registered in [EVY resource catalogue in 2.4 SDUI data and actions](04-data-and-actions.md#evy-resource-catalogue). EVY features declare their supported bindings in the complete signed application document.
+### The listing contract
 
-### Converting the existing flows
-
-| Flow | Shared resource binding |
-| --- | --- |
-| Request pickup creates an initial `evy.messages` record | Create `evy.purchases` with the item reference and pickup request data. The adapter creates the signed purchase and its initial `pending` message and saves the returned purchase key for the flow |
-| Accept, reject, cancel, pay and handover actions | Create messages with the selected `purchase_key` and parent message ID. Select messages within that purchase |
-| Latest request or message selected by item and type | Select by purchase key and verified participant role. Buyer views show that user's scoped buyer purchases; seller views retain every request for their items. Public availability follows the certified listing decision and retained sale evidence |
-| Home reads `marketplace.item_statuses` | Bind to the derived `status` on the verified item projection from [Item availability](#item-availability) |
-| Create item creates or edits `evy.addresses`; acceptance finds `address_id` | Use the shared delegate-held address book before a purchase exists, then seal a copy into the selected purchase's acceptance message |
-
-The converted Home and Marketplace flows use stable internal application routes and compatible adapter bindings under [Application routes and compatible updates in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#application-routes-and-compatible-updates). The validator checks each action's payload, route arguments and purchase context against all supported document generations.
-
-Each photo has an immutable contract. Its parameter is the JPEG's BLAKE3 hash; its state is the JPEG. The iOS and Android apps keep each photo below 1 MiB so peers can fetch it from a phone behind NAT ([#5643](https://github.com/freenet/freenet-core/issues/5643)). `photo_ids` holds the contract keys, and each phone caches the JPEG. Use [EVYFileRPC.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Data/API/EVYFileRPC.swift) and [EVYFileCache.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Data/EVYFileCache.swift) for the iOS file adapter and cache, with matching Android behavior. [seed-files](https://github.com/EVY-Platform/evy/tree/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/services/seed-files) supplies fixtures.
-
-## Item availability
-
-The SwiftUI and Compose readers verify each listing's seller-authorized service decision and retained captured-sale evidence under [Listing admission and one sale in 2.12 Listings and purchases](12-listings-and-purchases.md#listing-admission-and-one-sale). They fetch admitted purchase states for request details and verify code, parameters, service, item and participant signatures. Home search, item details and participant tabs use the same authority-backed availability.
-
-The reader uses the first matching availability rule. A capture certificate permanently closes its listing. Refund display uses that sale's highest verified payment `(revision, payment_hash)`; earlier capture/payment records remain evidence.
-
-| Verified purchase evidence | Derived availability | Reader behavior |
+| Part | Domain | Payload |
 | --- | --- | --- |
-| A capture certificate exists and its latest verified payment revision has a partial or zero buyer refund | `sold` | Hide the listing from available-item search; show the completed sale and any partial refund amounts in participant views |
-| A capture certificate exists and its latest verified payment revision has a full buyer refund | `refunded` | Keep the listing closed and show the refund in participant views |
-| A capture certificate exists while payment details are unavailable | `sold` | Keep the listing closed and show "Payment details refreshing"; update the refund display when its latest payment revision verifies |
-| The current signed listing decision reserves one purchase, including a declined card awaiting retry | `pickup_pending` | Show the reservation and its purchase flow |
-| The listing decision is missing or unverifiable | Unknown | Show "Availability unknown" and offer refresh; enable requests once the authority verifies availability |
-| The current signed decision has no reservation or captured sale | `available` | Show the listing in search. Enable a request within admission capacity; otherwise show "Requests full". A missing pending purchase affects its detail view while the service repairs it |
+| Item | `evy.record/1 marketplace.items`, signed by Alice | EVY's item schema fields, `photo_ids` and `address_id` |
+| Decision | `evy.listing-decision/1`, signed by the payment service key | The decision fields below |
+| Removal marker | `evy.removal/1 marketplace.items`, signed by a publishing key | The removed item ID |
 
-The derived `status` is a reader value supplied to the UI rows and action guards. It updates when the signed listing decision or captured-payment evidence changes. EVY's application data layer fetches and subscribes to the required state for search candidates and open listings. Views observe its projections. The layer keeps a bounded contract set and refreshes it through the connection lifecycle. Offline views show the observation time of cached purchase state and refresh availability on reconnect.
+| Decision field | Holds |
+| --- | --- |
+| `item_id` | The item |
+| `version` | One counter per item |
+| `live` | Purchase keys of open requests |
+| `reserved` | One purchase key or none |
+| `queue` | Accepted requests waiting, oldest acceptance first |
+| `reservation_deadline` | When the reservation ends |
+| `sold` | One purchase key or none |
 
-The service removes live requests after verified terminal rejection or cancellation, following the reservation fence rules. Captured-sale evidence remains separate for the listing's lifetime, including after refunds and seller edits. Alice uses a new listing ID to sell an item again after a refund.
+- For each item, the higher `(version, hash)` wins, separately for items and decisions.
+- A removal marker beats the item with the same ID.
+- `update_state` refuses a decision that clears `sold`. A sale closes the item for good.
+- The state also holds payment key certificates and revocations from [Payment signing-key revocation in 2.6 Payments](06-payments.md#payment-signing-key-revocation). A revocation for a decision names the item and its last trusted decision version.
 
-### Pilot hosting
+### The search index
 
-The EVY operator owns a durable hosting inventory for admitted purchases, listing decisions and referenced photos. `register_listing` and `register_purchase` perform the required inventory steps. Before admission or an item-publication acknowledgement, its full peer verifies the exact contract code, parameters and bytes and saves a recovery copy in operator storage. The payment service keeps admitted purchases subscribed from request through completion and the declared dispute/retention period. The operator keeps photos available for the listing and its retained sale evidence.
+The search index is an instance of the [collection contract from 2.4 SDUI data and actions](04-data-and-actions.md#the-collection-contract). It follows the collection rules:
 
-The inventory records the owning listing, contract identity, digest and retention deadline. A worker verifies availability through a second node, repairs missing hosted copies with saved bytes and alerts the operator on failure. Capacity refusal retains the user's draft and reports the limit before acknowledgement. Set storage quotas and retention periods before the pilot; recovery replays the inventory. Core's own hosting budgets still apply, so the operator supplies this application-level recovery responsibility.
+- Anyone may write. There is no per-author cap.
+- When the state is full, the newest entries by `created_at` stay.
+- A publisher removal frees its space.
+
+An entry holds `listing` (the listing contract key), `item_id`, `title`, `price_cents`, `area` and the first photo ID. Alice's app writes the entry when she lists an item and updates it when she edits the item.
+
+Readers show an entry only when it matches the listing contract: the entry's author is the listing's seller, and the item exists, is not removed and is not sold.
+
+### The purchase contract
+
+Bob signs the terms when he asks to buy:
+
+```jsonc
+{
+  "resource": "marketplace.items",
+  "fk": "4f1c6a0e-2b7d-4c1e-9a55-0d8e3f6b2a91",        // item ID, EVY's fk
+  "listing": "6tVb...",                                // Alice's listing contract key
+  "application_key": "<ui.evy contract key>",
+  "feature": "marketplace",
+  "ui_version": 4,
+  "ui_digest": "3b9e...",                              // hash of the exact UI document Bob used
+  "policy_version": 1,
+  "policy_digest": "9a2f...",
+  "runtime_context": {                                // filled in by the native host
+    "platform": "android",                             // ios or android
+    "build": 413,                                      // build number or versionCode
+    "artifact_digest": "7Hq3...",                      // digest of that build
+    "contracts": "<exact binding identities>"          // resolved contract identities
+  },
+  "type": "pickup",                                    // EVY's transfer type
+  "amount_cents": 7000,                                // the item's price
+  "service_fee_cents": 148,                            // covers Stripe's card fee
+  "fee_cents": 70,                                     // contributor fee
+  "currency": "AUD",
+  "version": 1,
+  "signature": "pX3a..."                               // Bob's buyer key, domain evy.purchase/1
+}
+```
+
+- `runtime_context` records the reader that made the purchase: its platform, build and artifact digest, and the resolved contract identities.
+- The trusted native host fills in `runtime_context`, outside any SDUI-controlled field. Bob's signature covers it.
+- The terms never change. Changed terms need a new purchase.
+
+### Photo contracts
+
+Each photo has an immutable contract:
+
+- Its parameter is the JPEG's BLAKE3 hash. Its state is the JPEG. The contract rejects bytes that do not match the hash.
+- The iOS and Android apps keep each photo below 1 MiB, so peers can fetch it from a phone behind NAT ([#5643](https://github.com/freenet/freenet-core/issues/5643)).
+- `photo_ids` holds the contract keys. Each phone caches the JPEG.
+- The iOS adapter reuses [EVYFileRPC.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Data/API/EVYFileRPC.swift) and [EVYFileCache.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Data/EVYFileCache.swift). The Android adapter matches them.
+- [seed-files](https://github.com/EVY-Platform/evy/tree/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/scripts/fixtures/services/seed-files) supplies fixtures.
+
+## The message list and status
+
+### The message list
+
+Each purchase holds one message list, signed by the payment service key:
+
+```jsonc
+{
+  "purchase": "7HqK...",
+  "version": 5,                      // purchase revision, shared with payment records and dispute summaries
+  "terms_hash": "Qm1x...",           // hash of Bob's signed terms
+  "messages": [                      // each signed by its author under evy.message/1
+    { "id": "...", "parent": null,  "value": "pending",               "by": "buyer"  },
+    { "id": "...", "parent": "...", "value": "accept",                "by": "seller" },  // data holds the sealed address
+    { "id": "...", "parent": "...", "value": "transaction",           "by": "buyer"  },  // data.signature holds the payment request
+    { "id": "...", "parent": "...", "value": "transaction_completed", "by": "seller" }
+  ],
+  "signer": "Rk9v...",
+  "signature": "..."
+}
+```
+
+- The list holds at most 16 messages and 64 KiB. The skateboard sale uses 4.
+- The contract checks the list's signature and `terms_hash`, each author's signature against the seller and buyer parameters, parent order and each transition in the status table below.
+- The highest `(version, hash)` wins. Only the listing authority writes the list, so a purchase has one status at any time.
+- Payment records refer to the list by `messages_hash`. The payment module's [outbox](06-payments.md#service-setup) and write-once storage keep the full bytes of every list.
+
+### Purchase status
+
+Status follows EVY's purchase status machine ([purchase.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/purchase.ts)), the message list and the latest payment record.
+
+| Message | Author | Allowed when | Status after it | Payment module |
+| --- | --- | --- | --- | --- |
+| `pending` | Bob | First message | `available` | Nothing |
+| `accept` | Alice | After `pending` | `pickup_pending` | The listing authority reserves the item, or queues the purchase |
+| `reject` | Alice | Before `transaction` | `available` | Releases any reservation |
+| `cancel` | Alice or Bob | Before `transaction` | `available` | Releases any reservation |
+| `transaction` | Bob | This purchase holds the reservation | `pickup_pending` | Creates the PaymentIntent when Bob's app calls `payment_intent` |
+| `transaction_completed` | Alice | After `transaction` | `sold` once the payment record is `succeeded` | Captures |
+| `transaction_rejected` | Alice | After `transaction` | `available` | Cancels the PaymentIntent and releases the reservation |
+
+- After `transaction`, only Alice may write. If she writes nothing within 24 hours, the payment module captures and the status becomes `sold`.
+- A `failed` payment record keeps `pickup_pending` while Bob retries. A `canceled` record sets `available`.
+- A partial refund keeps `sold`. A full refund sets `refunded`, as [Refunds in 2.6 Payments](06-payments.md#refunds) describes.
+
+### Item availability
+
+Readers derive each item's availability from the listing authority's decision and from the sale's payment record. The reader uses the first matching row:
+
+| Evidence | Availability | Reader shows |
+| --- | --- | --- |
+| A sale record exists. Its latest payment record has no refund or a partial refund | `sold` | Hidden from search. Participants see the sale and any refund amount |
+| A sale record exists. Its latest payment record has a full refund | `refunded` | The listing stays closed. Participants see the refund |
+| A sale record exists, but its payment record is not read yet | `sold` | The listing stays closed, with "Payment details refreshing" |
+| The decision reserves one purchase, including a declined card awaiting retry | `pickup_pending` | The reservation and its purchase. Other accepted requests show "Another request is reserved" and wait their turn |
+| The decision is missing or fails its checks | Unknown | "Availability unknown", with a refresh action |
+| The decision has no reservation and no sale | `available` | The listing in search, with "Request". At the request limit it shows "Requests full" |
+
+- A sale closes the listing for good, through refunds and seller edits. To sell again after a refund, Alice lists a new item.
+- Offline views show when the purchase state was last read, and refresh on reconnect.
+
+## Listing authority and reservations
+
+The listing authority runs in the payment module and signs with the payment service key. Callers sign each call with their seller or buyer key.
+
+| Call or event | Rule |
+| --- | --- |
+| `register_listing` | Checks that the seller is `admitted` on the seller list and has a connected Stripe account. Saves a copy of the listing contract in the hosting inventory. Signs decision version 1 with no requests, no reservation and no sale |
+| `register_purchase` | Checks Bob's terms against the item, the policy and the UI document. Checks Bob's buyer enrollment: one live request per enrolled buyer per item, and at most 32 live requests per item. Signs message list revision 1 with the `pending` message. PUTs the purchase state and adds the purchase key to the decision's `live` list |
+| `admit_message` | Locks the purchase. Checks the author's key, the parent, the transition and the list limit. Appends the message, signs the next revision and returns the signed list |
+| Reservation | On `accept`, reserves the item for this purchase when no reservation exists. Otherwise appends the purchase to `queue` |
+| Release | `reject`, `cancel`, `transaction_rejected`, a canceled PaymentIntent or a passed deadline ends the reservation. It passes to the first purchase in `queue`, oldest acceptance first |
+| Deadline | The agreed pickup end time plus the policy's `reservation_grace_seconds`, 3,600 in policy 1. The deadline applies only before `transaction` |
+| One sale | Postgres holds one sale key per item. The module captures only for the reserved purchase. After `succeeded`, the decision sets `sold` |
+| Uncertain Stripe result | The reservation stays until a Stripe look-up shows the PaymentIntent canceled or captured |
+
+- Every signed list and decision goes through the payment module's outbox, so it reaches Freenet even when both apps are closed.
+- A refusal returns a reason, such as "Requests full" or "Message limit reached". The reader keeps the draft and shows the reason.
+- After a database restore, the listing authority looks up Stripe and reads the hosted listing and purchase contracts before it accepts new work.
+
+## Flows
+
+The UI document's `resources` map binds `marketplace.items`, `marketplace.search`, `evy.purchases`, `evy.messages`, `evy.addresses` and `evy.files`, following [Resource bindings in 2.4 SDUI data and actions](04-data-and-actions.md#resource-bindings). Matching iOS and Android readers draw the flows. Home and Marketplace read the same rows and route each action to the same purchase.
+
+### Shared resources
+
+| Resource | In Home and Marketplace |
+| --- | --- |
+| `evy.purchases` | One purchase row with its item, purchase key, terms, derived status, latest payment record and dispute summary. Either view opens the same purchase and shows the same status |
+| `evy.messages` | One row per message, with its purchase key, ID, parent, author role and data. Actions sign with the actor's buyer or seller key |
+| `evy.addresses` | `address/1`. Create item saves Alice's address in her private address book and keeps its `address_id` in the item. Her `accept` message seals a copy to Alice and to Bob's purchase key, bound to the feature, resource, purchase key and message ID. `Open` checks that binding |
+| `evy.files` | `file/1`. Photo selection, checks, publication, caching and fetch use one adapter in each reader. The item's signed `photo_ids` supply the references |
+
+### Purchase operations
+
+The adapters run in both readers and use the messages from [Ordinary messages in 2.4 SDUI data and actions](04-data-and-actions.md#ordinary-messages).
+
+| Operation | Binding | What the adapter does |
+| --- | --- | --- |
+| Discover | Search results and "For you" | Search index entries lead to listing contracts. A decision's `live`, `reserved` and `sold` keys lead to purchases. Alice's app subscribes to her listing contract, so it sees new requests while open |
+| Request pickup | `create(evy.purchases, ...)` with the item reference and pickup time | Makes the purchase UUID and gets Bob's buyer key. Derives the contract key. Signs the terms and the `pending` message with `SignRecord`. Calls `register_purchase`. The row shows "Sending" until the purchase state holds the list |
+| Accept, reject, cancel, pay and handover | `create(evy.messages, ...)` with the `purchase_key` and the parent message ID | Signs the message with `SignRecord` and calls `admit_message`. The row shows "Sending" until the purchase state holds it |
+| Retry | The same action | A pending operation keeps its UUID, keys, parameters and signed bytes. A retry sends the same bytes, so a repeat returns the saved result. `runtime_context` stays the same |
+| Latest request or message by item and type | Select by purchase key and role | Buyers see their own purchases. Sellers see every request for their items |
+| Status | Home's `marketplace.item_statuses` binds to the derived status | Uses [Item availability](#item-availability) |
+| Pickup address | Create item saves `evy.addresses`. Acceptance finds `address_id` | The address book holds the address before any purchase. Acceptance seals a copy into the `accept` message |
+| Pay | A `transaction` message for the reserved purchase | Opens the payment sheet, as in [Paying on a phone in 2.6 Payments](06-payments.md#paying-on-a-phone) |
+| Card details | Bob's purchase view | Calls `payment_details` from [Card details in 2.6 Payments](06-payments.md#card-details) |
 
 ## Moderation and seller admission
 
-Owner: Marketplace product owner. Before pilot launch, name a primary and backup moderator, publish support contact/response time and approve seller/buyer terms. Product definitions in this section feed release checks in [2.10 Testing and release](10-testing-and-release.md#store-requirements).
+The moderators are named in the README. The support page states the report response time, a 14-day buyer dispute window after pickup and a 7-day moderation decision window.
 
-| Record | Signed schema and authority |
+| Record | Where it lives | Signed by |
+| --- | --- | --- |
+| Seller list, `marketplace.sellers` | The lookups contract, public. One entry per seller key: enrollment ID, status (`admitted` or `suspended`) and the time it starts | EVY's publishing key, through `evyctl` |
+| Report | The authenticated backend reports endpoint, private. See [Reports](#reports) | The reporter's feature key |
+| Removal | A removal marker in the target's contract: the item in the seller's listing contract, or its entry in the search index. A removed item hides its photos | EVY's publishing key, through `evyctl record remove` |
+
+Seller admission:
+
+1. Alice proves her seller key with a signed backend challenge.
+2. She links her Stripe account, as [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts) describes.
+3. She accepts the seller terms. They make her liable for lost disputes on her sales.
+4. The operator adds her key to the seller list as `admitted`.
+
+- The listing authority checks the seller list before it accepts a listing or a new request.
+- Suspension stops new listings and requests. Existing purchases, payments, refunds and sale records continue.
+- Suspending a seller publishes a new seller list with that entry set to `suspended`.
+- Bob accepts the buyer terms before his first request. The backend records the terms version and time for each user.
+
+## Reports
+
+A report names a target (an item, a photo or a purchase message), a reason (`prohibited`, `scam`, `offensive` or `other`) and optional details. The reader signs it with the reporter's feature key and sends it to the backend reports endpoint. Reports never appear in public contract state.
+
+| What users write | Report and Block |
 | --- | --- |
-| Seller lookup | Publisher-signed `marketplace.sellers/1`: application/feature, monotonic revision, policy identity, map keyed by seller public key, enrollment ID, Stripe association verification, admitted/suspended status and effective time. One active entry per verified seller. |
-| Report | `marketplace.report/1`: UUID, scoped reporter key, target kind (`item`, `photo`, `purchase-message`), source contract key, target ID/digest, reason (`prohibited`, `scam`, `offensive`, `other`), creation time and signature. Optional private supporting details are sealed to the moderator. |
-| Moderator authority | Publisher-signed `marketplace.moderator/1`: moderator key, application/feature, allowed report/removal/seller-suspension roles, validity interval and authority generation. |
-| Removal | `marketplace.removal/1`: target contract/ID/digest, immutable target identity, authority reference, revision, reason and moderator signature. A valid tombstone suppresses visible content across readers. |
+| Item details, description and photos | Report the content. Block the seller's key. Home search and Marketplace hide removed and blocked content |
+| Purchase requests and messages | Report the message. Block its author's purchase key. The purchase keeps its status, receipts and dispute access |
 
-The reports contract has a 512 KiB state cap and retains at most 1,000 ranked report IDs. Its versioned merge keeps the higher signed revision/hash per ID and the highest immutable `(created_at, id)` ranks; moderation tombstones keep ranked slots. The operator archives report/decision evidence before compaction and enforces bounded pilot admission. Shared merge fixtures cover same-rank reports, replay and archived resolutions. Public reports disclose target and reason; the report screen explains that scope.
-
-Seller admission verifies the seller key through a signed backend challenge and the resulting Stripe connected account association in [2.6 Payments](06-payments.md#fees-and-seller-accounts). The payment backend enforces the current admitted seller lookup at listing registration and new purchase admission. Search and reader actions use the verified latest lookup; offline views label its observation time. Suspension removes new-listing/request authority and preserves existing purchases, payment/refund reconciliation and retained sale evidence.
-
-| User-written flow | Required actions and filtering |
-| --- | --- |
-| Listing details, description and photos | Report selected content; Block verified seller key; hide tombstoned or blocked content in Home search and Marketplace views |
-| Purchase requests and participant messages | Report selected message; Block its verified author/purchase scope. Suppress later content from that key while retaining transaction status, receipts and dispute access |
-| Production guestbook, if retained | Named moderator, Report/Block and authenticated tombstones under its owning feature policy |
-
-Block lists are encrypted host records in the global inventory, with observed signing scopes and source context. The reader discloses the chosen scope; purchase-scoped keys bind only the selected purchase. Moderation and user blocking preserve transaction evidence needed for payments, refunds and support. A removal tombstone suppresses display; immutable network/evidence bytes remain under their declared retention.
-
-Terms acceptance records identify actor scope, role, document digest, version and time before listing/request submission. The service verifies terms and seller admission along with the signed source/purchase context. The support page states report response time, a 14-day buyer dispute window after pickup and a 7-day moderation decision window. Moderator refund access is a separately assigned backend role.
+- Each user's block list stays private on their phone. A purchase-scoped block covers only that purchase.
+- Moderators read and resolve reports in the backend with their own credentials. Refunds use `payment_refund` from [Refunds in 2.6 Payments](06-payments.md#refunds).
 
 ```text
-evyctl lookups publish --service marketplace sellers.json
-evyctl record list marketplace.reports --status open
-evyctl report resolve marketplace.reports <report-id> --decision remove --reason scam
-evyctl record remove marketplace.items <item-id> --authority marketplace-moderator
-evyctl seller suspend marketplace <seller-key> --reason scam
+evyctl lookups publish --feature marketplace lookups.json
+evyctl lookups publish --feature marketplace sellers.json
+evyctl record remove marketplace.items <item-id> --seller <seller-key> --reason scam
+evyctl record remove marketplace.search <entry-id> --reason scam
 ```
 
-Each command validates its role, saves exact signed bytes, submits idempotently and records independent readback. Seller suspension publishes a higher lookup revision. Report resolution/removal retain target evidence and the signed decision in operator storage; a receipt follows durable retention. Readers verify authority and apply tombstones before rendering. Fixtures cover forged moderator keys, stale lookup/revocation, blocked messages in both views, restored block/consent records and receipt/status access after blocking.
+Each command builds and signs the state with the publishing key and sends it through the [outbox from 2.1 Hello EVY world](01-hello-evy-world.md#the-outbox).
 
-## The skateboard sale
+## Pilot hosting
 
-Alice sells her skateboard on her iPhone and Bob buys it on his Android phone.
+EVY's backend node keeps Marketplace data hosted:
 
-| Step | Who | What they do | Message | Derived item availability |
-| --- | --- | --- | --- | --- |
-| 1 | Alice | Lists the skateboard in "Create item" for 70 dollars, with photos and Saturday pickup times | None | `available` |
-| 2 | Bob | Finds it in search, opens "Item details" and taps "Request 10:00" for Saturday | `pending` | `available` |
-| 3 | Alice | Taps "Accept" in "For you". Her message carries the sealed pickup address; the payment service confirms Bob's listing reservation | `accept` and reservation receipt | `pickup_pending` |
-| 4 | Bob | At the pickup on Saturday, taps "Item received" and pays 70.00 dollars in Stripe's payment sheet | `transaction` | `pickup_pending` |
-| 5 | Alice | Taps "Confirm" in "Item given". The payment service captures the payment | `transaction_completed` | `sold` |
-
-Readers that receive the verified completed purchase hide the skateboard from available-item search, including while Alice's app is closed. Alice receives 69.30 dollars, as [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts) shows.
+- It subscribes to every listing contract, the search index, every live purchase and every photo of a live listing.
+- It saves a copy of each one in the hosting bucket before the user sees it as accepted. This list of saved copies is the hosting inventory.
+- It keeps purchases hosted for the 14-day dispute window after pickup, and photos for as long as their listing.
+- Its hourly readback check PUTs a saved copy again when the network has lost it or holds an older one.
 
 ## Pilot enrollment
 
-The Sydney/AUD pilot uses the signed seller lookup above and one operator-issued buyer enrollment per verified participant. Enrollment ID, quota scope and credential expiry are defined with [2.12 Listings and purchases](12-listings-and-purchases.md#listing-admission-and-one-sale). Repeated purchase-scoped buyer keys share enrollment quotas. Set hosting storage, repair alarms, live-request limits and listing/dispute retention before the pilot. Record named product and operations owners with exact policy/lookup versions.
+The pilot runs in Sydney, in AUD.
+
+- Sellers are on the seller list.
+- The operator issues one buyer enrollment to each verified buyer.
+- Each enrolled buyer may hold one live request per item, across all of their purchase keys.
+- Set hosting storage, repair alarms and retention periods before the pilot.
+
+## The skateboard sale
+
+Alice sells her skateboard on her iPhone and Bob buys it on his Android phone, under UI version 4 and policy 1.
+
+| Step | Who | What they do | Message | Availability |
+| --- | --- | --- | --- | --- |
+| 1 | Alice | Lists the skateboard in "Create item" for 70 dollars, with photos and Saturday pickup times | None | `available` |
+| 2 | Bob | Finds it in Home search, opens "Item details" and taps "Request 10:00" for Saturday | `pending` | `available` |
+| 3 | Alice | Taps "Accept" in "For you". Her message carries the sealed pickup address. The listing authority reserves the item for Bob | `accept` | `pickup_pending` |
+| 4 | Bob | At the pickup, taps "Item received" and pays 71.48 dollars in Stripe's payment sheet: 70.00 plus a 1.48 service fee | `transaction` | `pickup_pending` |
+| 5 | Alice | Taps "Confirm" in "Item given". The payment module captures the payment | `transaction_completed` | `sold` |
+
+- Before step 4, Alice or Bob can cancel. The reservation then passes to the next accepted request, oldest first.
+- After step 4, Bob can no longer cancel. Only Alice answers, with "Confirm" or "Reject". If she does neither within 24 hours, the payment module captures automatically.
+- Alice receives 69.30 dollars and contributors share 0.70 dollars, as [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts) shows.
+- Readers hide the sold skateboard from search, even while Alice's app is closed.
 
 ## Acceptance
 
-- This plan owns product-flow, availability, photo hosting, moderation and pilot cases. [2.12 Listings and purchases](12-listings-and-purchases.md#acceptance) owns contract admission/message/convergence rules; [2.6 Payments](06-payments.md#acceptance) owns provider effects; [2.9 Remuneration and payouts](09-remuneration.md#acceptance) owns contributor accounting.
+Reader tests use the shared SwiftUI and Compose fixtures for listings, purchases and payment records.
 
-- Deliver an immutable capture certificate, its original zero-refund payment and a higher full-refund revision in either order. Both readers keep the listing closed and show `refunded`; a partial latest refund shows `sold` with its amount.
+Contracts:
 
-- Turn off both participant phones after the operator acknowledges a listing with photos and an admitted unpaid purchase. A fresh reader fetches the item, photos and request from the operator-backed network copies. Evict one copy, restore it from inventory and verify exact bytes through a second node. Capacity refusal preserves the draft.
+- The [merge-law coverage gate in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage) and shared vectors in Rust, Swift, Kotlin and TypeScript cover the listing and purchase contracts: every delivery order converges, equal versions break ties by hash, a removal marker beats its item and no merge clears `sold`. Include focused near-capacity corpora for the listing and search index, with removal markers, pruning and concurrent updates.
+- The purchase contract key comes out the same in Rust, Swift, Kotlin and TypeScript. A substituted seller, buyer or purchase ID fails.
+- The search index takes entries from many sellers. A publisher removal frees its space. An entry whose author is not the listing's seller stays hidden.
+- A photo contract rejects bytes that do not match its hash.
+- No purchase state holds card data.
+- Payment key revocation: records signed by a test key K after the cutoff are dropped from the purchase and listing contracts. The re-signed records are accepted.
 
-- On iOS and Android, Home and Marketplace read the same purchase, message and file instances through the shared bindings. Both expose the same decrypted pickup address to Alice and Bob. Substituting another service, purchase, message or recipient in the address context fails decryption or permission checks.
-- On iOS and Android, Bob and Carol request the same item. Each buyer sees their own purchase and messages; Alice sees both requests. Acceptance and payment target the selected purchase. Home's derived availability agrees with Marketplace. Alice's address exists before either request, survives backup restore and delegate migration, and only each intended recipient decrypts their purchase's address copy.
-- On iOS and Android, after the EVY application version that adds Marketplace, the home page shows item search, the three tabs and "Sell something", in the installed apps. A search result opens "View Item" and "Sell something" opens "Create item" within the complete EVY UI document.
-- On iOS and Android, the skateboard sale passes with Alice on iOS and Bob on Android, then with the platforms swapped. Both phones show `available`, `pickup_pending` and `sold` at the same steps, and an independent peer reads the same item and purchase.
-- On iOS and Android, terminate Alice's app after her `transaction_completed` message reaches the purchase contract and before capture finishes. The payment service completes capture, and Bob's reader and a third reader derive `sold` and hide the listing from available-item search. The item record keeps the same revision during capture.
-- Shared SwiftUI and Compose fixtures cover multiple linked purchases, a declined card awaiting retry, cancellation, sale, refund and unavailable purchase state. Retained captured-sale evidence keeps the listing closed when purchase or payment details are missing, including alongside a stale available decision. A missing pending purchase affects that request's details while the verified listing decision still governs admission. A missing listing decision shows "Availability unknown" until it verifies.
-- Consume the admission/cleanup/financial-proof suite in [2.12 Listings and purchases](12-listings-and-purchases.md#acceptance) and provider refund/dispute suite in [2.6 Payments](06-payments.md#acceptance). This plan verifies that Home and Marketplace keep the listing closed, show the latest refund/dispute totals and retain support access on iOS and Android.
-- On iOS and Android, the skateboard's photos show on Bob's phone, read from their photo contracts.
-- `evyctl ui publish` accepts the complete EVY document containing Home and Marketplace flows, with valid internal routes and resource bindings.
-- The items contract rejects an item not signed by its seller and a price of 0, following EVY's item schema. A photo contract rejects bytes that do not match its hash.
-- Only Alice's and Bob's phones can read the pickup address.
+UI and flows:
+
+- `evyctl ui publish` accepts UI version 3 with the Marketplace test item, and UI version 4 with Home and Marketplace flows, valid routes and bindings.
+- On iOS and Android, Home shows item search, the three tabs and "Sell something". A search result opens "View Item" and "Sell something" opens "Create item".
+- Home and Marketplace read the same purchase, message and file rows on iOS and Android. Bob's phone shows the skateboard's photos from their photo contracts.
+- Only Alice's and Bob's phones open the pickup address. Substituting another feature, purchase, message or recipient in the binding fails `Open`.
+- Alice's address exists before any request and stays after she restarts EVY.
+- Bob's `runtime_context` stays the same through retries and through a restart of EVY between creation and admission.
+
+The skateboard sale:
+
+- On iOS and Android, the skateboard sale runs on Freenet with Alice on iOS and Bob on Android, then swapped. Both phones show `available`, `pickup_pending` and `sold` at the steps in [The skateboard sale](#the-skateboard-sale). An independent peer reads the same item and purchase.
+- Bob's checkout shows the price, the 1.48 service fee and the 71.48 total.
+- After `transaction`, Bob's view offers no Cancel. Alice's view offers "Confirm" and "Reject". Bob's `cancel` after `transaction` fails in `admit_message` and in the contract.
+- With no answer from Alice for 24 hours, the module captures and the status becomes `sold`.
+- Terminate Alice's app after her `transaction_completed` message is admitted and before capture. The payment module captures. Bob's reader and a third reader show `sold` and hide the item from search.
+
+Availability and reservations:
+
+- Availability fixtures cover every row of [Item availability](#item-availability), including a sale record next to a stale `available` decision, a declined card awaiting retry and a full refund.
+- Bob and Carol both request the skateboard and Alice accepts both. Bob holds the reservation and Carol sees "Another request is reserved". Bob cancels before paying, and the reservation passes to Carol.
+- Race two acceptances, then restore the database to before the second. One purchase holds the reservation and the item has one sale.
+- A 17th message and a list over 64 KiB are refused. The reader keeps the draft and shows the reason.
+- One enrolled buyer with two purchase keys cannot hold two live requests on the same item.
+
+Moderation and hosting:
+
+- A report reaches the backend endpoint signed by the reporter's feature key. No report appears in public contract state.
+- `evyctl record remove` hides an item and its search entry on both phones. A blocked seller's items and a blocked author's messages disappear, while the purchase keeps its status and receipts.
+- A suspended seller sees "Selling paused" in "Create item". Their existing sale keeps its payment and refund display.
+- A test removes a hosted listing contract from the test network. The readback check PUTs the saved copy, and a second node reads the same bytes.

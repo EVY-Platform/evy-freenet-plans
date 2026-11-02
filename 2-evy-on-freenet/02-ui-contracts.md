@@ -4,48 +4,47 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | One application UI contract in `freenet/contracts/ui/`, complete document in `freenet/ui/evy.json`, local feature source files, `evyctl ui publish`, validation and compatibility fixtures, and `ui.evy` in `types/freenet/contract-keys.json` |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Node and `fdev verify-merge` |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Contract interface and the Rust publisher client |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | UI contract in `freenet/contracts/ui/`. UI document `freenet/ui/evy.json` with Home and Hello. `evyctl ui publish` and `evyctl ui fallback`. Write-once storage in `freenet/published/` and one object-locked bucket. Backend node subscriptions. `ui.evy` in `types/freenet/contract-keys.json` |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Node, `fdev execute` and `fdev verify-merge` |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Contract interface |
 
-Implementation starts from the supplied EVY schema/flows and adds signed Freenet publication. [Supplied EVY code and integration scope in 2.1 Hello EVY world](01-hello-evy-world.md#supplied-evy-code-and-integration-scope) records the domain/transport baseline.
+EVY's existing SDUI schema and flows are the starting point, as listed in [Supplied EVY code and integration scope in 2.1 Hello EVY world](01-hello-evy-world.md#supplied-evy-code-and-integration-scope).
 
 ## Purpose
 
-Publish EVY as one Freenet application. One publisher signs a complete UI document containing Home, Hello and Marketplace flows. The iOS and Android native readers use that application's UI contract and receive its signed updates.
+Publish EVY's whole UI as one signed document in one contract, `ui.evy`. UI version 1 holds two static SDUI pages:
 
-The first document contains Home and Hello. A later application version adds Marketplace. Each publication updates the complete EVY document under one application identity and one version stream.
+- Home, the entry page, with a "Hello" button.
+- Hello, which shows the text "Hello EVY world".
 
-The examples use this application-wide sequence. The publisher journal reserves actual versions; repeated updates consume higher versions in that same stream.
-
-| Example application version | Complete document includes |
-| --- | --- |
-| 1 | Home and Hello |
-| 4 | Home, Hello and the guestbook from [2.4 SDUI data and actions](04-data-and-actions.md) |
-| 6 | Marketplace listing/purchase fixture from [2.12 Listings and purchases](12-listings-and-purchases.md), with the preceding flows |
-| 7 | Marketplace flows and Home search from [2.7 EVY Marketplace](07-marketplace.md) |
-| 8 | Carol's accepted Marketplace change and the contribution snapshot from [2.8 Attribution](08-attribution.md) |
-| 9 | The subsequent compatible or reader-upgrade fixture in [2.10 Testing and release](10-testing-and-release.md) |
-
-Policy versions have their own signed sequence under [2.6 Payments](06-payments.md#financial-policy-identity).
+Each later version replaces the complete document under the same contract and the same version stream. Plans use the example version timeline in the [README](../README.md).
 
 ```mermaid
 flowchart LR
-  Source[EVY flows and resources] --> Ctl[evyctl validates and signs one document]
-  Ctl --> UI[One EVY application UI contract]
-  UI --> IOS[EVY native reader on iOS]
-  UI --> Android[EVY native reader on Android]
+  Source[freenet/ui/evy.json] --> Ctl[evyctl validates and signs]
+  Ctl --> Store[Write-once storage<br>git and object-locked bucket]
+  Store --> Send[fdev execute update]
+  Send --> UI[ui.evy contract]
+  UI --> Node[EVY backend node keeps it hosted]
+  UI --> Phones[EVY on iOS and Android]
 ```
 
 ## The UI document
 
-The application envelope contains `service: "evy"`, `routes`, `flows`, `resources`, `version`, `schema_version`, `min_reader_version` and `signature`. `service` is the fixed application namespace; feature names identify internal resources and capabilities. Flow and row fields follow EVY's [SDUI schema](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/schema/sdui/evy.schema.json), [UI_Flow definitions](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/sdui.md) and [data rules](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/data.md).
+| Field | Meaning |
+| --- | --- |
+| `service` | Always `"evy"`, the app namespace. Internal features use `feature` names |
+| `version` | UI version: 1 or more, one stream for the whole app |
+| `schema_version` | SDUI schema version of the document |
+| `min_reader_version` | Oldest reader that can draw the document. It names the document's generation |
+| `routes` | Stable route names, each mapped to a flow, a page and an argument schema. `entry` is required |
+| `flows` | Complete flow objects, following EVY's [SDUI schema](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/schema/sdui/evy.schema.json), [UI_Flow definitions](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/sdui.md) and [data rules](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/data.md) |
+| `certificate` | The publishing key certificate from [EVY signing keys in 2.1 Hello EVY world](01-hello-evy-world.md#evy-signing-keys) |
+| `signature` | The publishing key over the bytes `evy-ui/1` followed by RFC 8785 canonical JSON of every other field |
 
-- Home is the application's entry route.
-- Hello and Marketplace are flows inside the same document.
-- Each resource binding names a supported EVY adapter and verified source context under [2.4 SDUI data and actions](04-data-and-actions.md#evy-resource-catalogue).
-- Payment-capable documents name EVY's `policy_version` and `policy_digest` under [2.6 Payments](06-payments.md#financial-policy-identity).
-- One exact application release is identified by its UI contract key, version and `state_hash`.
+Later schema versions may add top-level fields. The signature covers them.
+
+UI version 1:
 
 ```jsonc
 {
@@ -57,110 +56,114 @@ The application envelope contains `service: "evy"`, `routes`, `flows`, `resource
     "entry": { "flow": "home-flow", "page": "home-page", "arguments": {} },
     "hello": { "flow": "hello-flow", "page": "hello-page", "arguments": {} }
   },
-  "resources": {},
   "flows": [
-    { "id": "home-flow", "name": "Home", "pages": ["<complete Home page objects>"] },
-    { "id": "hello-flow", "name": "Hello", "pages": ["<complete Hello page objects>"] }
+    { "id": "home-flow", "name": "Home", "pages": ["<Home page: a button row whose tap runs {navigate_route(hello)}>"] },
+    { "id": "hello-flow", "name": "Hello", "pages": ["<Hello page: a text row, \"Hello EVY world\">"] }
   ],
-  "signature": "<canonical padded base64 signature>"
+  "certificate": { "key": "5HqT...Wd", "name": "ci-1", "signature": "Zm9v...==" },
+  "signature": "<standard padded base64 of 64 bytes>"
 }
 ```
 
-The example abbreviates the flow objects. Published fixtures use the UUID IDs and complete page/row objects required by the existing schemas. Local files may organize flows by feature; `evyctl` validates their assembled complete application document before publication.
+The example shortens the flow objects. Published documents use the UUID IDs and complete page and row objects that the schemas require. Authors may keep flows in one file per feature; `evyctl` assembles and validates the complete document before signing.
 
-Sign the bytes `evy.ui/1` followed by RFC 8785 canonical JSON of every field except `signature`. Encode the 64-byte Ed25519 signature as standard padded base64, then serialize the complete signed object as canonical JSON. The publisher saves, submits and archives those exact bytes.
+The document hash is BLAKE3 of the exact canonical bytes of the complete signed document, including `signature`. One UI release is `ui.evy`, its version and its document hash.
 
 ## The UI contract
 
-Use `ui.evy`, the fixed `evy` namespace and the signing domain below in shared identity/signature fixtures. These labels distinguish the complete application publication from internal feature data and give both readers the same contract identity.
+The contract's parameters are the 32-byte UI root verifying key from 2.1 Hello EVY world, followed by UTF-8 `evy`. iOS and Android builds carry the resulting key as `ui.evy` in `types/freenet/contract-keys.json`.
 
-Build one UI contract from `freenet/contracts/ui/`. Its parameters are the EVY publisher's 32-byte verifying key followed by UTF-8 `evy`. The publisher key is defined in [2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key). Matching iOS and Android builds include the resulting full key as `ui.evy` in `types/freenet/contract-keys.json`.
+The state holds one document per reader generation, plus the revocations from the key chain:
+
+```jsonc
+{
+  "documents": {
+    "1": { "version": 5, "min_reader_version": 1, "...": "..." },  // newest document for readers 1 and up
+    "2": { "version": 6, "min_reader_version": 2, "...": "..." }   // newest document for readers 2 and up
+  },
+  "revocations": []
+}
+```
 
 | Function | Rule |
 | --- | --- |
-| `validate_state` | At most 512 KiB; canonical JSON; `service` equals `evy`; integer version/schema/reader fields of at least 1; at least one complete flow; canonical 64-byte signature verifying with the parameter key. Additional top-level fields are signed with the document. |
-| `update_state` | Retain the valid complete document with the higher `(version, state_hash)`. |
-| `summarize_state` | Return version and the 32-byte state hash. |
-| `get_state_delta` | Return the complete document for a higher tuple and an empty delta for an equal or lower tuple. |
+| `validate_state` | Canonical JSON. Each document sits under its own `min_reader_version`, has `service` equal to `evy`, integer fields of 1 or more, at least one flow and an `entry` route, and passes the key chain rules from 2.1 Hello EVY world. Each revocation verifies with the root key |
+| `update_state` | Keeps every revocation from both states. Drops documents signed by a revoked key. In each generation keeps the document with the higher `(version, document hash)`. If the result would pass Core's 50 MB state limit, drops the lowest generations first, never the highest |
+| `summarize_state` | Each generation's version and document hash, and the revoked keys |
+| `get_state_delta` | Each generation where the peer holds a lower tuple or nothing, and each revocation the peer lacks |
 
-```text
-state_hash = BLAKE3(exact complete signed state bytes, including signature)
-Compare version numerically, then hash bytes lexicographically as unsigned bytes.
-Higher wins; an equal tuple is a duplicate; lower is stale.
-```
+Ordering compares versions as numbers, then hash bytes as unsigned bytes. Every peer drops the same generations, so all peers converge. Run merge fixtures under [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage), including generation pruning and revocation at the state-size ceiling.
 
-The contract, Swift and Kotlin readers, local editor and CLI share identity, signature, canonical-encoding and ordering fixtures. Validate bytes before admitting a tuple to the saved observation. The hash also supplies the `ui_digest` in attribution evidence.
+The contract checks the envelope and the key chain. `evyctl` checks flows, routes and actions before signing.
 
-The contract validates its envelope and signature. Publisher validation checks full flow, route, resource and action semantics before signing. Run merge-law fixtures with `fdev verify-merge`.
+A change to the UI contract code or to the UI root key gives a new `ui.evy` key, which ships in new iOS and Android builds.
 
-### Release references
+## Application routes and compatible updates
 
-Implement the `evy-ui/1` adapter for the shared `application_content_ref` interface in [1.4 Application bundles](../1-freenet-mobile-appkit/04-bundles.md#release-references).
+Route names let a user return to a screen after the UI changes. Add the action `navigate_route(route, arguments)` to the action schema and the grammar corpus. The existing `navigate(flow, page)` stays within one document.
 
-| Field | EVY value |
-| --- | --- |
-| `format` | `evy-ui/1` |
-| `application_key` | Full application UI contract key |
-| `version` | Signed application version; maps to purchase `ui_version` |
-| `digest` | Base58 BLAKE3 of the complete RFC 8785 signed document, including signature; maps to purchase `ui_digest` |
-
-Hosts, backup manifests and the attribution archive verify references against the exact retained document. Decode base58 before comparing raw `state_hash` bytes. [2.6 Payments](06-payments.md#financial-policy-identity) defines the separate policy digest.
-
-[Release-reference encoding vectors](../fixtures/release-reference-encodings.json) fix the public test seed, Ed25519 signature, canonical signed bytes, BLAKE3 hash, base58 encodings and purchase-field mapping. Verify the signature over the stated domain and unsigned bytes, then hash the complete signed bytes. Full UI validation uses complete documents from this plan.
-
-Matching iOS and Android builds carry `ui.evy`, the EVY publisher key, supported data-contract code and the EVY delegate. Their build policy admits those components. Compatible UI publications update the document using admitted code.
-
-### Size cap
-
-The 512 KiB cap applies to the complete application document. Measure the assembled Home, Hello and Marketplace fixture on each release. Marketplace's existing two-flow fixture is 69,264 bytes; that measurement is input evidence for the combined-document test.
-
-Both the publisher and contract enforce the cap. Each UI update transfers one complete application document. Record its bytes in the [cellular budget in 1.11 Cellular data and resource budgets](../1-freenet-mobile-appkit/11-cellular-data-and-resource-budgets.md#cellular-budget-contract). The 512 KiB bound is EVY's application document cap. Carrier evidence in [1.8 Thin-peer protocol](../1-freenet-mobile-appkit/08-thin-peer.md#carrier-evidence) describes NAT transfer failures for larger states. Release fixtures measure complete-document cold fetch and update traffic on supported carriers.
-
-### The home flow
-
-Home is the entry flow inside `freenet/ui/evy.json`. Its Hello button opens the application's `hello` route. A Marketplace publication adds its flows and routes to that same signed document. The iOS and Android readers get all target flows with the release they activate.
-
-### Application routes and compatible updates
-
-Stable route names let retained drafts and purchases reach the intended screen after compatible UI changes. Matching schema and iOS and Android reader fixtures verify route names, inputs and compatibility before publication.
-
-`routes` maps stable application route names to flow/page UUIDs and argument schemas. Implement `navigate_route(route, arguments)` for named routes within the retained EVY document. The existing `navigate(flow, page)` stays within that document. Update the grammar corpus, action schema and both iOS and Android readers together.
-
-- Validate route targets, argument schemas and UUID uniqueness across the complete document.
-- Preserve public route names, required arguments and action meanings for supported document generations.
-- Retain the exact signed document, resource bindings and draft for an active flow.
-- Open an internal target using that flow's retained document. A new flow started from an idle entry page uses the activated compatible document.
-- A breaking route change requires an explicit schema/reader compatibility gate and supported pending-operation migration before publication.
-
-## Publishing a UI version
-
-Invoke `evyctl ui publish --key evy-publisher freenet/ui/evy.json` through [2.5 EVY authoring and publishing](05-developer.md#publishing-the-application). That plan owns validation, durable version reservation, signing/save, archival, submission, independent readback, confirmation and retry sequencing.
-
-This plan owns the complete-document schema, canonical signed bytes, UI identity, version ordering, 512 KiB cap and reader compatibility. Payment-capable publication requires the exact retained policy and durable release receipt from [2.13 Release archive and policy evidence](13-release-archive-and-policy-evidence.md). Bootstrap and preview callers pass their fixture profile into the same publication workflow.
+- `evyctl` checks route targets, argument schemas and UUID uniqueness across the complete document.
+- `evyctl` warns the publisher when a new version removes a route or a route argument that the live version has.
+- Readers never swap the UI while the user is on a screen with a draft.
+- When the user leaves and comes back, the reader opens the route in the current document.
+- If the current document no longer has that route, or lacks a field the draft uses, the reader warns that the draft will be lost.
 
 ## Reader compatibility
 
-`types/schema/sdui/version.json` records schema and reader versions. Each iOS and Android build embeds them. Tag the corresponding source as `reader-v<N>`.
+`types/schema/sdui/version.json` records schema and reader versions. Each iOS and Android build embeds them. Tag the matching source `reader-v<N>`.
 
 | Change | Schema version | Reader version |
 | --- | --- | --- |
-| Envelope, row or resource schema | Increase | Increase |
-| Route action, method, formatter or adapter behavior | Increase when its schema changes | Increase |
+| Envelope, row or route schema | Increase | Increase |
+| Action, method or formatter behaviour | Increase when its schema changes | Increase |
 | Compatible reader fix | Same | Same |
 
-Both readers store the newest verified application document and the newest drawable document with their exact bytes and tuples. A verified document requiring a newer reader advances the saved observation; the app keeps a drawable document and shows the update banner. A fresh installation fetches the EVY document. Offline restart draws the retained compatible document.
+A document that needs a new reader starts a new generation. A reader draws the highest generation at or below its own reader version. When the contract holds a higher generation, the reader shows "Update EVY" and keeps drawing its own generation.
 
-Active forms, drafts and purchases retain the exact application version and resource context that opened them. Compatible queued updates activate when the user reaches the defined idle boundary in [2.3 Native SDUI readers](03-readers.md#reading-the-application-ui-contract). Retain historical documents referenced by pending operations and purchase evidence.
+A revocation can leave a generation with no document. Readers then draw the highest remaining generation at or below their reader version. When no such generation remains, they draw their bundled fallback document.
+
+### Bundled fallback document
+
+`evyctl ui fallback --reader <N>` reads `ui.evy`, verifies it and writes the newest document a reader at version N can draw to `types/freenet/ui-fallback.json`. Each iOS and Android build copies that file in. On a first start with no network, the phone draws the bundled document. It replaces it once it has read the contract.
+
+## Publishing a UI version
+
+`evyctl ui publish freenet/ui/evy.json`:
+
+1. Validates the complete document: schema, rows, actions and routes. It reports errors at JSON paths, the same as `scripts/validate-ui-document.ts`.
+2. Reads `ui.evy` with `fdev execute get` and sets `version` to one above the highest version in any generation.
+3. Signs with the publishing key under `evy-ui/1`.
+4. Saves the exact signed bytes in [write-once storage](#write-once-storage).
+5. Sends and reads back with the routine in [Publishing a new greeting in 2.1 Hello EVY world](01-hello-evy-world.md#publishing-a-new-greeting). The state it sends holds only the new document and the revocations. The contract merges it into its generations. Readback compares that generation's document with the saved bytes.
+
+## Write-once storage
+
+Before sending, `evyctl` saves the exact signed bytes, named by their base58 BLAKE3 hash, in two places:
+
+| Copy | Location |
+| --- | --- |
+| Git | `freenet/published/ui/<hash>.json`, which the publishing job commits to evy's `main` branch |
+| Bucket | `ui/<hash>.json` in one S3 bucket with Object Lock in compliance mode and a 10-year default retention |
+
+- `evyctl` reads both copies back and checks the bytes before it sends anything.
+- A failed save stops publication before the send.
+- Nobody can overwrite or delete a saved object.
+- Anyone who checks a record that names a document hash looks the bytes up here.
+- The same storage holds every other EVY-signed document that records refer to by hash, with one folder per kind, for example `freenet/published/policy/`.
+
+## The EVY backend node
+
+The EVY backend node from 2.1 Hello EVY world subscribes to `ui.evy` and to every contract the live UI binds. UI version 1 binds no contracts, so the node holds `ui.evy` and the hello contract.
+
+Every hour the node reads each of these contracts through a second node. When the network has no copy or a lower tuple, it sends the saved bytes again.
 
 ## Acceptance
 
-- On iOS and Android, one EVY UI contract opens Home and navigates to Hello within one document.
-- Publishing a compatible application version updates both running readers within 30 seconds. A later version adds Marketplace flows and their routes together.
-- Both publisher and contract reject a complete application document over 512 KiB. Report assembled fixture size and update bytes.
-- Signature, identity, canonical encoding, version ordering, duplicates and equal-version hash conflicts produce identical results in Rust, TypeScript, Swift and Kotlin.
-- The `evy-ui/1` adapter passes the encoding vectors and verifies an archived document after the live contract advances.
-- Invalid route targets, duplicate IDs, unsupported adapters and malformed actions fail publisher validation at matching JSON paths.
-- Concurrent local publication jobs serialize through one journal; retries use the reserved version and exact signed bytes. Archive failure retains the pending release.
-- Independent readback confirms the submitted release. A higher competing tuple stops replay and reports the winner.
-- Active drafts and purchases retain their exact document while compatible updates queue. Unsupported reader versions preserve the drawable document and update state across restart.
-- UI-contract code or publisher-key changes follow the application upgrade and store-build gate in [1.7 Upgrades and migration](../1-freenet-mobile-appkit/07-migration.md).
+- Contract tests and the [merge-law coverage gate in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage) cover: two generations, an equal-version hash tie, a revocation that drops one key's documents in every generation, a state that passes 50 MB and drops its lowest generation, noncanonical JSON, a forged certificate and a state that holds only one new document. Focused near-capacity corpora exercise the required merge cases with the selected verifier and its recorded byte and case budgets.
+- Signature, canonical encoding, ordering and generation choice give the same results in Rust, TypeScript, Swift and Kotlin from one set of shared vectors.
+- A revocation that empties the newest generation leaves readers on the highest remaining generation they support. A revocation that empties every generation they support leaves them on the bundled fallback document.
+- `evyctl ui publish` publishes UI version 1, and readback through a second node matches the saved bytes.
+- `evyctl` reports invalid route targets, duplicate UUIDs and malformed actions at matching JSON paths. It warns when a version drops the `hello` route.
+- Both write-once copies exist and match before the send. A failed bucket write stops publication. An attempt to overwrite or delete a bucket object fails.
+- After test peers drop `ui.evy`, the backend node's hourly check sends the saved bytes again and a fresh peer can read the document.
+- `evyctl ui fallback --reader 1` writes a verified UI version 1 document and refuses a document that fails verification.

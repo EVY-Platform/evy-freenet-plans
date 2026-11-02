@@ -25,21 +25,21 @@ The current delivery scope is defined by [2.10 Testing and release](../2-evy-on-
 
 An independently published application uses EVY services with a verified caller, retained policy and defined recovery path.
 
-Require a named outside application, an integration owner and a concrete operation before writing an implementation plan.
+Require a named outside application and a concrete operation before writing an implementation plan.
 
 | Design decision | Required evidence |
 | --- | --- |
-| Application identities | Signed registrations bind each outside application's publisher, release and supported protocol. |
+| Application identities | The release key and version from the outside application's signed bundle identify its release and supported protocol. |
 | Authorization | A reviewed design defines caller authentication, user consent, operation and participant scopes, expiry and revocation. |
 | Data ownership | The design identifies the owner and lifetime of each referenced record, contract instance and private key. |
 | Payment context | Purchases bind the outside application, its accepted policy, seller authorization and exact retained release evidence. |
 | Native and browser routes | Each selected route has an authenticated transport and matching request/reply context. Native integration has matching iOS and Android fixtures. |
-| Service operations | Named operators, hosting quotas, fee allocation, moderation, privacy, recovery and support are agreed for the outside application. |
+| Service operations | Hosting quotas, fee allocation, moderation, privacy, recovery and support are agreed for the outside application. |
 | Compatibility | Versioned protocols and fixtures prove upgrades, restored sessions, refunds and historical attribution. |
 
-An implementation plan will define these interfaces and its own release gates once the demand and owners are established.
+An implementation plan will define these interfaces and its own acceptance once the demand is established.
 
 ## Sources
 
 - [evy.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/schema/sdui/evy.schema.json) and [sdui.md](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/sdui.md): The `UI_Flow` structure and row types an outside app would publish
-- [client_api.rs](https://github.com/freenet/freenet-core/blob/99612051c535ff7f18ce7c40857ecd236bbbdd46/crates/core/src/server/client_api.rs): The app frame's `connect-src`, limited to the node's own origin
+- [client_api.rs](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/server/client_api.rs): The app frame's `connect-src`, limited to the node's own origin

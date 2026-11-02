@@ -4,218 +4,324 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | `api/src/modules/payment`: EVY's Stripe code, webhooks, seller onboarding and payment records. `evy-txn-sig-v2` in `types/`. Shared purchase and message schemas and adapters for the SwiftUI and Compose readers. The hello test item. The items contract and the common purchase contract in `freenet/contracts/`. The EVY delegate signs purchases, participant messages and payment requests |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | `api/src/modules/payment`: Stripe calls, webhooks, seller onboarding and withdrawals, card details and the signed payment records. `evy-txn-sig-v2` in `types/`. Payment record, dispute summary, payment key certificate and revocation payloads, with their contract checks, in `freenet/common/`. The payment sheet adapter in the SwiftUI and Compose readers. Financial policy 1 in `freenet/published/policy/` |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | The EVY backend node that sends payment records |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | [TypeScript client](https://github.com/freenet/freenet-stdlib/blob/7782c176a622efc3f284ce4710b4f184c4986405/typescript/src/websocket-interface.ts) for the backend node |
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Swift package and Kotlin library in the EVY app |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Shared backend node for payment demand |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | [TypeScript client](https://github.com/freenet/freenet-stdlib/blob/7782c176a622efc3f284ce4710b4f184c4986405/typescript/src/websocket-interface.ts) for the shared backend node adapter |
-| [stripe-ios](https://github.com/stripe/stripe-ios), [stripe-android](https://github.com/stripe/stripe-android) | Used | Payment sheets on iOS and Android |
+| [stripe-ios](https://github.com/stripe/stripe-ios), [stripe-android](https://github.com/stripe/stripe-android) | Used | Payment sheets on iOS and Android, with Apple Pay and Google Pay |
 
 ## Purpose
 
-EVY on iOS and Android takes Stripe payments for purchases stored in Freenet. Bob pays Alice 70 dollars for her skateboard in Stripe's native payment sheet on iOS and Android. The payment service writes a signed payment record into the purchase contract. Alice receives 69.30 dollars and EVY holds the 1% contributor fee of 0.70 dollars.
+EVY on iOS and Android takes Stripe payments for purchases stored in Freenet.
 
-Implement `api/src/modules/payment` inside the shared TypeScript/Bun backend with its `payment` PostgreSQL schema under [2.14 Backend operations and recovery](14-backend-operations-and-recovery.md#operating-the-services), using EVY's [payment procedures](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/procedures/payments.ts) and [payment orchestration](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/services/marketplace/data.md#payment-orchestration). `payment_intent` places a hold, `payment_capture` captures it and `payment_cancel` releases it. Purchase messages trigger these operations, and each purchase has its own contract. The shared commerce fixture is Marketplace's skateboard listing for 70 dollars (AUD), defined by [2.12 Listings and purchases](12-listings-and-purchases.md) and rendered by [2.7 EVY Marketplace](07-marketplace.md).
+Example: Bob buys Alice's skateboard for 70 dollars under UI version 4 and policy 1.
+
+- Bob pays 71.48 dollars in Stripe's payment sheet on his Android phone: the 70-dollar price plus a 1.48-dollar service fee that covers Stripe's card fee.
+- Alice receives 69.30 dollars.
+- Contributors share the full 0.70-dollar contributor fee.
+- The payment module writes a signed payment record into the purchase, so both phones show the payment.
+
+This plan builds `api/src/modules/payment` in EVY's shared TypeScript/Bun backend, with its own `payment` PostgreSQL schema. It reuses EVY's [payment procedures](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/procedures/payments.ts) and [payment orchestration](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/services/marketplace/data.md#payment-orchestration).
+
+On Bob's phone, the EVY delegate from [The EVY delegate in 2.4 SDUI data and actions](04-data-and-actions.md#the-evy-delegate) holds his buyer key. It signs his payment messages and his calls to the payment module.
+
+```mermaid
+flowchart LR
+    Phone[EVY on iOS and Android] -->|payment_intent, payment_details| Pay[Payment module]
+    Phone -->|Payment sheet| Stripe[Stripe]
+    Stripe -->|Webhooks| Pay
+    Pay -->|Outbox: signed records| Node[EVY backend node]
+    Node --> Purchase[Purchase state on Freenet]
+    Purchase --> Phone
+```
 
 ## Service setup
 
-Install the payment module's schema, signing-role access, operation journal, webhook inbox and publication outbox in the shared backend before its first test charge. Configure recoverable backups and restore the admission and listing-coordinator records before enabling Stripe writes after an outage. [Operating the services in 2.14 Backend operations and recovery](14-backend-operations-and-recovery.md#operating-the-services) defines the shared backup configuration; this plan installs its payment portion. Install the purchase portion of [Pilot hosting in 2.7 EVY Marketplace](07-marketplace.md#pilot-hosting) before admission; that plan adds the photo workload. Enable additional domain modules in the same application after their own setup and recovery gates pass.
+Install the payment module before its first test charge:
+
+- the `payment` schema, with the webhook inbox and the purchase-to-Stripe mapping
+- the payment service key, held in the backend's key service
+- an outbox store in the `payment` schema, for Stripe calls and Freenet sends
+
+Every Stripe call and every signed record in this plan goes through the [outbox from 2.1 Hello EVY world](01-hello-evy-world.md#the-outbox). The module saves each entry in the same database transaction as its change.
+
+- For a Freenet send, read-back GETs the purchase through a second node.
+- For a Stripe call, read-back looks Stripe up by purchase key and operation ID in the metadata. The module always looks up first, because Stripe keeps [idempotency keys](https://docs.stripe.com/api/idempotent_requests) for only 24 hours.
+
+## What the payment module needs from a purchase
+
+The payment module works on any purchase that supplies the parts below. This plan tests it with fixture purchases built from the shared vectors.
+
+| Part | Used for |
+| --- | --- |
+| Purchase key | Stripe metadata, the database mapping and the target for signed records |
+| Purchase terms signed by Bob's buyer key: seller key, item, `amount_cents`, `service_fee_cents`, `fee_cents`, currency, `policy_version` and `policy_digest` | The PaymentIntent amounts |
+| A message list signed by the payment service key, holding Bob's `transaction` message with his payment request | Proof that Alice accepted and Bob authorized the payment |
+| Alice's `transaction_completed` or `transaction_rejected` message in that list | Capture or cancel |
+| Confirmation that this purchase holds the item's reservation | Only one buyer pays for an item |
+| Alice's connected Stripe account, found by her seller key | The destination of the charge |
+| A purchase state that accepts records signed by a certified payment service key | Where payment records and dispute summaries go |
 
 ## Financial policy identity
 
-Define one EVY policy envelope: `service: "evy"`, application key, publisher identity, `policy_version`, `fee_rate_bp`, `reservation_grace_seconds`, archive endpoint/key, payment authority contract key/code hash, key-role certificate references, dispute loss/hold/reversal fields and signature. The signature covers `evy.service-policy/1` followed by RFC 8785 canonical JSON of every other field. Preserve the signing-domain label as a protocol namespace. Encode the signature as canonical padded base64 and the complete state as canonical JSON. `policy_digest` is base58 BLAKE3 of those exact bytes.
+The payment root key signs each financial policy. It is an offline hardware key, kept apart from the UI root key from [EVY signing keys in 2.1 Hello EVY world](01-hello-evy-world.md#evy-signing-keys). The policy is a `signed-register/1` record from [2.4 SDUI data and actions](04-data-and-actions.md) with domain `evy.service-policy/1`. Its `version` is the policy version.
 
-Select the higher policy `(version, digest)` by numeric version then unsigned hash bytes. Retain every accepted policy. The initial EVY policy uses a 100-basis-point fee and 3,600-second reservation grace period. [2.8 Attribution](08-attribution.md#application-policy) extends the same envelope with feature capability accounting and payout fields.
-
-The complete EVY UI document carries signed top-level `policy_version` and `policy_digest`. Publisher validation resolves them to the policy for the EVY application and publisher. Purchase creation retains `application_key`, `feature`, `ui_version`, `ui_digest`, both policy fields and the buyer-signed runtime context. The signed admission receipt binds its digest to the serving backend identity under [2.12 Listings and purchases](12-listings-and-purchases.md#evy-purchase-interface). Buyer authorization, seller acceptance, reservation and payment evidence bind that same identity.
-
-The payment service verifies the complete archived application document, its EVY policy and the source feature/resource before calculating the agreed fee. Later policies apply to new purchases; an existing purchase retains its signed terms and document evidence. A change to agreed terms requires a new buyer-authorized purchase.
+Policy 1:
 
 ```jsonc
-"policy_version": 1,
-"policy_digest": "9a2f..." // BLAKE3 of the exact complete signed EVY policy
+{
+  "version": 1,                                  // policy 1
+  "fee_rate_bp": 100,                            // contributor fee: 1% of the price
+  "service_fee": { "card_rate_bp": 165, "card_fixed_cents": 30 }, // Stripe's domestic card fee, passed to the buyer
+  "reservation_grace_seconds": 3600,             // a reservation lasts until one hour after the agreed pickup end
+  "dispute_loss_payer": "seller",                // the seller pays for a lost dispute
+  "dispute_contributor_hold": "while_open",      // contributor cents stay held while a dispute is open
+  "lost_dispute_reverses_contributors": true,    // a lost dispute reverses contributor allocations
+  "signature": "<payment root key>"
+}
 ```
+
+- `policy_digest` is the base58 BLAKE3 hash of the exact signed bytes.
+- `evyctl` saves the signed policy in write-once storage under `freenet/published/policy/<hash>.json`, as [Write-once storage in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#write-once-storage) defines.
+- This plan adds two top-level fields to the UI document: `policy_version` and `policy_digest`. A UI version that takes payments names its policy there.
+- Readers fetch the signed policy by digest with `payment_policy`. They check the payment root signature and the digest, then compute the fees.
+- A purchase keeps the policy named by the UI version Bob used. A newer policy applies only to new purchases.
+
+## Fees and seller accounts
+
+Each sale is a Stripe [destination charge](https://docs.stripe.com/connect/destination-charges). Prices are in AUD, the one currency EVY's `toStripeAmount` accepts ([stripeGateway.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/procedures/stripeGateway.ts)). Alice's account is Australian like EVY's platform account, as destination charges require.
+
+| Amount | Rule | Skateboard sale |
+| --- | --- | --- |
+| Price | Set by Alice | 70.00 |
+| Contributor fee (`fee_cents`) | `fee_rate_bp` of the price, rounded half up | 0.70 |
+| Service fee (`service_fee_cents`) | (price × card rate + card fixed fee) ÷ (1 − card rate), rounded up | 1.48 |
+| Bob pays | Price + service fee | 71.48 |
+| `application_fee_amount` | Contributor fee + service fee | 2.18 |
+| Alice receives | Bob pays − `application_fee_amount` | 69.30 |
+| Stripe's card fee | 1.65% + 0.30 dollars of 71.48 for an Australian card ([Stripe pricing](https://stripe.com/au/pricing), checked 2026-10-07). Stripe takes it from EVY's balance | 1.48 |
+| Contributors | Application fee − Stripe's card fee | 0.70 |
+
+Bob sees the price, the service fee and the total before he pays. When Stripe's actual card fee differs, for example for an international card, EVY's budget covers the difference. Contributors still get the full contributor fee.
+
+Alice links her account once, before she lists her first item:
+
+1. Alice taps "Get paid". Her app calls `seller_onboarding`, signed with her seller key.
+2. The module creates a connected account with these settings, then an Account Link ([hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding)):
+   - `controller.fees.payer` and `controller.losses.payments` set to `application`
+   - `controller.stripe_dashboard.type` set to `express`
+   - `settings.payouts.schedule.interval` set to `manual`
+3. EVY opens the link in `SFSafariViewController` on iOS and Custom Tabs on Android, because Stripe-hosted onboarding runs only in a browser.
+4. Alice accepts EVY's seller terms. They make her liable for lost disputes on her sales.
+5. When Stripe's `account.updated` webhook shows the account can take transfers, the module stores Alice's seller key with her account ID.
+
+Alice's money stays in her Stripe balance until she withdraws it:
+
+1. Alice taps "Withdraw". Her app calls `seller_withdraw`, signed with her seller key.
+2. The module shows the amount after Stripe's monthly active-account fee: 2.00 dollars in each month in which Stripe pays Alice out ([Connect pricing](https://stripe.com/au/connect/pricing)).
+3. The module deducts that fee from the withdrawal and creates one [payout](https://docs.stripe.com/connect/payouts-connected-accounts) for the rest. EVY pays Stripe's payout fee of 0.25% plus 0.25 dollars.
 
 ## Paying on a phone
 
 ```mermaid
 sequenceDiagram
     participant App as Bob's EVY app on Android or iOS
-    participant Del as EVY delegate
-    participant P as Purchase contract
+    participant P as Purchase state
     participant Pay as Payment module
     participant S as Stripe
-    App->>Del: Sign the transaction message and payment request
-    App->>Pay: admit_message(saved signed transaction proposal)
-    Pay-->>App: Certified complete transcript checkpoint
-    App->>P: UPDATE with checkpoint
-    App->>Pay: payment_intent(purchase key, message ID)
-    Pay->>P: GET, check signatures, accepted policy and reservation fence
-    Pay->>S: PaymentIntent for 7,000 cents AUD, manual capture,<br>fee 70 cents, destination Alice's account
+    Note over P: The message list holds Bob's transaction message
+    App->>Pay: payment_intent(purchase key, transaction message ID)
+    Pay->>P: GET, check signatures, policy, amounts and reservation
+    Pay->>S: Look up a PaymentIntent by metadata
+    Pay->>S: Create PaymentIntent: 7,148 cents AUD, manual capture,<br>application fee 218 cents, destination Alice, 3-D Secure
     Pay-->>App: Client secret
-    App->>S: Payment sheet: Bob enters his card
+    App->>S: Payment sheet: card, Google Pay or Apple Pay
     S-->>Pay: Webhook payment_intent.amount_capturable_updated
-    Pay->>P: UPDATE with payment record "intent"
-    Note over P: Alice admits and submits transaction_completed checkpoint
+    Pay->>P: Payment record "intent"
+    Note over P: Alice's transaction_completed, or 24 hours pass
     Pay->>S: Capture
     S-->>Pay: Webhook payment_intent.succeeded
-    Pay->>P: UPDATE with payment record "succeeded"
+    Pay->>P: Payment record "succeeded"
 ```
 
-- The shared message adapter in the SwiftUI and Compose readers runs this step for a `create(evy.messages, ...)` action whose data holds EVY's `payment_signature(...)` marker ([EVYPaymentSignature.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Utils/EVYPaymentSignature.swift)). The EVY delegate fills in the message ID and signs in the verified purchase's originating feature and buyer scope. The reader calls `payment_intent` over JSON-RPC 2.0 on a WebSocket, using EVY's service transport ([wsServer.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/wsServer.ts)), with the call signed by Bob's buyer key.
-- Stripe's payment sheet runs card entry and 3-D Secure in native screens. stripe-ios needs iOS 15 or later and stripe-android API 23 or later, within EVY's iOS 17 and Android 9 floors from [The EVY app on iOS and Android in 2.1 Hello EVY world](01-hello-evy-world.md#the-evy-app-on-ios-and-android).
-- The listing coordinator admits one active payment purchase and keeps one PaymentIntent per purchase. The purchase key and message ID form Stripe's idempotency key, and Postgres maps the purchase key to the PaymentIntent ID, using the mapping pattern in Marketplace's `item_payment_intents` table ([paymentIntents.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/paymentIntents.ts)). A repeated call returns the same client secret.
-- The service subscribes to each purchase it charges and sends each payment record from its own node, so the purchase updates even when Bob closes EVY. Its Freenet client allows one request awaiting a reply per connection across all purchase contracts and request types, as [Matching replies to requests in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#matching-replies-to-requests) requires. Subscription updates flow while the request awaits its reply. Parallel requests require tested request-ID coverage in every success and error reply from the Core and stdlib. A card hold usually lasts 7 days, so if Alice never confirms, Stripe cancels the hold ([place a hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method)) and the record becomes `canceled`.
+| Step | Rule |
+| --- | --- |
+| Authorize | Bob taps "Item received" and pays at the pickup. The reader adds his `transaction` message to the purchase. The message holds his payment request, signed with his buyer key |
+| Create the intent | `payment_intent` checks Bob's signature, the policy, the amounts and the reservation. It looks up Stripe for a PaymentIntent with this purchase key in its metadata, and creates one only when none exists. A repeated call returns the same client secret |
+| Pay | Stripe's payment sheet runs on iOS and Android. It offers cards, Apple Pay on iOS and Google Pay on Android |
+| Authenticate | Every card payment requests 3-D Secure (`payment_method_options.card.request_three_d_secure: any`). Apple Pay and Google Pay authenticate Bob on his phone |
+| Hold | Stripe holds the funds. The module writes an `intent` record |
+| Capture | Alice taps "Confirm" and her `transaction_completed` message reaches the purchase. The module captures and writes a `succeeded` record |
+| Capture without Alice | After `transaction`, only Alice can answer. If she sends neither `transaction_completed` nor `transaction_rejected` within 24 hours, the module captures automatically |
+| Cancel | Alice's `transaction_rejected` cancels the PaymentIntent and the hold. The module writes a `canceled` record |
 
-Before a backend call, EVY's iOS and Android service clients verify the operation, audience, challenge, policy and purchase context. Record payment/backend network bytes separately from Freenet node traffic under [1.11 Cellular data and resource budgets](../1-freenet-mobile-appkit/11-cellular-data-and-resource-budgets.md#accounting-scope-and-external-traffic). The payment UI states its network policy. Reconcile submitted payments when the node reaches its cap; retain pending contract writes until a new allowance permits them.
+- The reader's payment adapter runs this step for a `create(evy.messages, ...)` action whose data holds EVY's `payment_signature(...)` marker ([EVYPaymentSignature.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Utils/EVYPaymentSignature.swift)). The EVY delegate from [2.4 SDUI data and actions](04-data-and-actions.md#the-evy-delegate) signs it with Bob's purchase-scoped buyer key.
+- The reader calls the module over JSON-RPC 2.0 on a WebSocket, using EVY's service transport ([wsServer.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/wsServer.ts)). Each call is signed by Bob's buyer key over a fresh backend challenge.
+- stripe-ios needs iOS 15 or later and stripe-android API 23 or later. Both fit EVY's iOS 17 and Android 9 floors from [The EVY app on iOS and Android in 2.1 Hello EVY world](01-hello-evy-world.md#the-evy-app-on-ios-and-android).
+- Postgres maps the purchase key to its one PaymentIntent, following the `item_payment_intents` table in Marketplace ([paymentIntents.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/services/marketplace/src/paymentIntents.ts)).
+- The EVY backend node subscribes to each purchase the module charges. It sends each payment record through the outbox, so the purchase updates even when Bob closes EVY.
+- A card hold usually lasts 7 days ([place a hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method)). The 24-hour automatic capture happens well before it ends.
 
 ### Retrying a card payment
 
-After a declined card attempt, Stripe returns the PaymentIntent to `requires_payment_method`, so Bob can choose to try again ([PaymentIntent lifecycle](https://docs.stripe.com/payments/paymentintents/lifecycle)). Each card confirmation starts with Bob's action in the native payment sheet on iOS and Android. The purchase keeps Alice's acceptance, the agreed amount and fee, Bob's buyer key and the signed `transaction` message.
+A declined card returns the PaymentIntent to `requires_payment_method` ([PaymentIntent lifecycle](https://docs.stripe.com/payments/paymentintents/lifecycle)). Bob can try again.
 
-| Step | What runs on retry |
+| Step | What happens |
 | --- | --- |
-| 1. Choose | Bob taps "Try again". EVY reopens the payment sheet for the purchase. |
-| 2. Resume | The reader calls `payment_intent` with the original purchase key and authorization message ID. The service checks the purchase's current acceptance, cancellation, accepted policy and listing reservation fence, then Stripe's current PaymentIntent. For an accepted purchase with a retryable PaymentIntent, it returns that intent's client secret. |
-| 3. Confirm | Bob enters or selects a card and confirms another attempt on the same PaymentIntent. Stripe runs 3-D Secure when required. |
-| 4. Hold | After successful authorization, the service publishes a higher-revision `intent` record. The funds are held and the purchase stays `pickup_pending`. |
-| 5. Capture | Alice confirms the handover. The service captures once and publishes a higher-revision `succeeded` record. The purchase becomes `sold`. |
+| 1. Choose | Bob taps "Try again". EVY reopens the payment sheet for the same purchase |
+| 2. Resume | The reader calls `payment_intent` with the same purchase key and `transaction` message ID. The module checks that the purchase still holds the reservation and returns the same PaymentIntent's client secret |
+| 3. Confirm | Bob picks another card or wallet. Stripe runs 3-D Secure for a card |
+| 4. Hold | The module writes an `intent` record at a higher purchase revision |
+| 5. Capture | Alice confirms the handover, or 24 hours pass. The module captures once and writes `succeeded` |
 
-The payment-record sequence is `failed → intent → succeeded`. Repeated declines produce the latest failed-attempt details with increasing revisions when those details change. A retry uses the original transaction message and payment request; it keeps the purchase's message count unchanged. The service offers retry while the purchase remains accepted and the PaymentIntent permits another confirmation. Captured payments follow [Refunds](#refunds), and canceled purchases return to the purchase flow.
+The record sequence is `failed → intent → succeeded`. A retry reuses Bob's original `transaction` message and payment request, so the message list does not grow.
 
 ## The payment record
 
-Each ledger row retains EVY's transaction signature trail. It hashes the amount, currency, authorizing message, time, provider and card's last 4 digits with SHA-256 ([transaction-signature-trail.md](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/plans/transaction-signature-trail.md), [paymentSignature.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/paymentSignature.ts)). This plan adds signed buyer authorization and payment-service evidence:
+The backend ledger keeps EVY's transaction signature trail: a SHA-256 hash of the amount, currency, authorizing message, time, provider and the card's last 4 digits ([transaction-signature-trail.md](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/plans/transaction-signature-trail.md), [paymentSignature.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/paymentSignature.ts)). This plan adds two signed parts:
 
-1. Bob's `transaction` message carries his payment request in `data.signature`, under the scheme `evy-txn-sig-v2`. Its canonical string holds the amount, currency, agreed fee, message ID, `created_at`, provider, purchase contract key, UI version/digest and policy version/digest. The EVY delegate signs its hash with Bob's buyer key.
-2. After a verified Stripe webhook, the payment service reads the current Stripe payment and charge state, writes a changed payment record with the current card's last 4 digits, and signs it with the payment service key under the prefix `evy.payment/2`.
-3. The EVY publisher key from [The EVY publisher key in 2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key) certifies each payment service signing key. The purchase contract's code holds the publisher's verifying key and checks that certificate.
+1. Bob's payment request, in `data.signature` of his `transaction` message, under the scheme `evy-txn-sig-v2`. Its canonical string holds the amount Bob pays, the service fee, the contributor fee, currency, message ID, `created_at`, provider, purchase key, UI version and digest, and policy version and digest. Bob's buyer key signs its hash.
+2. The payment record, a `signed-register/1` record with domain `evy.payment/2`, signed by the payment service key.
 
 ```jsonc
 {
-  "purchase": "7HqK...",                        // purchase contract key
-  "authorization_message_id": "b2e0...",        // Bob's transaction message, EVY's field name
-  "request_hash": "3b9e...",                    // hash of Bob's evy-txn-sig-v2 payment request
-  "status": "succeeded",                        // intent, succeeded, failed, canceled or refunded
-  "amount_cents": 7000,                         // 70.00 dollars
-  "currency": "AUD",                            // matches the purchase
-  "fee_cents": 70,                              // application fee EVY holds for contributors
-  "refunded_cents": 0,                          // cumulative successful buyer refunds
-  "fee_refunded_cents": 0,                      // cumulative application fee returned by Stripe
-  "payment_method_last_4_characters": "4242",   // from Stripe's charge, EVY's field name
-  "policy_version": 1,                          // purchase's accepted policy
-  "policy_digest": "9a2f...",                   // retained policy bytes
-  "reservation_fence": 1,                       // listing coordinator authorization
-  "revision": 2,                                // rises with each change, the highest wins
-  "signer": "Rk9v...",                          // payment service verifying key
-  "signer_certificate": "<scoped authority certificate>",
-  "authority_ref": "<authority contract/generation/digest>",
-  "acceptance_receipt": "<independent signed payload receipt>",
-  "signature": "MEUC..."                        // payment service key over the canonical payload excluding acceptance_receipt
+  "purchase": "7HqK...",                    // purchase key
+  "version": 6,                             // the purchase revision, see below
+  "messages_hash": "Fp2c...",               // hash of the message list holding Bob's transaction message
+  "authorization_message_id": "b2e0...",    // Bob's transaction message, EVY's field name
+  "request_hash": "3b9e...",                // hash of Bob's evy-txn-sig-v2 payment request
+  "status": "succeeded",                    // failed, intent, succeeded, canceled or refunded
+  "amount_cents": 7000,                     // item price
+  "service_fee_cents": 148,                 // covers Stripe's card fee
+  "fee_cents": 70,                          // contributor fee
+  "currency": "AUD",
+  "refunded_cents": 0,                      // price refunded to Bob so far
+  "fee_refunded_cents": 0,                  // contributor fee taken back for those refunds
+  "policy_version": 1,
+  "policy_digest": "9a2f...",
+  "signer": "Rk9v...",                      // payment service key
+  "signature": "MEUC..."
 }
 ```
 
-The service checks webhooks with EVY's existing handler ([stripeWebhookHttp.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/shared/stripeWebhookHttp.ts)). It handles `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `application_fee.created`, `application_fee.refunded` and `application_fee.refund.updated` by reading the current PaymentIntent, charge, refunds and application fee from Stripe. Application-fee events map back to the purchase through the saved charge and fee IDs ([Stripe event types](https://docs.stripe.com/api/events/types)). Stripe can deliver duplicate events and events out of order ([webhook delivery](https://docs.stripe.com/webhooks#event-ordering)). Each event starts a reconciliation of current state.
+- Card details, including the last 4 digits, stay in the backend. The purchase state holds no card data.
+- `messages_hash` ties the record to the message list. The backend outbox and write-once storage keep the full bytes of every list it refers to.
+- The purchase revision is one counter per purchase in the module's Postgres. It rises by one for every record the payment service key signs for that purchase: message lists, payment records and dispute summaries.
+- A purchase keeps the payment record with the highest `(version, hash)`, the `signed-register/1` order. Delivery order does not matter.
 
-| Current Stripe evidence | Signed payment status |
+| Current Stripe state | Signed status |
 | --- | --- |
 | A declined attempt awaiting another payment method | `failed` |
-| Authorized funds awaiting manual capture | `intent` |
-| Captured funds, including a partial buyer refund | `succeeded`, with current cumulative `refunded_cents` and `fee_refunded_cents` |
-| Canceled PaymentIntent | `canceled` |
-| A captured payment whose successful buyer refunds equal `amount_cents` | `refunded`, with current cumulative `refunded_cents` and `fee_refunded_cents` |
+| Funds held, awaiting capture | `intent` |
+| Captured, with no refund or a partial refund | `succeeded` |
+| PaymentIntent canceled | `canceled` |
+| Captured, and refunds equal `amount_cents` | `refunded` |
 
-The payment service sums successful buyer refund objects for `refunded_cents`. Pending and failed refund requests retain the prior confirmed total. It reads `fee_refunded_cents` from the matching [Application Fee object's `amount_refunded`](https://docs.stripe.com/api/application_fees/object), independently of the buyer total. A separate fee refund can change that field while the buyer total stays unchanged. Changed totals produce a new signed revision even when the status stays `succeeded` or `refunded`.
+The purchase contract runs the checks in `freenet/common/` on each record:
 
-Both totals are nonnegative integer cents, with `refunded_cents <= amount_cents` and `fee_refunded_cents <= fee_cents`. The purchase contract checks these bounds and the status rules on each signed record. Pre-capture records have zero refund totals. Captured `succeeded` records have `refunded_cents < amount_cents`; `refunded` records have `refunded_cents == amount_cents`. A zero fee has a zero fee-refund total. When a nonzero fee is expected, reconciliation verifies its matching Stripe fee object before publishing totals. Missing objects and failed reads leave reconciliation pending. Current Stripe reads retain confirmed cumulative totals. An inconsistent read leaves reconciliation pending for another read. Older signed revisions remain evidence of capture and earlier totals.
+- the signature, the signer's certificate and any revocation, from [Payment signing-key revocation](#payment-signing-key-revocation)
+- `0 <= refunded_cents <= amount_cents` and `0 <= fee_refunded_cents <= fee_cents`, in integer cents
+- records before capture have zero refund totals
+- `succeeded` has `refunded_cents < amount_cents`; `refunded` has `refunded_cents == amount_cents`
 
-The service processes reconciliation one at a time per purchase, including the Stripe read and record creation, within the listing coordinator's fencing rules. Listing capture/cancel decisions serialize across all of its purchases. Postgres deduplicates webhook event IDs and assigns a strictly increasing `revision` to each changed record. It saves the signed bytes and their publication outbox entry together, then retries publication with those same bytes. The purchase contract selects the valid record with the highest `(revision, payment_hash)`, where `payment_hash` is BLAKE3 of its canonical complete signed bytes and hash ties compare unsigned bytes, so `failed → intent → succeeded` converges in either delivery order.
+### Webhooks
 
-Duplicate events and unchanged state retain the existing revision. A delayed failure event reads the current successful state and preserves its record. Stripe charge, refund, fee and fee-refund IDs stay in the service's Postgres. Each changed captured-payment record queues a remuneration notification, including fee-only changes.
+The module checks webhooks with EVY's existing handler ([stripeWebhookHttp.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/shared/stripeWebhookHttp.ts)). It handles:
 
-- Bob signs the payment request with his buyer key. The contract checks that key against its `buyer` parameter.
-- The payment service verifies the webhook, reads Stripe's current payment state and signs the resulting record.
-- The contract checks the signature, certificate, amounts, retained policy identity, reservation fence and revision. Support recomputes `request_hash` and asks Bob for his card's last 4 digits, following EVY's support flow ([data.md](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/data.md#data_evy_transaction)).
+- `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed` and `payment_intent.canceled`
+- `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed` and `transfer.reversed`
+- `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn` and `charge.dispute.funds_reinstated`
+
+Stripe can send duplicate events and events out of order ([webhook delivery](https://docs.stripe.com/webhooks#event-ordering)). So each event only starts a reconciliation:
+
+1. Postgres drops an event ID it has already seen.
+2. The module locks the purchase, so reconciliations run one at a time per purchase.
+3. It reads the current PaymentIntent, charge, refunds, transfer reversals and disputes from Stripe.
+4. If the result differs from the last record, it signs a new record at the next purchase revision. It saves the record in the outbox in the same transaction.
+5. It raises an internal event with the purchase key for the other backend modules.
+
+A failed or partial Stripe read leaves the reconciliation pending, and the module tries again. Stripe charge, refund, transfer and dispute IDs stay in Postgres.
+
+### Card details
+
+Bob's card details stay in the backend. `payment_details(purchase key)`, signed by Bob's buyer key, returns his card brand and last 4 digits for display. Support recomputes `request_hash` and asks Bob for his card's last 4 digits, following EVY's support flow ([data.md](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/evy/data.md#data_evy_transaction)).
 
 ### Payment signing-key revocation
 
-Owner: EVY payments lead, with the Core/contract lead. Complete the authority codec and shared fixtures before live payments. Use payment envelope `evy.payment/2` and authority codecs below in `freenet/common/`, the purchase contract, payment backend and iOS and Android readers.
+The payment root certifies one payment service key at a time. Purchase contracts compile in the payment root's public key.
 
-| Record | Authenticated fields and rule |
-| --- | --- |
-| `evy.payment-authority/1` | Publisher-signed application identity, authority contract key/code hash, generation, previous-generation digest, and complete key dispositions. Each certificate names key ID/public key, feature, seller/listing scope, operation role, endpoint audience and validity interval. The signed financial policy and compiled contract identify this authority contract and publisher key |
-| `evy.payment-receipt/1` | A distinct publisher-certified acceptance role signs the payment/checkpoint payload digest, purchase/listing identity, payment revision or checkpoint revision, operation role, audience, authority generation, monotonic acceptance sequence and acceptance time. This role uses separate key-service credentials and a durable acceptance journal. It verifies current authority and reconciled provider/admission evidence before signing |
-| Payment/checkpoint envelope | Embed the exact role certificate, authority generation/digest, signed payload and its acceptance receipt. Hash the canonical signed payload excluding the receipt; the receipt signs that hash. The outer canonical envelope fixes all field types, maximum lengths and signature/digest encodings in shared vectors |
-| Revocation | The publisher signs a higher authority generation containing the compromised key, its maximum trusted receipt sequence, cutoff evidence digest, replacement certificate and recovery-record reference. Carry every earlier key's disposition forward. Equal generations use unsigned BLAKE3 digest ordering; merge retains the higher complete authority record |
-| Historical evidence | A matching independently signed receipt at or below the trusted cutoff remains verifiable under its original certificate and policy. A delayed first delivery follows the same rule as already retained history. Service timestamps alone supply no cutoff authority |
-| New operation | At authorization, checkpoint admission, capture and new receipt issuance, backend workers require the current authority generation, role, exact scope/audience and acceptance time within the certificate interval. A revoked signer receives no new trusted receipts. An uncertain provider operation keeps its listing fence while the replacement authority reconciles it |
-| Contract check | Resolve the required related authority state through Core, authenticate it with the pinned publisher and preserve the highest verified generation in the purchase projection. Verify payload signature, receipt role/hash/context and cutoff sequence deterministically. Use signed acceptance time for interval checks; contract validation uses supplied evidence rather than a host clock |
-| Missing or suspect evidence | Missing related state returns the contract's required-related-state result. Readers and backend keep new actions pending verification. Malformed signatures fail validation. Structurally valid evidence outside the trusted cutoff stays quarantined for recovery; its merge leaves verified historical financial proofs intact |
+| Record | Signed by | Fields |
+| --- | --- | --- |
+| `evy.payment-key/1` certificate | Payment root | Payment service key and the time it starts |
+| `evy.payment-revocation/1` | Payment root | Revoked key K, the target (a purchase key) and the last trusted revision R |
 
-Authority merging and payment selection form one versioned codec. Preserve the immutable capture/authorization proof separately from the latest payment register. Joining a higher authority record re-evaluates its trust disposition deterministically; quarantined records support operator reconciliation. This keeps merges valid while authority changes. Persist the highest observed authority generation on restart; a lower received generation retains that high-water mark. Connected authorization workers refresh the authority through independent readback before dispatch, and offline readers defer new financial actions until that check succeeds.
+- Each purchase state carries the certificate of every key that signed its records.
+- Any other state that holds payment service key records uses the same two records, with its own target and revision counter.
+- A record is valid when its signer has a certificate in the state and no revocation in the state covers it.
+- A revocation covers every record signed by key K with a purchase revision above R.
 
-Bound the authority evidence carried in each purchase to its referenced certificates, receipts and current publisher-signed disposition proofs. The shared codec fixes these bounds within the purchase state ceiling in [2.12 Listings and purchases](12-listings-and-purchases.md#bounded-participant-history). Archive complete authority/recovery generations and original record bytes under [2.13 Release archive and policy evidence](13-release-archive-and-policy-evidence.md).
+When the payment service key leaks:
 
-Acceptance requires shared Rust, Swift, Kotlin and backend vectors for wrong role, seller, feature, audience and receipt digest; stale generations; receipt times outside validity; sequence just below/at/above cutoff; delayed historical delivery; authority/record delivery in either order; unavailable authority; and forged backdated writes after a leak. Restart and rotation reconcile one charge while preserving the reservation fence. The acceptance-role compromise drill uses publisher-signed recovery evidence before new receipts. Matching iOS and Android builds admit the codec/code hashes together. [2.14 Backend operations and recovery](14-backend-operations-and-recovery.md#signing-key-recovery) owns custody and the combined drill.
-
-## Fees and seller accounts
-
-Each sale is a Stripe [destination charge](https://docs.stripe.com/connect/destination-charges). The PaymentIntent sets `transfer_data.destination` to Alice's connected account and `application_fee_amount` to the fee, 1% of the price in cents, rounded half up. Stripe moves Alice's share when the service captures. Prices are in AUD, the one currency EVY's `toStripeAmount` accepts ([stripeGateway.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/procedures/stripeGateway.ts)). Alice's account is Australian like EVY's platform account, as destination charges require.
-
-| Party | Skateboard sale |
-| --- | --- |
-| Bob pays | 70.00 dollars |
-| Alice receives | 69.30 dollars |
-| EVY holds for contributors | 0.70 dollars |
-| Stripe's card fee | About 1.46 dollars, at 1.65% + 0.30 dollars for Australian cards ([Stripe pricing](https://stripe.com/au/pricing), checked 2026-10-07) |
-| Stripe's payout fee | About 0.42 dollars, at 0.25% + 0.25 dollars of Alice's 69.30-dollar payout ([Connect pricing](https://stripe.com/au/connect/pricing)) |
-| Stripe's active account fee | 2.00 dollars in each month Stripe pays Alice out ([Connect pricing](https://stripe.com/au/connect/pricing)) |
-| Who pays Stripe | EVY. Destination charges take Stripe's fees, refunds and chargebacks from EVY's balance, and EVY pays them from its own budget so contributors get the full 0.70 dollars |
-
-Alice links her account once, before she lists her first item:
-
-1. Alice taps "Get paid". Her app calls `seller_onboarding`, signed with her seller key.
-2. The service creates a connected account with `controller.fees.payer` and `controller.losses.payments` set to `application` and `controller.stripe_dashboard.type` set to `express`, then an Account Link ([hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding)).
-3. EVY opens the link in `SFSafariViewController` on iOS and Custom Tabs on Android, because Stripe-hosted onboarding runs only in a browser.
-4. When Stripe's `account.updated` webhook shows the account can take transfers, the service stores Alice's seller key with her account ID.
+1. The module stops signing.
+2. The payment root signs a certificate for a new key, and one revocation for each affected purchase. Each revocation names that purchase's last trusted revision.
+3. The outbox sends each revocation into its purchase. The contract checks it with the payment root key alone, with no lookup of another contract.
+4. The module re-signs the genuine records after R with the new key, from its database, at higher purchase revisions.
+5. Peers drop records signed by K after R and keep the re-signed ones.
 
 ## Refunds
 
-Before capture, `cancel` and `transaction_rejected` release the hold, and the money stays on Bob's card. After capture, the EVY operator refunds an agreed amount with `payment_refund` or in the Stripe Dashboard.
+Before capture, Alice's `transaction_rejected` releases the hold. The money stays on Bob's card.
 
-| Refund path | Rule |
+After capture, the EVY operator refunds with `payment_refund`. Refunds return the price. EVY keeps the service fee, because Stripe keeps its card fee.
+
+| Step | Rule |
 | --- | --- |
-| `payment_refund` | Takes the purchase key, a stable refund request ID and a positive `amount_cents` up to the remaining captured amount. Stores the request, uses its ID as the Stripe idempotency key and saves the resulting refund ID. Repeated or uncertain calls reconcile the saved request and Stripe evidence; a changed amount under the same ID fails validation. |
-| Stripe request | Sets `reverse_transfer` and `refund_application_fee`. Stripe returns the application fee and reverses the seller transfer in proportion to the refunded charge amount ([Create a refund](https://docs.stripe.com/api/refunds/create)). |
-| Dashboard | The operator selects transfer reversal and application-fee refund for the agreed refund. Reconciliation reads the actual buyer and fee totals, including any separately issued fee refund. |
-| Partial buyer refund | Successful buyer refunds total less than `amount_cents`. The payment remains `succeeded`, the completed purchase remains `sold`, and participant views show the refunded amount. |
-| Full buyer refund | Successful buyer refunds total `amount_cents`. The payment and purchase become `refunded`. |
-| Contributor earnings | [2.9 Remuneration and payouts](09-remuneration.md#refunds-after-payout) reverses only the cumulative application fee actually returned, using `fee_refunded_cents`. |
+| Request | `payment_refund` takes the purchase key, a refund operation ID and `amount_cents`, up to the price not yet refunded. A changed amount under the same operation ID fails |
+| Refund Bob | The module looks up Stripe for a refund with this operation ID in its metadata. It creates the [refund](https://docs.stripe.com/api/refunds/create) only when none exists. Destination charge refunds come from EVY's balance |
+| Recover from Alice | The contributor share of the refund is `fee_cents × amount ÷ price`, rounded half up. The module reverses Alice's transfer by the rest of the refund ([transfer reversals](https://docs.stripe.com/api/transfer_reversals/create)). It looks up an existing reversal with this operation ID first |
+| Record | The module writes the new cumulative `refunded_cents` and `fee_refunded_cents` |
 
-For a 35.00-dollar refund of the skateboard, Bob receives 35.00 dollars, Alice returns 34.65 dollars and EVY returns 0.35 dollars. The signed totals are `refunded_cents: 3500` and `fee_refunded_cents: 35`, and the purchase stays `sold`. A later refund of the remaining 35.00 dollars raises the totals to 7000 and 70 and makes the purchase `refunded`. A full refund in one request returns the same final amounts: Alice 69.30 dollars and EVY 0.70 dollars. Stripe keeps its card fee.
+The operator refunds only through `payment_refund`, so every refund has both steps.
+
+Example: a 35.00-dollar refund of the skateboard.
+
+- Bob receives 35.00 dollars.
+- Alice's transfer is reversed by 34.65 dollars.
+- The contributor fee loses 0.35 dollars.
+- The record shows `refunded_cents: 3500` and `fee_refunded_cents: 35`. The status stays `succeeded`.
+
+A later refund of the other 35.00 dollars raises the totals to 7000 and 70, and the status becomes `refunded`.
 
 ## Card disputes
 
-Owner: EVY payments lead. Marketplace support disputes follow the product deadlines in [2.7 EVY Marketplace](07-marketplace.md#moderation-and-seller-admission). Card disputes use Stripe's provider deadlines and the [Disputes API](https://docs.stripe.com/disputes/api), checked 14 October 2026.
+Card disputes follow Stripe's deadlines and the [Disputes API](https://docs.stripe.com/disputes/api), checked 14 October 2026. Stripe takes the disputed amount and its dispute fee from EVY's balance when a dispute opens.
 
-Handle `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn` and `charge.dispute.funds_reinstated` in the deduplicated webhook inbox. Retrieve current charge, PaymentIntent, all dispute pages and balance transactions before committing a changed result. Save dispute IDs, amounts/currency, status, reason, evidence deadline, evidence submissions/files and provider funds movements with their charge/purchase mapping in the payment schema and immutable recovery storage. Keep private submitted evidence outside public contract state.
-
-| Case | Payment and ledger rule |
+| Outcome | What the module does |
 | --- | --- |
-| Public evidence | Publish one signed `evy.dispute-summary/1` register per purchase: purchase/charge evidence digest, revision, open-dispute count, total withdrawn/reinstated cents, terminal lost cents, provider-evidence digest and authority receipt. Fixed-size summary fields keep multiple disputes bounded; full per-dispute records remain in the backend/archive. Merge by higher `(revision, BLAKE3 hash)` |
-| Open dispute or incomplete reconciliation | Commit a payout hold for that purchase's remaining contributor allocation under the same purchase/recipient locks as payout reservation. Already dispatched transfers reconcile once. New allocation remains credited and held until all related disputes are terminal and provider reads complete |
-| Won or closed warning | Reconcile reinstated funds and release the hold after the ordinary payout date and all other holds clear. Retain the dispute history |
-| Lost dispute | Record the chargeback amount and provider fees as EVY budget losses. Retain the seller transfer and contributor gross allocations under EVY's loss policy. Release the contributor hold after terminal reconciliation |
-| Application-fee refund | Apply the actual cumulative `fee_refunded_cents` independently under [2.9 Remuneration and payouts](09-remuneration.md#refunds-after-payout). Confirmed fee refunds reverse original allocations even when a dispute is open, won or lost |
-| Buyer refund | Continue to derive `succeeded`/`refunded` from successful refund objects. Dispute funds withdrawals have their own records and display; the sale remains closed under retained capture evidence |
-| Recovery | Restore dispute inbox, evidence, signed-summary outbox, EVY loss entries and ledger holds together. Reconcile provider objects and transfers before releasing holds or production writes |
+| Open | Records the dispute. Contributor cents for the purchase stay held while it is open |
+| Won | Records the reinstated funds. The hold ends |
+| Lost | Reverses Alice's transfer for the lost amount less the contributor fee, up to what the transfer allows. The contributor allocations are reversed. Alice owes any remainder, including Stripe's dispute fee, under the seller terms. EVY covers only what it cannot recover from her |
 
-The financial policy signs `dispute_loss_payer: evy`, `dispute_contributor_hold: until_terminal_reconciliation` and `fee_reversal_basis: confirmed_application_fee_refunds`. Backend interfaces notify remuneration of both changed dispute summaries and fee totals. iOS and Android readers show dispute status alongside payment/refund amounts and retain receipt/support access through moderation and blocking.
+Each change writes a public `evy.dispute-summary/1` record into the purchase. It is a `signed-register/1` record signed by the payment service key, at the next purchase revision:
 
-This plan owns provider fixtures for duplicate/reordered events, partial and multiple disputes, withdrawn/reinstated funds, won/lost outcomes, missing pages and restart. [2.9 Remuneration and payouts](09-remuneration.md#dispute-holds-and-losses) owns hold/loss/fee-reversal fixtures; [2.10 Testing and release](10-testing-and-release.md#release-tests) connects them through both readers and the restore drill.
+```jsonc
+{
+  "purchase": "7HqK...",
+  "version": 8,                 // purchase revision
+  "status": "lost",             // open, won or lost
+  "disputed_cents": 7148,
+  "lost_cents": 7148,
+  "recovered_from_seller_cents": 7078,
+  "signer": "Rk9v...",
+  "signature": "..."
+}
+```
+
+The dispute evidence that EVY submits to Stripe stays private in the backend. iOS and Android readers show the dispute status next to the payment and refund amounts.
 
 ## Store payment rules
 
-EVY takes payment only for physical goods and services used outside the app, such as Alice's skateboard. The Marketplace item is a real skateboard that Alice hands to Bob. Both stores send these payments outside their own billing, so EVY on iOS and Android takes them through Stripe's payment sheet. EVY's App Store privacy details and Play data safety form list the card details Stripe collects.
+EVY takes payment only for physical goods and services used outside the app, such as Alice's skateboard. Both stores require these payments to use a method outside their own billing, so EVY on iOS and Android takes them through Stripe's payment sheet. EVY's App Store privacy details and Play data safety form list the card details Stripe collects.
 
 | Store | Rule for physical goods |
 | --- | --- |
@@ -224,18 +330,24 @@ EVY takes payment only for physical goods and services used outside the app, suc
 
 ## Acceptance
 
-- Record passing results from [2.12 Listings and purchases](12-listings-and-purchases.md#acceptance), [2.4 SDUI data and actions](04-data-and-actions.md#acceptance) and [2.11 EVY delegate and private records](11-delegate-and-private-records.md#acceptance) for the same codecs/builds. Those suites own admission bounds, message parents, source-context signing and durable replay.
-- Integrate the admitted transcript and reservation fence with Stripe intent/capture/cancel operations. Interrupt before and after provider dispatch and restore the operation journal; reconciliation permits one completed sale and preserves uncertain fences.
-- Authorize, capture and refund a purchase after publishing a new fee policy. Every provider operation and signed record retains the original policy/amount/fee; substituted digests and cross-purchase replay fail before dispatch.
-- The payment authority/revocation and provider dispute suites defined in this plan pass before live payments.
+These tests use fixture purchases from the shared vectors and Stripe test mode.
 
-- On iOS and Android in Stripe test mode, Alice links a connected account in the browser and lists the skateboard for 70 dollars on her iPhone. Bob asks to buy it on his Android phone and Alice accepts. Bob pays 70.00 dollars in the payment sheet and Alice confirms the handover. Both phones show `sold`, Alice's account receives 69.30 dollars and EVY's balance holds 0.70 dollars. The run passes again with the platforms swapped.
-- On iOS and Android, a 3-D Secure test card completes inside the payment sheet. Closing EVY during the payment and reopening it shows the payment record from the contract.
-- `payment_intent` fails before any Stripe call for a bad buyer signature, a purchase Alice has not accepted or has canceled, a missing or stale reservation fence, a wrong retained policy, amount or fee, or a seller with no connected account. A repeated call returns the same PaymentIntent. Duplicate events and unchanged Stripe state retain the same signed payment record and revision.
-- On iOS and Android in Stripe test mode, Bob's first card is declined. He chooses "Try again", enters a valid card and completes 3-D Secure when required. The same purchase, buyer key, authorization message and PaymentIntent produce `failed → intent → succeeded` with increasing revisions. The purchase stays `pickup_pending` through the decline and hold, then becomes `sold` after Alice confirms. Capture produces one successful charge and one contributor fee.
-- Deliver duplicate and delayed failure events after successful authorization and capture, and deliver signed record revisions to contract peers in different orders. Every peer converges to the highest valid revision. Concurrent webhook workers serialize reconciliation per purchase, and a restart replays saved signed bytes through the publication outbox.
-- `transaction_rejected` before capture releases the hold and the record shows `canceled`. A full refund after capture returns 70.00 dollars to Bob, takes 69.30 dollars from Alice and 0.70 dollars from EVY, and the record shows `refunded` with `refunded_cents` of 7000 and `fee_refunded_cents` of 70.
-- On iOS and Android, refund 35.00 dollars after capture. Both phones retain `sold`, display the partial refund and keep the listing closed. The payment record has totals 3500 and 35. Refunding the remainder produces `refunded` with totals 7000 and 70.
-- Duplicate, reordered and delayed refund and application-fee events reconcile the current cumulative totals once. A fee-only refund creates a higher revision and remuneration notification while the buyer refund total and purchase status stay unchanged. Pending or failed buyer refunds retain confirmed totals. Invalid refund bounds or status combinations fail contract validation.
-- The purchase contract rejects payment evidence with a bad signature, role/scope/receipt or wrong amount. Valid older revisions preserve the selected higher tuple. The defining contract merge suite in [2.12 Listings and purchases](12-listings-and-purchases.md#acceptance) passes with payment and dispute envelopes.
-- `evy-txn-sig-v2` golden vectors give the same results in the EVY delegate, the purchase contract and `api/src/modules/payment`, using the shared-vector pattern in EVY's TypeScript and Swift tests ([paymentSignature.test.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/tests/paymentSignature.test.ts), [EVYPaymentSignatureTests.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evyTests/EVYPaymentSignatureTests.swift)).
+- Shared vectors give the same results in Rust, Swift, Kotlin and TypeScript for `evy-txn-sig-v2`, the payment record, the dispute summary, the certificate and the revocation. Follow the pattern in EVY's [paymentSignature.test.ts](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/tests/paymentSignature.test.ts) and [EVYPaymentSignatureTests.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evyTests/EVYPaymentSignatureTests.swift).
+- On iOS and Android, Alice links a connected account in the browser and accepts the seller terms. Her account has a manual payout schedule.
+- On iOS and Android, Bob pays for the skateboard fixture in the payment sheet, once with a test card and once with Apple Pay on iOS and Google Pay on Android. The run checks the Stripe objects:
+  - the PaymentIntent is 7,148 cents and requests 3-D Secure
+  - the application fee object is 218 cents
+  - Alice's net from the charge is 6,930 cents
+  - Stripe's fee on the balance transaction is about 148 cents, so EVY's net from the sale is 70 cents
+- A 3-D Secure test card completes inside the payment sheet on iOS and Android. Closing EVY during payment and reopening it shows the payment record from the purchase.
+- Alice's `transaction_completed` captures once. With the backend clock 24 hours past `transaction` and no answer from Alice, the module captures automatically. `transaction_rejected` cancels the hold and the record shows `canceled`.
+- `payment_intent` fails before any Stripe call for: a bad buyer signature, a purchase without the reservation, a wrong policy, amount or fee, and a seller with no connected account.
+- Bob's first card is declined. He taps "Try again" and pays with a valid card. The same PaymentIntent produces `failed → intent → succeeded` at rising purchase revisions.
+- Duplicate, delayed and reordered webhooks produce the same final record. Peers that receive record revisions in different orders keep the same record.
+- Look-up-first: replay a PaymentIntent, refund and transfer-reversal request after its idempotency key has expired. Stripe holds one of each.
+- Refund 35.00 dollars, then the rest. Totals go 3500 and 35, then 7000 and 70. The status goes `succeeded`, then `refunded`. Alice's transfer reversals total 69.30 dollars.
+- A test dispute that is lost reverses Alice's transfer and shows `lost` in the dispute summary. A won dispute ends the hold.
+- `payment_details` returns the card's last 4 digits to Bob's signed call only. No purchase state holds card data.
+- Revocation drill: the payment root revokes a test key K with cutoff R. The contract checks drop K's records after R and accept the re-signed records.
+- A purchase under policy 1 keeps policy 1 amounts after a fixture policy 2 is signed.
+- Alice withdraws her balance. The payout equals her balance less the monthly active-account fee.

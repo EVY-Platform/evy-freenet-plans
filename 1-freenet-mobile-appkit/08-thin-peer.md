@@ -5,27 +5,34 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | Thin-role protocol and serving-peer support |
-| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | iOS and Android workload tests |
-| [river](https://github.com/freenet/river) | Used | Mobile app workload fixture |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Switch River's phone node to the thin role; iOS and Android traffic and carrier tests |
+| [river](https://github.com/freenet/river) | Used | Mobile app workload |
 | [freenet-test-network](https://github.com/freenet/freenet-test-network) | Used | NAT and peer-loss test network |
 
 ## Purpose
 
-Each application installation accounts for its own embedded node, storage and traffic. Its application data layer owns the bounded set of active contract subscriptions. [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md) owns that installation's accounting and resource limits.
+Run the phone's node as a thin peer on iOS and Android. A thin peer sends and receives only its user's own traffic. Full peers route and host for the rest of the network.
 
-Run the phone's node as a negotiated thin peer on iOS and Android. River is the first app. When Bob reads and posts in "Skate club" on his phone:
+When Bob reads and posts in "Skate club" on his phone:
 
 ```mermaid
 flowchart LR
   subgraph phone["Bob's phone (thin peer)"]
     river["River"] --> core["Core checks the room, keeps its copy and runs the chat delegate"]
   end
-  core <-->|"Bob's reads, writes and subscriptions"| serving["Serving full peer"]
-  serving <-->|"Routing and hosting"| peers["Other full peers"]
+  core <-->|"Bob's reads, writes and subscriptions"| serving1["Serving full peer 1"]
+  core <-->|"Bob's reads, writes and subscriptions"| serving2["Serving full peer 2"]
+  serving1 <-->|"Routing and hosting"| peers["Other full peers"]
+  serving2 <-->|"Routing and hosting"| peers
 ```
 
-- The phone sends and receives Bob's own traffic only. Full peers route and host for the rest of the network.
-- Measure terminal traffic and enforce caps through [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md). At a cap, keep drafts and show the allowance needed to resume.
+| Stage | Phone node role |
+| --- | --- |
+| Development, before this plan is built | Full peer |
+| After this plan is built | Thin peer for River |
+| Every released River build, internal or public | Thin peer |
+
+No River build is released before the end of milestone 1 (Freenet mobile AppKit). Record the node role and the exact protocol and build in every test result.
 
 [1.1 Mobile feasibility and supported profiles](01-feasibility.md) measured full-peer traffic on Wi-Fi ([finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#phones-are-full-peers-on-the-public-network)):
 
@@ -35,100 +42,108 @@ flowchart LR
 | Android emulator, full peer, first two minutes, 22 peers | About 22 KiB/s | About 22 KiB/s |
 | iPhone 13 mini, idle | Under 1 KiB/s | Under 1 KiB/s |
 | Android emulator, idle, 1 peer | 1.4 KiB/s | 1.1 KiB/s |
-| Loading River's 1.06 MB archive on the public network | 9 KiB | 1.2 MiB |
+| Loading River's 1.06 MB bundle on the public network | 9 KiB | 1.2 MiB |
 
-Use the thin role for these reasons:
+Released builds use the thin role for two reasons:
 
-- At 60 KiB/s, one hour of traffic uses about 210 MiB each way and consumes battery power.
-- Google Play allows an app to relay traffic for others only when relaying is the app's main purpose ([Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/16559646)). River's iOS and Android release uses the thin role to send the user's own traffic. Chat is River's main purpose.
+- At 60 KiB/s, one hour of traffic uses about 210 MiB each way and drains the battery.
+- Google Play allows an app to relay traffic for others only when relaying is the app's main purpose ([Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/16559646)). Chat is River's main purpose, so River's iOS and Android builds send only the user's own traffic.
 
-Development fixtures and dated feasibility runs may select a full-peer profile. River release acceptance requires negotiated thin support on iOS and Android. Record the profile and exact protocol/build in every result.
-
-| Part | Section |
+| Upstream source | Role in this plan |
 | --- | --- |
-| What the phone does, what the serving peer does and the Core changes | [Scope and trust boundary](#scope-and-trust-boundary) |
-| Byte limits per workload, how to count bytes and what happens at a cap | [Cellular budget contract in 1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#cellular-budget-contract) |
-| The upstream proposal and carrier issues | [Upstream work and carrier evidence](#upstream-work-and-carrier-evidence) |
-
-Implement the thin-role protocol and pass terminal-role device/carrier fixtures. The independent budget plan owns numeric caps and accounting acceptance.
-
-| Upstream source | State on 2026-10-01 |
-| --- | --- |
-| [Mobile app discussion #420](https://github.com/freenet/freenet-core/discussions/420) | Closed. The only maintainer statement on a node on the phone (iduartgomez, 2022): "a limited node will be running in the device" |
-| [Smartphone discussion #811](https://github.com/freenet/freenet-core/discussions/811) | Closed. It says Freenet will support mobile and holds no design |
+| [Mobile app discussion #420](https://github.com/freenet/freenet-core/discussions/420) | Mobile scope: a limited node runs on the device |
+| [Smartphone discussion #811](https://github.com/freenet/freenet-core/discussions/811) | Mobile support scope |
 | [Incentive discussions #136](https://github.com/freenet/freenet-core/discussions/136), [#137](https://github.com/freenet/freenet-core/discussions/137) and [#893](https://github.com/freenet/freenet-core/discussions/893) | Open. Core intends to tie the resources a peer uses on others to a karma score |
-| Thin-role proposal issue | To be filed |
+| [Outbound-only light-client proposal #5917](https://github.com/freenet/freenet-core/issues/5917) | Open design proposal. Extend it with this plan's on-device verification, two serving peers, subscription delivery and iOS and Android carrier requirements |
 | [Whitepaper peers and ring section](https://github.com/freenet/paper-1/blob/bff15702759800a003ffbfce639fe859f57d966d/sections/03-primitives.tex) | Describes one peer role |
 
 ## Scope and trust boundary
 
-A thin peer opens terminal connections to full peers for its own reads, writes and subscriptions. Core verifies contracts, keeps subscribed state, runs delegates, signs and protects secrets on the phone. Serving full peers handle onward routing, fallback routing, hosting and subscription roots. Treat returned state as input for local verification.
+A thin peer opens terminal connections to full peers for its own reads, writes and subscriptions. On the phone, Core verifies contracts, keeps subscribed state, runs delegates and protects secrets. Serving full peers handle onward routing, hosting and subscription roots. The phone treats state it receives as input for local verification.
 
-Gateways keep the link of a peer that has not joined the ring ([#5656](https://github.com/freenet/freenet-core/pull/5656)). The thin-role implementation gives these links explicit retention and admission rules. Keep an admitted terminal connection while its authorized subscription demand or bounded idle lease remains active, including receive-only sessions. Define capacity and fairness for phones sharing a carrier address. The rules cover the request-based retention, per-address limits and transport-age limits in that gateway mechanism.
+Each thin phone keeps at least two serving peers for its contracts. If one serving peer withholds an update, the phone still receives it through the other.
+
+Gateways keep the link of a peer that has not joined the ring ([#5656](https://github.com/freenet/freenet-core/pull/5656)). The thin role gives these links explicit admission and retention rules:
+
+- Keep an admitted terminal connection while its subscriptions or a bounded idle lease remain active, including receive-only sessions.
+- Set capacity and fairness rules for phones that share one carrier address.
 
 | Core area | Required change |
 | --- | --- |
-| Connect protocol | Negotiate a versioned thin role and acknowledge it explicitly. Accept only thin-role connections for the release profile. |
-| Connection manager | Retain terminal edges and their negotiated role across completion, reconnect and network changes. |
-| Ring and serving-peer selection | Assign network routing/hosting to full peers. Bound serving connections, selection attempts and retries, with capacity and reachability errors. |
-| Subscription delivery | Deliver only authorized active demand down terminal edges. Define unsubscribe, resubscribe and cleanup after disconnect. |
-| Lifecycle and configuration | Persist the selected role, release downstream state and preserve thin behavior across startup and Wi-Fi/cellular changes. |
-| SDK and diagnostics | Expose negotiated role, serving state, traffic counters, exhausted budgets and actionable failure reasons. Add budget failures to the [diagnostics in 1.3 Single-application host](03-host.md#diagnostics). Detect offline and serving-peer loss from the OS network path monitored by [1.2 Embedded node and mobile SDK](02-sdk.md) and the serving connection's state. Test outages that leave Core's peer count unchanged ([finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-peer-count-stays-up-during-an-outage)). |
+| Connect protocol | Negotiate a versioned thin role and acknowledge it explicitly. Released builds accept only the thin role |
+| Connection manager | Keep terminal connections and their role across reconnects and network changes |
+| Serving-peer selection | Assign routing and hosting to full peers. Keep at least two serving peers per phone. Bound connection attempts and retries, with capacity and reachability errors |
+| Subscription delivery | Deliver only the phone's active subscriptions down terminal connections. Define unsubscribe, resubscribe and cleanup after a disconnect |
+| Lifecycle and configuration | Persist the role and keep thin behavior across startup and Wi-Fi or cellular changes |
+| SDK and diagnostics | Report the negotiated role, serving peers and failure reasons. Add them to the [diagnostics in 1.3 Single-application host](03-host.md#diagnostics). Detect offline and serving-peer loss from the OS network path watched by [1.2 Embedded node and mobile SDK](02-sdk.md) and from the serving connections. Test outages that leave Core's peer count unchanged ([finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-peer-count-stays-up-during-an-outage)) |
 
-An unsupported protocol or role fails visibly and retries within the configured budget while preserving the thin role. Exhausted attempts leave a visible disconnected state and retain local work. Only explicit development-fixture profiles may request a full-peer role.
+An unsupported protocol or role fails visibly and retries with bounded backoff, keeping the thin role. When the attempts run out, the app shows a disconnected state and keeps local work.
 
-Specify how thin nodes reach gateways and select replacement serving peers, including capacity limits and backoff. Test cleanup when peers disappear abruptly and deduplicate subscription demand after reconnect. Verify the client Unsubscribe capability with [1.2 Embedded node and mobile SDK](02-sdk.md) and prove that released demand stops consuming the cellular budget once the subscription lease ends, while other consumers in the app retain service.
+Test cleanup when peers disappear abruptly, and remove duplicate subscriptions after reconnect. Check the client Unsubscribe call with [1.2 Embedded node and mobile SDK](02-sdk.md). Delivery for a released subscription stops when its lease ends, while other screens keep theirs.
+
+## Traffic measurement
+
+Measure thin-peer traffic on iOS and Android with the [harness](https://github.com/glesage/freenet-appkit/tree/1988c5cbdfc5c1f88065382de2a4f86093948b6e/harness) `watch` scenario and Core's upload and download counters. Publish the results with the resolved transport and bandwidth settings from [Transport profile in 1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile). Keep both bandwidth caps unset for these measurements. Record node role and serving peers alongside the traffic counters.
+
+| Workload | What to record |
+| --- | --- |
+| Foreground idle | Upload and download per minute, including keepalives and subscription upkeep |
+| Active use | Upload and download for River's join, read and send sequence |
+| Reconnect and network change | Upload and download per reconnect, with a room state above 1 MiB. River's reconnect uses code-free GET subscriptions, deltas and fallback PUTs ([River PR #759](https://github.com/freenet/river/pull/759)); record each part |
+| Serving-peer loss | Upload and download across the loss and the switch to a replacement peer |
+
+Each message Bob sends today costs the whole room state, because Core forwards the full merged state ([#4072](https://github.com/freenet/freenet-core/pull/4072)).
 
 ## Upstream work and carrier evidence
 
-File the thin-role Core proposal in this plan. [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md) owns the independent cap-enforcement and client-delta proposals. Build the thin-peer protocol and serving-peer support alongside [1.2 Embedded node and mobile SDK](02-sdk.md).
+This plan develops the thin role through [Core's outbound-only light-client proposal #5917](https://github.com/freenet/freenet-core/issues/5917) and builds it with [1.2 Embedded node and mobile SDK](02-sdk.md).
 
-Define terminal-link renewal alongside the admission, retention and capacity rules in [Scope and trust boundary](#scope-and-trust-boundary), separately from unjoined transport safeguards. Run the same workload on iOS and Android with the selected serving-peer build. Cover the carrier cases in [Acceptance](#acceptance), capacity rejection, renewal and reconnect within the [Cellular budget contract in 1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#cellular-budget-contract).
-
-1. File the thin-role Core issue.
-2. Link the issue here and track negotiation, terminal edges, serving-peer selection, subscription delivery and carrier acceptance.
+1. Add this plan's requirements to #5917: on-device verification and delegates, at least two serving peers, negotiated terminal connections, receive-only subscriptions and iOS and Android carrier coverage.
+2. Agree peer discovery, admission, retention and resource accounting with Core's maintainers.
+3. Link the implementation and release that satisfy these requirements. Track negotiation, terminal connections, serving-peer selection, subscription delivery and carrier tests there.
 
 | Proposal decision | Requirements |
 | --- | --- |
-| Resource accounting | Define how thin peers repay serving full peers. Thin peers use serving capacity and route for no one ([#136](https://github.com/freenet/freenet-core/discussions/136), [#137](https://github.com/freenet/freenet-core/discussions/137) and [#893](https://github.com/freenet/freenet-core/discussions/893)). |
-| GET routing | Keep GET routing for subscribed contracts ([#4222](https://github.com/freenet/freenet-core/issues/4222)). Account for relay GETs that drop at the first hop without fallback ([#4229](https://github.com/freenet/freenet-core/issues/4229)). |
-| Hosting demand | Define how reads, PUTs and subscriptions count under demand-driven hosting ([#4642](https://github.com/freenet/freenet-core/issues/4642)). Hosts evict by subscriber count. Reads and PUTs count as demand, and every hop hosts within demand limits. |
-| Protocol overhead | Specify which summary and hosting exchanges thin peers skip ([#4965](https://github.com/freenet/freenet-core/issues/4965), [#5157](https://github.com/freenet/freenet-core/issues/5157)). |
+| Resource accounting | Define how thin peers repay serving full peers. Thin peers use serving capacity and route for no one ([#136](https://github.com/freenet/freenet-core/discussions/136), [#137](https://github.com/freenet/freenet-core/discussions/137) and [#893](https://github.com/freenet/freenet-core/discussions/893)) |
+| GET routing | Keep GET routing for subscribed contracts ([#4222](https://github.com/freenet/freenet-core/issues/4222)). Handle relay GETs that drop at the first hop without fallback ([#4229](https://github.com/freenet/freenet-core/issues/4229)) |
+| Hosting demand | Define how reads, PUTs and subscriptions count under demand-driven hosting ([#4642](https://github.com/freenet/freenet-core/issues/4642)) |
+| Protocol overhead | Name the summary and hosting exchanges that thin peers skip ([#4965](https://github.com/freenet/freenet-core/issues/4965), [#5157](https://github.com/freenet/freenet-core/issues/5157)) |
 
-These upstream changes lower every budget:
+These upstream changes reduce phone traffic:
 
 | Change | State |
 | --- | --- |
-| Compress every peer message with zstd ([#3336](https://github.com/freenet/freenet-core/issues/3336)) | Proposal filed 2026-09-29. Gate rollout on each peer's minimum version |
+| Compress every peer message with zstd ([#3336](https://github.com/freenet/freenet-core/issues/3336)) | Proposal filed 2026-09-29 |
 | Send a code hash first and the Wasm only when the receiver lacks it ([#5707](https://github.com/freenet/freenet-core/issues/5707)) | Open proposal |
-| [Send client UPDATEs as deltas in 1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#client-update-deltas) | Core issue to be filed |
+| Send client UPDATEs as deltas against the receiver's state summary ([#4072](https://github.com/freenet/freenet-core/pull/4072) left the delta format for later) | Core issue to be filed |
 | Cut summary and interest-sync traffic ([#5203](https://github.com/freenet/freenet-core/pull/5203), [#5109](https://github.com/freenet/freenet-core/pull/5109)) | Draft PRs under Core's bandwidth tracking issue [#5153](https://github.com/freenet/freenet-core/issues/5153) |
 
 ### Carrier evidence
 
-Prove that each supported carrier path works through direct transport or an implemented fallback. Core's direct transport is encrypted UDP with hole punching ([#2211](https://github.com/freenet/freenet-core/pull/2211)).
+Carrier transport problems are general to Freenet. Track them in Core's issues and file a new issue where none exists. This plan tests each supported carrier path on iOS and Android. The selected release profile uses encrypted UDP with hole punching ([#2211](https://github.com/freenet/freenet-core/pull/2211)) and `transport-quic: off`. Core 0.2.152 also maps `prefer` to `shadow`, with application traffic on UDP ([QUIC modes](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/transport/quic.rs#L82)). UDP reachability remains a carrier acceptance requirement. A transport-profile change repeats the iOS and Android carrier, serving-peer-loss, traffic, memory and lifecycle tests.
 
 | Source | State | What it means for phones |
 | --- | --- | --- |
-| [CGNAT discussion #5051](https://github.com/freenet/freenet-core/discussions/5051) | Open | A phone-hotspot user reports that the carrier blocks UDP. The question on relay fallback has no maintainer answer |
+| [CGNAT discussion #5051](https://github.com/freenet/freenet-core/discussions/5051) | Open | A phone-hotspot user reports that the carrier blocks UDP |
 | [Relay fallback #2925](https://github.com/freenet/freenet-core/issues/2925) | Closed without an implementation | No relay exists for carrier paths that block UDP |
 | [SOCKS5 #2409](https://github.com/freenet/freenet-core/issues/2409) | Open | A possible path where UDP is blocked |
-| [NAT'd node streams at about 1% of uplink #5643](https://github.com/freenet/freenet-core/issues/5643) | Open | The reported Core 0.2.135 test fetched a NAT-published 1 MiB state in 77 seconds and failed fetches of 2 and 4 MiB states; a public-node-published 4 MiB state fetched in 20 seconds. Follow-ups report a failed 1 MiB fetch and transient stalls on smaller states under Core 0.2.138. The serving peer/path and retries affect results. Measure cold fetch on the selected Core build and supported carrier paths. The reconnect workload includes a room state above 1 MiB |
-| [Dual-stack IPv6 #3648](https://github.com/freenet/freenet-core/pull/3648), [IPv6 on gateways #3666](https://github.com/freenet/freenet-core/issues/3666) | #3648 merged, #3666 open | Until #3666 lands, IPv6-only carriers reach the IPv4 gateways through NAT64. Track #3666 |
+| [NAT'd node streams at about 1% of uplink #5643](https://github.com/freenet/freenet-core/issues/5643) | Open | Fetches of NAT-published states of 1 to 4 MiB stall or fail. Measure cold fetch on the selected Core build, including a room state above 1 MiB |
+| [Dual-stack IPv6 #3648](https://github.com/freenet/freenet-core/pull/3648), [IPv6 on gateways #3666](https://github.com/freenet/freenet-core/issues/3666) | #3648 merged, #3666 open | IPv6-only carriers reach the IPv4 gateways through NAT64 until #3666 lands |
 | [1200-byte packets #3619](https://github.com/freenet/freenet-core/pull/3619) | Merged | Avoids IP fragmentation on carrier NAT paths |
-| [Stream-listener wakeups #5751](https://github.com/freenet/freenet-core/pull/5751) | Merged 2026-10-03 | Keeps the wakeup when a re-armed stream listener fires. Check the fix in the Core build and run lossy-link regression cases |
-| [Duplicate-packet acknowledgements and receive timers #5803](https://github.com/freenet/freenet-core/pull/5803) | Shipped in [Core 0.2.142](https://github.com/freenet/freenet-core/releases/tag/v0.2.142) | Re-acknowledges duplicate packets and preserves receive timers across cancellation. Test dropped acknowledgements, duplicate packets and interrupted receives on the build |
+| [Stream-listener wakeups #5751](https://github.com/freenet/freenet-core/pull/5751) | Merged 2026-10-03 | Run lossy-link regression cases on the build |
+| [Duplicate-packet acknowledgements #5803](https://github.com/freenet/freenet-core/pull/5803) | Shipped in [Core 0.2.142](https://github.com/freenet/freenet-core/releases/tag/v0.2.142) | Test dropped acknowledgements, duplicate packets and interrupted receives |
 | [Wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951), [state after suspend #4153](https://github.com/freenet/freenet-core/issues/4153) | Open | Resume regression cases |
 
-Run the carrier-NAT and serving-peer-loss cases on freenet-test-network's Docker NAT simulation as well as on carriers. Check its stdlib version against Core first. Use builds and device runs to establish release support. Keep issue status and discussion notes as research evidence.
+Run the carrier-NAT and serving-peer-loss cases on freenet-test-network's Docker NAT simulation as well as on carriers. Check its stdlib version against Core first.
 
 ## Acceptance
 
-- Upstream thin-role support is implemented in the Core build.
-- On real iOS and Android devices, Bob joins "Skate club", reads it and sends a message through terminal connections. Core verifies state and runs River's chat delegate on the phone.
-- Traces show application traffic and bounded protocol overhead on the phone. Serving full peers handle onward routing and network hosting.
-- On real iOS and Android devices and the isolated NAT network, keep receive-only subscriptions active beyond the transient timeout and keep a session active for more than one hour. More than two thin peers behind one carrier address retain admitted demand within the serving peer's declared capacity. Revoked or disconnected demand is reclaimed within the terminal-role lease.
-- Unsupported roles, incompatible versions and exhausted serving capacity produce visible failures. Retry, restart, resume and network-change tests preserve the thin role.
-- Malformed state, wrong contract identities and forged updates fail on-device validation. Serving peers receive only the application's authorized network payloads, while signing keys stay in the on-device protected boundary.
-- Loss of a serving peer keeps sent messages in the phone's copy of the room, refreshes state and sends them through the replacement serving peer. Repeated losses exhaust bounded attempts visibly.
-- Integration with [1.11 Cellular data and resource budgets](11-cellular-data-and-resource-budgets.md#acceptance) confirms that cap teardown preserves the negotiated thin role and stops downstream delivery.
+- The Core build includes upstream thin-role support agreed through [#5917](https://github.com/freenet/freenet-core/issues/5917), with every requirement in [Scope and trust boundary](#scope-and-trust-boundary) covered by the linked implementation and tests.
+- On real iOS and Android phones, Bob joins "Skate club", reads it and sends a message through terminal connections. Core verifies state and runs River's chat delegate on the phone.
+- Traces show only the phone's own traffic and bounded protocol overhead. Serving full peers handle onward routing and hosting.
+- Each phone keeps at least two serving peers. When one serving peer withholds Alice's update, Bob's phone still receives it through the other.
+- On real iOS and Android phones and the isolated NAT network, receive-only subscriptions stay active past the transient timeout, and a session stays active for more than one hour. More than two thin peers behind one carrier address keep their subscriptions within the serving peer's capacity. Disconnected subscriptions are cleaned up when their lease ends.
+- Unsupported roles, incompatible versions and full serving capacity produce visible failures. Retry, restart, resume and network-change tests keep the thin role.
+- Malformed state, wrong contract identities and forged updates fail on-device checks. Serving peers receive only River's network payloads. Signing keys stay on the phone.
+- When a serving peer drops, sent messages stay in the phone's copy of the room, and the phone resends them through a replacement serving peer. Repeated losses end in a visible disconnected state.
+- Idle, active, reconnect and serving-peer-loss traffic is measured and published for iOS and Android.

@@ -4,98 +4,107 @@
 
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
-| [evy](https://github.com/EVY-Platform/evy) | Modified | Local EVY Developer in `web/`, draft import/export, application document validation, publisher journal in `evyctl`, and matching iOS and Android preview builds |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Publisher's node and application UI contract |
-| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Rust client for publication and preview |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Local EVY Developer in `web/` with draft import and export. Document validation shared with `evyctl`. `evyctl ui get` and `evyctl ui preview`. The publishing workflow in `.github/workflows/publish.yml` and preview publishing in `.github/workflows/ui_preview.yml` |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | `fdev execute` and the EVY backend node |
+| [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Contract interface |
 
 ## Purpose
 
-Use EVY Developer as a local editor for the complete EVY application document. The author edits Home, Hello and Marketplace flows in one workspace, exports a draft to `evyctl`, previews it on iOS and Android, and publishes a signed EVY application version.
+This plan defines how EVY authors change the UI and how EVY publishes every signed contract state. It builds on the `evyctl` routine from [Publishing a new greeting in 2.1 Hello EVY world](01-hello-evy-world.md#publishing-a-new-greeting) and the write-once storage from [2.2 EVY UI contracts and publishing](02-ui-contracts.md#write-once-storage).
 
-Keep the React builder's [canvas](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/web/app/components/CanvasViewport.tsx), [rows panel](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/web/app/components/RowsPanel.tsx) and [configuration panel](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/web/app/components/ConfigurationPanel.tsx). Run the editor from `web/` on the author's computer. Author workspaces hold contributor keys and drafts. The authorized publisher workspace holds publication authority, its node and the release journal.
+The example:
+
+1. Carol, an EVY author, changes the label of Home's "Hello" button to "Say hello" in the local EVY Developer.
+2. She opens a pull request. CI publishes a preview. She checks it on her iPhone and Bob checks it on his Android phone.
+3. A maintainer merges the pull request. `publish.yml` publishes the next UI version.
+4. Alice's and Bob's running EVY apps show "Say hello" within 30 seconds.
 
 ```mermaid
 flowchart LR
-  Editor[Local EVY Developer] --> Draft[Complete application draft file]
-  Draft --> CLI[evyctl validates, reserves and signs]
-  CLI --> Preview[Preview EVY UI contract]
+  Editor[Local EVY Developer] --> Draft[Draft file]
+  Draft --> PR[Pull request]
+  PR --> Preview[Preview contract]
   Preview --> Test[EVY test builds on iOS and Android]
-  CLI --> Archive[Application archive and receipt]
-  Archive --> Live[One production EVY UI contract]
-  Live --> App[EVY native readers on iOS and Android]
+  PR -->|merge| Job[publish.yml runs evyctl ui publish]
+  Job --> Store[Write-once storage]
+  Store --> Live[ui.evy]
+  Live --> App[EVY readers on iOS and Android]
 ```
 
 ## Local editor and draft files
 
-Load a complete application document or a local feature source tree assembled into that document. The editor opens a flow/page/row and preserves the selected location in its local URL. Draft persistence records the base application key, version and digest together with edits.
+Keep the React builder's [canvas](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/web/app/components/CanvasViewport.tsx), [rows panel](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/web/app/components/RowsPanel.tsx) and [configuration panel](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/web/app/components/ConfigurationPanel.tsx). Authors run the editor from `web/` on their own computer.
 
-Use `assembleFlatFlows` to rebuild nested flows and their submits. Save drafts in browser storage with explicit file export/import. The exported file is the durable handoff to the publisher tool. A newer base version is imported as a complete signed document; the author chooses to rebase or retain the current draft and base identity.
+1. Load the live document with `evyctl ui get`, which reads `ui.evy` with `fdev execute get` and verifies it, or load `freenet/ui/evy.json` from git.
+2. Pick Home, Hello or another flow from the flow tree. The editor keeps the selected flow, page and row in its local URL.
+3. Edit. The editor saves the draft in browser storage, with its base UI version and document hash.
+4. Export the complete draft to `freenet/ui/evy.json`, or to the feature source files that `evyctl` assembles into it.
 
-Validation uses `scripts/validate-ui-document.ts` and the reader schemas from [2.2 EVY UI contracts and publishing](02-ui-contracts.md#reader-compatibility). Editor and CLI show the same JSON-path errors for rows, actions, internal routes, resource adapters and size.
+`assembleFlatFlows` rebuilds nested flows and their submits. When the live document is newer than the draft's base, the author either rebases the draft or keeps it on its base.
 
-## Publisher workspace
-
-`evyctl` uses the EVY publisher key from [2.1 Hello EVY world](01-hello-evy-world.md#the-evy-publisher-key). Store it in the author's protected local key storage and use explicit signing commands. The editor exchanges document files and signed public results with the CLI.
-
-A workspace has one application version allocator and publication journal. The journal stores the application key, base tuple, reserved version, exact signed bytes, digest, archive receipt, submission state and readback evidence. Write and sync the journal before sending bytes. Serialize local jobs and reconcile network state before reserving another application version. Protect local key files, journal and draft directories according to their contents and include them in the publisher's recovery procedure.
-
-## Workspace protection and recovery
-
-| Workspace | Credentials and files | Recovery |
-| --- | --- | --- |
-| Contributor | Contributor signing key, drafts and base release identity; protected OS credential store or encrypted key file. Private draft directories use owner-only access. | Encrypted credential/draft backup; restore key or use the contributor identity-recovery protocol. Proposal mode signs contributor statements. |
-| Publisher | Publisher key, exact signed bytes, durable reservation journal, archive receipts and confirmations; one workspace per publication stream. | Encrypted key/journal/prepared-state backup with tested recovery to the same application identity. Transfer the entire workspace when operators move machines. |
-
-Local and CI publication jobs share an exclusive stream lock and one authoritative journal. Reconcile pending attempts and verified network state before reservation after a workspace move. Signer access is explicit; editor files and public receipts carry their declared data. On iOS and Android, preview tests verify separate test identities and permission scopes.
-
-## Opening the application
-
-1. Export the live signed EVY application document through `evyctl ui get` or load its saved verified copy.
-2. Import it into the local editor and select Home, Hello or Marketplace from its flow tree.
-3. Edit a draft while retaining its base application release identity.
-4. Export the complete draft for validation, preview or publication.
-
-A change to the guestbook button inside Hello becomes a new EVY application version containing the updated Hello flow and the retained Home/Marketplace flows.
+Validation uses `scripts/validate-ui-document.ts` and the reader schemas from [Reader compatibility in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#reader-compatibility). The editor and `evyctl` show the same JSON-path errors for rows, actions and routes.
 
 ## Previewing on a phone
 
-Create a preview UI contract with a dedicated preview verifying key and UTF-8 `evy` parameters. It runs the production UI contract code and the complete application document schema. Its identity differs from the production application key.
+A preview contract runs the production UI contract code with different parameters: a preview root key followed by UTF-8 `evy`. The preview root key and its certified preview publishing key are test keys in the GitHub environment `preview`.
 
-`evyctl ui preview` validates and signs the complete draft, publishes it under the preview key and exports a QR descriptor containing the contract key, publisher key and schema/reader requirements. Matching iOS and Android preview builds have separate application IDs, node stores and keys. Their explicit Scan preview screen admits the descriptor and checks the supported UI code and parameter identity before reading it.
-
-The preview readers subscribe to that complete application document. Preview resources use declared test keys, test contracts and test payment endpoints. Production builds use the production application identity.
+- `ui_preview.yml` runs on each pull request that changes `freenet/ui/`. It runs `evyctl ui preview`, which validates and signs the draft, then publishes it with the same routine. Preview documents skip write-once storage.
+- The job posts a QR code on the pull request. The QR holds the preview contract key, the preview root key and the schema and reader versions.
+- The `test` builds from [Builds from GitHub in 2.3 Native SDUI readers](03-readers.md#builds-from-github) have a "Scan preview" screen. They check the contract code hash and parameters before reading.
+- Preview documents use test keys and test contracts only. `store` builds carry no preview contract key and never read a preview.
 
 ## Publishing the application
 
-| Step | Publisher tool behavior |
-| --- | --- |
-| Validate | Validate the complete document against the selected reader/schema version, internal routes, resource context, policy and 512 KiB cap. |
-| Reserve | Reconcile the live application tuple and journal, then durably reserve one higher application version. |
-| Sign and save | Canonicalize and sign with the production publisher key. Atomically save the exact bytes, version and digest before submission. |
-| Archive | For every payment-capable or attributed release, archive the exact signed policy first, then the complete signed document and verify the durable receipt from [2.13 Release archive and policy evidence](13-release-archive-and-policy-evidence.md#archiving-before-publication). |
-| Submit | PUT the initial state or UPDATE the one production EVY UI contract with the saved bytes. |
-| Read back | Fetch through an independent node and verify identity, signature and exact bytes. |
-| Confirm | Save readback evidence and issue and durably journal the signed publication confirmation required by release evidence. |
+Every EVY-signed contract state goes through one routine: `evyctl` signs and saves the bytes in its outbox, and `fdev` sends and reads back. UI documents also pass through write-once storage before the send.
 
-A storage failure keeps the operation recoverable before dispatch. An archive outage keeps the signed document pending. An uncertain submission retries the saved bytes after readback. A higher competing tuple stops replay and preserves both documents as evidence. A reserved version names one immutable signed document in the local journal.
+| Step | What happens for a UI version |
+| --- | --- |
+| Validate | `evyctl ui publish` validates the complete document |
+| Version | `fdev execute get` reads `ui.evy`. `evyctl` picks one above the highest version |
+| Sign | The publishing key signs under `evy-ui/1` |
+| Store | `evyctl` saves the exact bytes in git and in the object-locked bucket |
+| Send | `fdev execute update --as-state` through the EVY backend node |
+| Read back | `fdev execute get` through a second node, compared with the saved bytes |
+
+| Path | Where | Key |
+| --- | --- | --- |
+| Normal | `publish.yml` in GitHub Actions. It runs when a merge to `main` changes `freenet/ui/`, and when a maintainer starts it for another state such as the hello greeting | `ci-1`, from the GitHub environment `publishing`, which needs a maintainer's approval |
+| Emergency | The publisher's laptop, with the same `evyctl` commands | `laptop-1`, from the OS keychain |
+
+- `publish.yml` uses one concurrency group, so EVY's own runs never race for a version.
+- After a crash, the next run reads back every open outbox entry before it signs anything new.
+- When another state wins at the same version, the contract keeps the higher hash. `evyctl` reports the winner and the run fails.
+
+## Publishing keys
+
+- `ci-1` lives only in the GitHub environment `publishing`. `laptop-1` lives only in the publisher's OS keychain.
+- Neither key has a backup. On loss or leak, the UI root key revokes it and certifies a replacement, as in [EVY signing keys in 2.1 Hello EVY world](01-hello-evy-world.md#evy-signing-keys).
+- To undo a bad version, the UI root key revokes the key that signed it, then the publisher publishes the fix with another key.
+
+## Contributor keys
+
+- Each author, such as Carol, has one Ed25519 contributor key in her OS keychain on her own computer.
+- `evyctl` signs every contributor operation with it. The local EVY Developer never holds a key; it exchanges draft files with `evyctl`.
+- The key has no backup kept by EVY. Carol backs it up herself.
 
 ## Backend requests
 
-The publisher CLI calls the policy-declared HTTPS archive, contributor and payout endpoints directly. It verifies the EVY policy signature, endpoint audience, operation identity and signed response. Sign-in uses a fresh service challenge, exact audience and expiry, consumed once by the receiving backend.
+`evyctl` calls EVY's backend over HTTPS for contributor and payout operations.
 
-The archive receipt covers the full application UI identity, version, digest and policy reference. Save and verify it before Freenet submission. Interrupted requests resume from the journal using the same signed operation; sign-in retries obtain a fresh authentication challenge.
-
-Contributor keys are protected local author credentials. Contributor statements, proposals, reviews and estimates are signed in that workspace and sent through the protocols in [2.8 Attribution](08-attribution.md). Payout identity follows [2.9 Remuneration and payouts](09-remuneration.md). Credential recovery uses the author's own key backup and the relevant backend's identity-recovery procedure.
+| Rule | What `evyctl` does |
+| --- | --- |
+| Endpoint | Calls only endpoints listed in EVY's signed configuration, and checks the signature first |
+| Sign-in | Gets a fresh challenge, signs it with the contributor key for that exact endpoint, with an expiry. The backend accepts each challenge once |
+| Operations | Signs each operation with its own ID. A retry after a crash reuses the same signed operation |
+| Replies | Checks the backend's signature on every reply before showing it |
 
 ## Acceptance
 
-- The local editor imports and exports complete EVY application documents and preserves draft/base identity across reload and file round-trip.
-- Editing one feature publishes a new complete EVY version with all internal routes and other flows intact.
-- Publisher private keys remain in protected local credential storage. Document and journal outputs contain only their declared signed public material.
-- Editor and CLI validation return matching paths for malformed rows, internal routes, adapters and policies.
-- On iOS and Android, preview builds verify the explicit test application descriptor and receive later complete preview versions. Production builds use the production identity and resource endpoints.
-- Interrupt before signing, after journal persistence, archive receipt, submission and readback. Resume with the saved version/bytes and obtain one verified application publication.
-- Concurrent jobs serialize version reservation. A higher network winner stops replay; an exact saved-byte readback completes the operation.
-- Archive failure, invalid receipt, altered audience/digest and expired sign-in challenge preserve the journal and fail the affected operation.
-- On iOS and Android, both running production readers receive the published guestbook-button change in the complete EVY document.
-- Local editor integration fixtures cover import, edit, export and validation. Publisher fixtures use the application contract and an independent readback node.
+- The local editor imports and exports complete UI documents and keeps the draft's base version and hash across reload and a file round trip.
+- Carol's "Say hello" change publishes as one new complete UI version with every route and other flow intact. On iOS and Android, both running release builds show "Say hello" within 30 seconds.
+- Editor and `evyctl` validation return matching JSON paths for malformed rows, routes and actions.
+- On iOS and Android, test builds scan the preview QR, verify the preview contract and receive later preview versions. Store builds refuse a preview QR.
+- `publish.yml` is stopped after signing, after storage and after the send. Each next run ends with one published document whose bytes match the saved copy.
+- Two `publish.yml` runs started together run one after the other and publish consecutive versions.
+- A publication from the laptop with `laptop-1` passes the same readback and leaves the same write-once copies.
+- After the UI root key revokes `ci-1` and certifies `ci-2`, `publish.yml` publishes with `ci-2` and no app update.

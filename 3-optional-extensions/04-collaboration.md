@@ -33,9 +33,11 @@ Work starts when contributors ask to edit a flow together or frequently submit o
 
 The session produces the complete application draft, the signed proposal and contributor-share format from [Proposing a UI change in 2.8 Attribution](../2-evy-on-freenet/08-attribution.md#proposing-a-ui-change). Its contributor shares total 10,000. This plan defines how both contributors confirm the final document and their shares, and how attribution records those confirmations before review and publication.
 
+The session contract passes [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage). Fixtures include concurrent overlapping edits, repeated patches, deletions and near-capacity session state. Keep per-property execution counts, combined-input size budgets and explicit reconciliation triples with the release evidence.
+
 ## Sources
 
-- [freenet-core #5320](https://github.com/freenet/freenet-core/issues/5320): Merge laws for the session contract. EVY runs `fdev verify-merge` on the session contract, as River does on its room contract in [Conflicting changes in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#conflicting-changes)
+- [freenet-core #5320](https://github.com/freenet/freenet-core/issues/5320): Merge laws for the session contract. The contract passes [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage), with the concurrent-change scenarios from [Conflicting changes in 1.6 Application protocols, data and operations](../1-freenet-mobile-appkit/06-data-and-operations.md#conflicting-changes)
 - [freenet-wiki](https://github.com/freenet/freenet-wiki): A wiki whose contract holds page revisions and patches. A signing delegate signs each patch, and subscriptions deliver live updates to every editor
 - [Ephemeral datagram API #4959](https://github.com/freenet/freenet-core/discussions/4959): A proposed real-time transport in Core to assess if subscription latency exceeds the live canvas's needs
 - [freenet-core #5153](https://github.com/freenet/freenet-core/issues/5153): How Core measures traffic

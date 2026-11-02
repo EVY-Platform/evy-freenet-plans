@@ -19,7 +19,7 @@ Freenet apps use the [Ghostkeys delegate](https://github.com/freenet/ghostkeys#i
 3. It returns a [signature over the message and the caller's identity](https://github.com/freenet/ghostkeys#scoped-signatures), with Bob's ghost key certificate.
 4. The certificate proves a card donation to Freenet through Stripe and records its amount and date ([D1189](https://github.com/freenet/freenet-core/discussions/1189)).
 
-Use verified completed-purchase receipts to define buyer eligibility for complaints under [2.12 Listings and purchases](../2-evy-on-freenet/12-listings-and-purchases.md#the-purchase-contract). The reputation design selects disclosure, consent and seller-standing rules before implementation.
+Complaints about a buyer or seller use the report and moderation flow in [2.7 EVY Marketplace](../2-evy-on-freenet/07-marketplace.md). This plan would add proofs of completed purchases; it chooses disclosure, consent and seller-standing rules before implementation.
 
 ## When this becomes a plan
 
@@ -29,14 +29,14 @@ Work starts when EVY Marketplace needs evidence of completed purchases or an unl
 
 | Claim | Evidence and privacy requirements |
 | --- | --- |
-| Bob completed 5 pickups in the last 90 days while keeping sellers, items and dates private | Each completed purchase has statuses and a payment-service-signed payment record in a [purchase contract from 2.12 Listings and purchases](../2-evy-on-freenet/12-listings-and-purchases.md#the-purchase-contract). The proof must verify those purchases and hide their details. A ghost key signature proves key possession. Evaluate anonymous receipt proofs using [Freenet reputation research #882](https://github.com/freenet/freenet-core/discussions/882) and define commitments that hide purchase details |
+| Bob completed 5 pickups in the last 90 days while keeping sellers, items and dates private | Each completed purchase has statuses and a payment-service-signed payment record in a [purchase contract from 2.7 EVY Marketplace](../2-evy-on-freenet/07-marketplace.md#the-purchase-contract). The proof must verify those purchases and hide their details. A ghost key signature proves key possession. Evaluate anonymous receipt proofs using [Freenet reputation research #882](https://github.com/freenet/freenet-core/discussions/882) and define commitments that hide purchase details |
 | Bob holds a ghost key while keeping its identity private | The proof must hide the certificate. Ghost key signatures carry the same certificate, which lets services link requests. An "always allow" grant lasts indefinitely; expiry and revocation controls remain open work ([ghostkeys#49](https://github.com/freenet/ghostkeys/issues/49)) |
 
 Zero-knowledge proofs can take seconds to minutes to build ([D882](https://github.com/freenet/freenet-core/discussions/882)). This plan selects a proof system and measures it on both iOS and Android. The iOS test device is the iPhone 13 mini; the Android test devices follow [1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#device-limits).
 
 The EVY delegate must build each proof within the mobile Wasm limits validated for iOS and Android under Pulley ([Running Wasm in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#running-wasm)). Request limits must prevent a service from narrowing down Bob's count through repeated threshold requests.
 
-A scoped signature identifies its caller by a web app contract or delegate key. This plan defines requests from the native EVY app through the EVY delegate. Before implementation, the EVY identity lead selects embedded proof support within the EVY delegate or an explicit external Ghostkeys delegate boundary. The decision records exact code admission, authenticated caller/reply routing, consent, privacy/linkability, secret ownership, backup/migration/Forget and iOS/Android conformance. An external path adopts required delegate-to-delegate replies only after a fixture demonstrates the missing capability; [RFC #5587](https://github.com/freenet/freenet-core/issues/5587) is research evidence.
+A scoped signature identifies its caller by a web app contract or delegate key. This plan defines requests from the native EVY app through the EVY delegate. Before implementation, this plan selects embedded proof support within the EVY delegate or an explicit external Ghostkeys delegate boundary. The decision records exact code admission, authenticated caller/reply routing, consent, privacy/linkability, secret ownership, backup/migration/Forget and iOS/Android conformance. An external path adopts required delegate-to-delegate replies only after a fixture demonstrates the missing capability; [RFC #5587](https://github.com/freenet/freenet-core/issues/5587) is research evidence.
 
 ## Sources
 

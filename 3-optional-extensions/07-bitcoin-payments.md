@@ -1,16 +1,29 @@
 # 3.7 Bitcoin payments
 
+## Repositories
+
+| Repository | Role | Work in this plan |
+| --- | --- | --- |
+| [evy](https://github.com/EVY-Platform/evy) | Modified | Bitcoin payment option in `api/src/modules/payment` and in the iOS and Android readers |
+| [freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) | Used | SPV payment evidence that peers can check |
+
 ## Purpose
 
-Research Bitcoin payments for EVY physical-goods purchases. Owner: EVY payments lead.
+This plan is an idea note for Bitcoin payments in EVY physical-goods purchases, such as Bob paying Alice for her 70-dollar skateboard.
 
 ## When this becomes a plan
 
-Define custody, trusted bridges, confirmations, refunds and contributor-fee handling. Verifiable payment evidence gives peers a defined way to establish settlement and respond to chain reorganizations. Release requires the evidence model and matching iOS and Android payment/recovery fixtures.
+Work starts when buyers or sellers ask to pay with Bitcoin and EVY picks a custody and payment-evidence model.
 
-Bitcoin has a separate start decision: buyers or sellers request it, and EVY selects a supported custody and payment-evidence model. Its implementation can proceed independently of saved cards.
+[freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) publishes SPV payment evidence for peers to check. Compare its proof and bridge authority with the purchase evidence in [The purchase contract in 2.7 EVY Marketplace](../2-evy-on-freenet/07-marketplace.md#the-purchase-contract). The plan must then define:
 
-[freenet-bitcoin](https://github.com/freenet/freenet-bitcoin) publishes SPV payment evidence for peers to check. Evaluate its proof/bridge authority against the EVY purchase evidence model in [2.12 Listings and purchases](../2-evy-on-freenet/12-listings-and-purchases.md). Before this becomes implementation work, define real-chain anchoring, trusted bridges, confirmation and reorganization handling, refund behavior, and how a 70-dollar purchase supplies the 0.70-dollar contributor fee. Add matching iOS and Android payment and recovery acceptance cases to that implementation plan.
+- custody and trusted bridges
+- anchoring to the real chain
+- confirmations and chain reorganizations
+- refunds
+- how a 70-dollar purchase supplies the 0.70-dollar contributor fee
+
+Release needs matching iOS and Android payment and recovery tests.
 
 ## Sources
 
