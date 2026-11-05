@@ -1,3 +1,5 @@
+_The following plans describe one option for building native iOS & Android apps for freenet. MVP uses webviews, V1 uses native code (optionally with an SDUI system). Electron and GPUI were considered but the approach does not fit the EVY model of SDUI well._
+
 # EVY + Freenet <3
 
 ## EVY's vision
@@ -99,46 +101,6 @@ Both milestones use the release evidence owned by [1.9 Testing and release](1-fr
 | NAT harness dependencies | Each linked harness binary passes [Test-network dependencies in 1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#test-network-dependencies), including its stdlib and linker checks ([Core #5950](https://github.com/freenet/freenet-core/issues/5950)) |
 | Mobile release profile | Exact iOS and Android artifacts record effective runtime, transport and bandwidth settings under [1.1 Mobile feasibility and supported profiles](1-freenet-mobile-appkit/01-feasibility.md#release-profile-evidence) |
 
-## Shared conventions
-
-### Example UI versions
-
-Plans use these EVY UI versions in their examples.
-
-| UI version | Contents | Plan |
-| --- | --- | --- |
-| 1 | Home and Hello, static pages | 2.2 EVY UI contracts and publishing |
-| 2 | Hello binds the greeting through `signed-value/1` | 2.4 SDUI data and actions |
-| 3 | Marketplace test item | 2.7 EVY Marketplace |
-| 4 | Marketplace flows and Home search | 2.7 EVY Marketplace |
-| 5 | Carol's accepted Marketplace change and the contribution snapshot | 2.8 Attribution |
-| 6 | Reader-upgrade fixture with a new reader generation | 2.10 Testing and release |
-
-Financial policy 1 starts payments in 2.6 Payments. Policy 2 adds attribution in 2.8 Attribution. Alice sells her skateboard to Bob under UI version 4 and policy 1: Bob pays about 71.48 dollars, Alice receives 69.30 and contributors share 0.70.
-
-### Names
-
-| Concept | Name |
-| --- | --- |
-| River's signed website release | Bundle: the website container holding `index.html`, `app_definition.json` and Wasm files |
-| EVY UI document format and signing domain | `evy-ui/1` |
-| Internal EVY feature | `feature`, for example `feature: "marketplace"`. Pull request trailer `EVY-Feature:` |
-| EVY application namespace | `service: "evy"`, only in the UI envelope |
-| EVY signed record format | `signed-register/1` |
-| Save exact bytes, send, read back, resend after a crash | Outbox, one library defined in 2.1 Hello EVY world |
-| The payment module's Marketplace admission and reservation role | Listing authority |
-
-### People
-
-Plans own their rules. People who hold keys or roles are named here once.
-
-| Role | Plans | Person |
-| --- | --- | --- |
-| River publisher key holder | 1.4 Application bundles | To be named |
-| EVY UI root and payment root key holders | 2.1 Hello EVY world | To be named |
-| Marketplace moderators | 2.7 EVY Marketplace | To be named |
-| Backend operators | 2.12 Backend operations and recovery | To be named |
-
 ## Decision gates
 
 | Type | Meaning |
@@ -150,7 +112,7 @@ Plans own their rules. People who hold keys or roles are named here once.
 | Today | Type | Proposal |
 | --- | --- | --- |
 | [Core](https://github.com/freenet/freenet-core) runs a node and provides client APIs for contract operations. | New | Add `crates/mobile` with node lifecycle, WebView host support and Swift bindings for iOS and Kotlin bindings for Android. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#sdk-interface-and-packages) |
-| [Core](https://github.com/freenet/freenet-core) treats every loopback connection as local. | **Change** | Session admission upstream ([#5264](https://github.com/freenet/freenet-core/issues/5264)), so other apps on the phone cannot reach River's node. Public release waits for it. [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#freenet-issues-being-worked-on-that-are-required) |
+| [Core](https://github.com/freenet/freenet-core) treats every loopback connection as local. | **Change** | Session admission upstream ([#5264](https://github.com/freenet/freenet-core/issues/5264)), so other apps on the phone cannot reach River's node. Public release waits for it. [1.3 Single-application host](1-freenet-mobile-appkit/03-host.md#core-dependencies) |
 | [Core](https://github.com/freenet/freenet-core) monitors node background tasks. | **Change** | Complete task cancellation and teardown under [#6048](https://github.com/freenet/freenet-core/issues/6048), then verify repeated in-process lifecycles on iOS and Android. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#start-stop-and-reconnect) |
 | [Core](https://github.com/freenet/freenet-core) resolves gateway hostnames during node startup and returns `PeerNotJoined` before joining. | **Change** | Resolve gateways in the join loop and serve stored contracts and delegate storage before the first join, so Alice opens "Skate club" offline. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#offline-startup) |
 | [Core](https://github.com/freenet/freenet-core) runs Wasm with configured reservations, executors and Store replacement limits. | Release profile | Use the measured fixed-reservation profile for the first iOS and Android release, with Android on arm64-v8a and x86_64. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#running-wasm) |
