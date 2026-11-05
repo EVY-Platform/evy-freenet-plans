@@ -95,7 +95,7 @@ Provide these materials for River test builds on iOS and Android:
 - A River WebView starter, with Swift and Kotlin examples that start, stop and report on the node
 - The supported-version matrix and dependencies
 - iOS and Android setup, build and distribution instructions
-- Diagnostic export and the release checklist
+- Support report export instructions and the release checklist
 
 ## Store requirements
 
@@ -152,7 +152,7 @@ Run every release test on the distributed iOS and Android builds, with the phone
 | Merge-law coverage | The [merge-law coverage gate](#merge-law-coverage) passes for every declared contract with the saved reports and boundary fixtures |
 | Store checks | Every [store requirement](#store-requirements) and [store build check](#store-build-checks) holds |
 | Core version | The [Core version rules](#core-version-and-the-network) hold for both builds. A test peer that requires a newer Core gives "update the app" on iOS and Android |
-| Diagnostics | Reports show versions, node role, lifecycle state, observation source and pending-message status, with [host redaction in 1.3 Single-application host](03-host.md#diagnostics) |
+| Support reports | On iOS and Android, export from River's settings after an offline start, serving-peer loss and a denied notification permission, and from the host's recovery screen after a failed node start. The exported files pass the allowed-field, status and private-data checks in [Support reports in 1.3 Single-application host](03-host.md#support-reports) |
 
 ## Acceptance
 

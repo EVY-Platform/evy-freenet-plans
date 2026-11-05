@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | iOS and Android WebView host, bridge script and device adapters |
 | [freenet-core](https://github.com/freenet/freenet-core) | Used | Shell page, loopback WebSocket authentication and session admission ([#5264](https://github.com/freenet/freenet-core/issues/5264)) |
-| [river](https://github.com/freenet/river) | Used | The hosted app |
+| [river](https://github.com/freenet/river) | Modified | The hosted app; add the support report settings action and supply pending-message counts |
 
 ## Purpose
 
@@ -21,7 +21,7 @@ Each installation owns its embedded node, node store, encryption key and host re
 | Part | What it does |
 | --- | --- |
 | Host | Supplies storage paths, starts and stops the node, owns River's session and enforces device permissions |
-| Native screens | Show permission and recovery screens |
+| Native screens | Show permission and recovery screens and support reports for review |
 | River | Owns its UI, its room subscriptions and its chat delegate |
 | Core | Verifies contract state, authenticates client connections and runs delegates |
 | Chat delegate | Checks the caller before reading secrets, signing or decrypting |
@@ -80,22 +80,23 @@ The WebView keys web storage by origin. The origin includes the host name and th
 
 River's frame posts `__freenet_shell__` messages to Core's shell for anything its opaque origin cannot do. The host's bridge script in the shell page receives each one first. The bridge rejects any message over 64 KiB.
 
-| Message | What Core's shell does | What the host does |
+| Message | What Core's browser shell does | What the host does |
 | --- | --- | --- |
 | `notification_enable_prompt` | Shows an Enable button, calls `Notification.requestPermission()` from its own frame and replies `notification_status` ([#4801](https://github.com/freenet/freenet-core/pull/4801), [#5094](https://github.com/freenet/freenet-core/pull/5094)) | On the first tap, shows the iOS or Android notification prompt. Replies `notification_status` with the answer |
 | `notification` | Shows a browser alert when the browser permission and the app's stored consent allow it | On River's first alert, shows the notification prompt. Shows a native alert when River's choice and the OS permission both allow it. Otherwise the alert stays in River's page |
 | `clipboard` | Writes the text after a user tap, at most once per second and at most 2,048 characters ([#3748](https://github.com/freenet/freenet-core/pull/3748), [#4015](https://github.com/freenet/freenet-core/pull/4015)) | Writes the text under the same three rules. Android 13 and later shows a short system confirmation |
-| `download` | Saves the file, at most one every 2 seconds | Hands the file to the iOS or Android save dialog |
+| `download` | Saves the file, at most one every 2 seconds | Requires a user tap and opens the iOS or Android save dialog. Accepts one save request at a time, within the file and processing bounds below |
 | `open_url` | Opens an http or https URL in a new tab | Checks the URL and opens it in the system browser |
 | `navigate` | Moves the frame within the same app | Checks the room destination |
 
-The host adds three messages of its own:
+The host adds four messages of its own:
 
 | Message | Direction | Meaning |
 | --- | --- | --- |
 | `flush_request` | Host to River | The host is about to stop the node. Save drafts now |
 | `flush_done` | River to host | Drafts are saved |
 | `migration_done` | River to host | River has finished moving its data to the active release. The old release's data may now be retired |
+| `support_report` | River to host | A settings tap asks the host to show a support report for review. Carries River's pending-message counts by send status and their observation time |
 
 River's web UI copies invite links with `document.execCommand('copy')` inside its own frame ([util.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/util.rs)), so those copies need no host involvement.
 
@@ -192,7 +193,7 @@ Each River release declares its device permissions. Today River declares one opt
 | --- | --- | --- |
 | Notifications | Foreground room messages | River's choice plus the OS permission |
 | Clipboard | Invite copy | Tap, size and rate |
-| Files | Download | iOS or Android save dialog |
+| Files | Download | User tap, one iOS or Android save dialog at a time, file size and processing bounds |
 | External link | Open URL | http or https target |
 | Internal route | Room invite | Target and arguments |
 
@@ -207,21 +208,44 @@ The host leaves delegate prompts and `Background` grants to Core's defaults, bec
 | Bound | Limit | Where it is enforced |
 | --- | --- | --- |
 | Shell-bridge message | 64 KiB serialized. Clipboard text keeps its 2,048-character limit | The native WebView bridge, before parsing |
+| File save | One active request. File data fits within the 64 KiB serialized bridge-message limit. Decode each accepted file once and release its buffer when saving finishes or is cancelled | The native WebView bridge checks the message size, user tap and active request before decoding the file or opening the iOS or Android save dialog |
 | Contract state, requests and delegate replies | Core's existing limits, such as the 50 MiB contract state ceiling | Core |
 
-## Diagnostics
+## Support reports
 
-Expose connection state, node status, storage use, the active River release, permission answers and typed failures.
+On iOS and Android, River's settings and the host's startup recovery screen offer **Export support report**. The host collects a snapshot, shows it for review and opens the system save or share dialog when the user chooses to export it. This works while offline, including after a node startup failure.
 
-Exported reports hide keys, message bodies, session tokens and private records by default. Test this with delegate replies, conversation keys and WebSocket query strings, using [River diagnostic redaction #700](https://github.com/freenet/river/pull/700).
+Build a versioned JSON report from this list of allowed fields:
+
+| Area | Allowed fields |
+| --- | --- |
+| Report | Report format version and collection time |
+| Versions | App version and build, Core version, active River release version and digest, platform and OS version |
+| Node | Lifecycle state and negotiated node role |
+| Connections | OS network-path state and type, loopback WebSocket state, Freenet join state, serving-peer count and each serving connection's state and failure code |
+| Storage | Total bytes used by the node store and WebView storage |
+| Permissions | Permission name, River's saved choice and current OS permission status |
+| Pending messages | Total pending-message count and counts by send status, supplied by River |
+| Failures | The latest 50 failures from this app run: time, component, operation name and typed failure code |
+
+For each status or measurement, record its observation time and source: OS, Core, host or River. Mark unavailable values explicitly. Assign serving connections labels that last only for the report, such as `peer-1`.
+
+The host serializes only the allowed fields. Use fixed status values, operation names and failure codes. Keep keys, session tokens, message bodies, private records, peer addresses, URLs and raw logs outside the report.
+
+Test the complete export on iOS and Android:
+
+- Export from River's settings after an offline start, serving-peer loss and a denied notification permission, and from the host's recovery screen after a failed node start. Check the reported versions, states, sources and times against the fixture.
+- Seed unique test values in delegate replies, conversation keys, message bodies, session tokens, private records and WebSocket query strings. Export through the settings and recovery actions and scan every exported byte for those values. Include the cases from [River diagnostic redaction #700](https://github.com/freenet/river/pull/700).
+- Check that the JSON contains only the allowed fields, unavailable values are marked, and pending-message counts match River's fixture.
 
 ## Acceptance
 
 - On iOS and Android, River runs in one WebView, using its installation's own node and store.
 - The bridge rejects messages over 64 KiB and messages from the wrong source or target.
+- On iOS and Android, each file save requires a user tap. Repeated requests keep one save dialog open at a time. Oversized requests are rejected before decoding, and completing or cancelling a save releases its file buffer and allows the next user-initiated save.
 - Backgrounding the app or locking the phone sends `flush_request`. River's drafts are saved before the node stops, or the 2-second timeout passes.
 - After a restart on the previous port, River keeps its web storage. With that port taken, River gets a fresh session and its shell records come back from host records.
 - A new River version activates at the next session boundary. River's `migration_done` reaches the host.
 - On iOS and Android, the first Enable tap or first alert shows the notification prompt and saves River's choice. Revoking the OS permission stops native alerts; River's in-page alerts continue.
-- Diagnostics hide keys, tokens, decrypted messages and private records.
+- On iOS and Android, the user can review and export a support report while offline and after a node startup failure. The report passes the allowed-field, status and private-data checks in [Support reports](#support-reports).
 - Once #5264 lands, another local client cannot act as River on any equivalent API path.
