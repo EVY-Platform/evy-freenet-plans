@@ -25,7 +25,7 @@ flowchart LR
 
 EVY reaches live users only after the milestone 2 release gate in the [README](../README.md) passes. Until then every build is a pilot build and Stripe stays in test mode.
 
-Reviewed pilot and public releases on iOS and Android require [Native session admission in 2.1 Hello EVY world](01-hello-evy-world.md#native-session-admission). The selected Core implementation must enforce the native host's session on every SDK connection and equivalent API route. Track that implementation through [Core #5264](https://github.com/freenet/freenet-core/issues/5264) and its native-client requirements in [RFC #5919](https://github.com/freenet/freenet-core/issues/5919).
+Reviewed pilot and public releases on iOS and Android require [Native session admission in 2.1 Hello EVY world](01-hello-evy-world.md#native-session-admission). The selected Core implementation must enforce the native host's session on every SDK connection and equivalent API route. Track that implementation through [Core #5264](https://github.com/freenet/freenet-core/issues/5264), whose first part shipped as app grants for native clients in [#6130](https://github.com/freenet/freenet-core/pull/6130), and its native-client requirements in [RFC #5919](https://github.com/freenet/freenet-core/issues/5919).
 
 ## Test ownership
 
@@ -56,7 +56,7 @@ Record each plan's results once, with its suite, source commit and build numbers
 
 | | Isolated test network | Public network |
 | --- | --- | --- |
-| Network | freenet-test-network. Each node gets explicit gateways, and each run checks that every peer stays in the isolated network | Freenet's public network through Core's gateways |
+| Network | freenet-test-network. Each node starts with `--skip-load-from-network` and explicit `--gateway` entries, and each run checks that every peer stays in the isolated network | Freenet's public network through Core's gateways |
 | Keys | A test UI root key, publishing key and payment root key from `evyctl key new` | EVY's own keys from [2.1 Hello EVY world](01-hello-evy-world.md) and [2.6 Payments](06-payments.md) |
 | EVY builds | iOS and Android debug builds with test contract keys and test-network gateways | Store-variant pilot builds |
 | Backend | One test deployment with the payment, attribution and remuneration modules and a backend node | EVY's backend |
@@ -94,7 +94,7 @@ EVY publishes from organization Apple Developer Program and Google Play Console 
 | --- | --- | --- | --- |
 | Reporting | Every user-written flow has Report, as [Moderation and seller admission in 2.7 EVY Marketplace](07-marketplace.md#moderation-and-seller-admission) sets. A moderator and support response time are set | [Guidelines](https://developer.apple.com/app-store/review/guidelines/) 1.2 | [User-generated content](https://support.google.com/googleplay/android-developer/answer/9876937) |
 | Blocking | Both readers pass the Block action in [Moderation and seller admission in 2.7 EVY Marketplace](07-marketplace.md#moderation-and-seller-admission) | Guidelines 1.2 | User-generated content |
-| Content filter | Only admitted sellers' items and unremoved items show in Home and Marketplace, as 2.7 EVY Marketplace sets | Guidelines 1.2 | User-generated content |
+| Content filter | Only unremoved items that the listing authority accepted from admitted sellers show in Home and Marketplace, as 2.7 EVY Marketplace sets | Guidelines 1.2 | User-generated content |
 | Terms | Sellers and buyers accept their terms before listing or requesting, as 2.7 EVY Marketplace sets | – | User-generated content |
 | Support URL | A support page with contact details, the report response time and the dispute deadlines. Both store listings link to it | Guidelines 1.2 | User-generated content |
 | Privacy details | Declare the card and contact details Stripe's payment sheet collects, the device data Stripe collects against fraud ([Stripe mobile SDK privacy details](https://support.stripe.com/questions/stripe-ios-sdk-privacy-details)), the seller and contributor identity and bank details Stripe-hosted onboarding collects, the public item data (title, photos, price, pickup postcode and map point), and the EVY public keys and IP addresses the node sends to peers | [App privacy details](https://developer.apple.com/app-store/app-privacy-details/) | [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469) |

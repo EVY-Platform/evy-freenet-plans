@@ -46,7 +46,7 @@ Writes by users run through the EVY delegate. This plan's suite proves them with
 
 ## Resources and contracts
 
-This plan fills the `resources` map of [The UI document in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-document). Each entry maps a resource reference to an adapter and its contract. References keep EVY's `<feature>.<resource>` form ([rpc.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/schema/common/rpc.schema.json)), for example `hello.greeting`.
+This plan adds the `resources` map as a top-level field of [The UI document in 2.2 EVY UI contracts and publishing](02-ui-contracts.md#the-ui-document). Each entry maps a resource reference to an adapter and its contract. References keep EVY's `<feature>.<resource>` form ([rpc.schema.json](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/types/schema/common/rpc.schema.json)), for example `hello.greeting`.
 
 ### EVY resource catalogue
 
@@ -74,7 +74,7 @@ Every signed state or record in EVY uses this one format. The hello state from [
 | Part | Rule |
 | --- | --- |
 | Fields | The payload fields, `version` (integer, 1 or more), optional `signer` and `signature` |
-| Signer | `signer` is the signing key in base58. It is left out when the key is the contract parameter |
+| Signer | `signer` is the signing key in base58. It is left out when the object carries the signer's `certificate`, which names the key, or when the contract fixes the key as its parameter or a compiled-in root key |
 | Signed bytes | The domain's UTF-8 bytes, such as `evy.hello/1`, followed by the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical JSON of every field except `signature` |
 | Signature | Ed25519, as standard padded base64 |
 | Stored bytes | RFC 8785 canonical JSON of the complete signed object |
@@ -139,7 +139,7 @@ UI version 2 is published with `evyctl ui publish`, as in [Publishing a UI versi
 
 ### The collection contract
 
-`freenet/contracts/collection/` holds many records from many authors. Anyone may write, with no per-author cap. The contract's only size limit is Core's 50 MB state limit.
+`freenet/contracts/collection/` holds many records from many authors. Anyone may write, with no per-author cap. The contract's only size limit is Core's 50 MiB state limit.
 
 ```jsonc
 {
@@ -162,7 +162,7 @@ A record in `test.notes`:
 | `message` | "Hi from Alice" | Feature payload |
 | `signature` | base64 | `signed-register/1` with domain `evy.record/1 test.notes` |
 
-A removal marker holds `id`, `created_at`, `version` 1, the publishing key as `signer`, its certificate and a signature with domain `evy.removal/1 test.notes`. It replaces the record, so the record's bytes are freed. The marker is about 300 bytes.
+A removal marker holds `id`, `created_at`, `version` 1, the publishing key's certificate and a signature with domain `evy.removal/1 test.notes`. It replaces the record, so the record's bytes are freed. The marker is about 300 bytes.
 
 | Function | Rule |
 | --- | --- |
@@ -176,13 +176,13 @@ A removal marker holds `id`, `created_at`, `version` 1, the publishing key as `s
 Accepted risks:
 
 - A record with a future `created_at` stays longer than newer honest records.
-- Each client UPDATE resends the full state until Core sends client update deltas ([#4072](https://github.com/freenet/freenet-core/pull/4072) deferred the delta wire format).
+- Core forwards each client UPDATE between peers as the full state until it adopts a delta wire format ([#4072](https://github.com/freenet/freenet-core/pull/4072) deferred it).
 
 The publisher removes a record with `evyctl record remove test.notes <id>`. It signs the marker with the publishing key, sends it with `fdev execute update` and reads it back with `fdev execute get`. This is the same send-and-read-back routine as `evyctl hello publish` in [2.1 Hello EVY world](01-hello-evy-world.md#publishing-a-new-greeting).
 
 ## The EVY delegate
 
-Adapters never hold user keys. The EVY delegate holds them, and signs, seals and queues each write. It lives in `freenet/delegates/evy/`. Each iOS and Android installation runs one, and both apps carry its Wasm. Its parameters are empty, so its key is the hash of its code.
+Adapters never hold user keys. The EVY delegate holds them, and signs, seals and queues each write. It lives in `freenet/delegates/evy/`. Each iOS and Android installation runs one, and both apps carry its Wasm. Its parameters are empty, so its key depends only on its code. Core runs a delegate only when the call's parameters derive its key ([#5918](https://github.com/freenet/freenet-core/pull/5918)), so every call sends empty parameters.
 
 Example: Alice taps "Sign" on a test note on her iPhone. The reader asks the delegate to sign the note with her `test` feature key. The delegate saves the signed note as a pending operation, then returns it. The reader sends it.
 
@@ -247,9 +247,9 @@ Messages are JSON, with schemas in `freenet/common/`. Readers send only these or
 ### Caller rules
 
 - Core verifies the EVY native host and current session under [Native session admission in 2.1 Hello EVY world](01-hello-evy-world.md#native-session-admission) before it runs the delegate. This boundary covers every connection and equivalent API path.
-- The delegate accepts calls from that admitted native session and checks the feature, scope, domain and operation context. It also rejects a web app or another delegate as `MessageOrigin` ([delegate_interface.rs](https://github.com/freenet/freenet-stdlib/blob/7782c176a622efc3f284ce4710b4f184c4986405/rust/src/delegate_interface.rs)).
+- The delegate accepts calls from that admitted native session and checks the feature, scope, domain and operation context. It also rejects a web app or another delegate as `MessageOrigin` ([delegate_interface.rs](https://github.com/freenet/freenet-stdlib/blob/7782c176a622efc3f284ce4710b4f184c4986405/rust/src/delegate_interface.rs)). A connection that presents a Core app grant arrives as a web app origin ([#6130](https://github.com/freenet/freenet-core/pull/6130)), so the delegate refuses it.
 - The native host authorizes the ordinary messages above from the reader's call path. Only the native migration runner may request the lifecycle messages in [2.11 EVY delegate updates and recovery](11-delegate-updates-and-recovery.md#lifecycle-messages).
-- Private replies reach only their admitted session. The release tests verify confidential delivery, including attempts by another local connection to register for the same delegate's output. [RFC #5919](https://github.com/freenet/freenet-core/issues/5919) supplies design input for addressed pushes and native grants; the release uses an implemented, tested boundary.
+- Private replies reach only their admitted session. The release tests verify confidential delivery, including attempts by another local connection to register for the same delegate's output. Core keeps a connection registered for a delegate's output for as long as the connection stays open ([#5920](https://github.com/freenet/freenet-core/pull/5920)), so these tests hold the second connection open across EVY's calls. [RFC #5919](https://github.com/freenet/freenet-core/issues/5919) supplies design input for addressed pushes; the release uses an implemented, tested boundary.
 
 ### Bounds
 
@@ -257,7 +257,7 @@ Messages are JSON, with schemas in `freenet/common/`. Readers send only these or
 | --- | --- |
 | One request message | 256 KiB of canonical JSON |
 | One reply | 1 MiB |
-| One page from `ListPending` or `ListAddresses` | 256 records |
+| One page from `ListPending` or `ListAddresses` | 256 records, or fewer when the next record would take the reply past 1 MiB |
 
 The native call API checks the request size before sending. The delegate refuses anything larger.
 

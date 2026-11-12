@@ -51,7 +51,7 @@ EVY signs its own contract states with a two-level key chain.
 | Publishing key | Online, one key per place that publishes: `ci-1` in the GitHub environment `publishing`, `laptop-1` in the publisher's OS keychain for emergencies | Hello states, and every later EVY-signed state |
 | Payment root key | A separate offline hardware signing device | Nothing in this plan. Money keys stay apart from UI keys |
 
-All three are Ed25519 keys. The UI root key's 32-byte verifying key is the parameter of every EVY-signed contract, so contract keys depend on the root key and not on publishing keys.
+All three are Ed25519 keys. The UI root key's 32-byte verifying key is in the parameters of every contract that holds states signed by publishing keys, so those contract keys depend on the root key and not on publishing keys.
 
 ```mermaid
 flowchart TD
@@ -139,7 +139,7 @@ Bytes pass through unchanged. The SDK checks that each reply names the requested
 
 ### Native session admission
 
-Use Core's session-admission design under [#5264](https://github.com/freenet/freenet-core/issues/5264) to authenticate the EVY native host and bind its calls to the current installation and session. Agree the native binding and its credential lifecycle with Core's maintainers before implementation. The selected Core build must pass this boundary before EVY's reviewed pilot or public release on iOS and Android.
+Authenticate the EVY native host and bind its calls to the current installation and session through Core's client authentication under [#5264](https://github.com/freenet/freenet-core/issues/5264). Core 0.2.156 ships the first part: a user-approved app grant gives a native client one web app's identity through a durable bearer token ([#6130](https://github.com/freenet/freenet-core/pull/6130)). This section needs the open part, which separates local processes of the same user, and a credential that ends with the host session. Agree the native binding and its credential lifecycle with Core's maintainers before implementation. The selected Core build must pass this boundary before EVY's reviewed pilot or public release on iOS and Android.
 
 | Boundary | Required behavior |
 | --- | --- |
@@ -150,7 +150,7 @@ Use Core's session-admission design under [#5264](https://github.com/freenet/fre
 | Replies | Private replies reach only the admitted session that owns the call. Any unsolicited private output uses a reviewed confidential-delivery path |
 | Session end | Backgrounding, locking or stopping ends admission and drops the session's calls and callbacks. Foreground startup creates a fresh admitted session |
 
-[Native-client RFC #5919](https://github.com/freenet/freenet-core/issues/5919) separates app authentication from connection addressing and native `Background` grants. Treat addressed pushes and native grants as proposed interfaces whose adoption needs the matching Core and stdlib implementation and tests. Session authentication proves the caller; the delegate's `MessageOrigin`, feature, scope, domain and context checks then decide its allowed operations. Core's [hosted-user isolation #5991](https://github.com/freenet/freenet-core/pull/5991) applies to hosted users; embedded EVY uses the native session boundary defined here.
+A connection that presents a Core app grant carries the `MessageOrigin::WebApp` identity of the app it names. [Native-client RFC #5919](https://github.com/freenet/freenet-core/issues/5919) proposes addressed pushes and `Background` grants for native clients. Treat addressed pushes as a proposed interface whose adoption needs the matching Core and stdlib implementation and tests. Session authentication proves the caller; the delegate's `MessageOrigin`, feature, scope, domain and context checks then decide its allowed operations. Core's [hosted-user isolation #5991](https://github.com/freenet/freenet-core/pull/5991) applies to hosted users; embedded EVY uses the native session boundary defined here.
 
 ### Matching replies to requests
 
@@ -158,7 +158,7 @@ Some Core replies and errors carry no request ID or contract key, so replies are
 
 | Connection | Carries | Rule |
 | --- | --- | --- |
-| Subscription | Every SUBSCRIBE and its update notifications | Opened once per session. Request timeouts never touch it. If it drops, the SDK subscribes the app's demand set again once |
+| Subscription | Every SUBSCRIBE and its update notifications | Opened once per session. Request timeouts never touch it. If it drops, the SDK subscribes the app's demand set again once. Core allows 500 subscriptions on one connection ([executor.rs](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/contract/executor.rs#L101-L105)); at that count the SDK opens another subscription connection |
 | Priority | Delegate calls such as signing, every PUT and UPDATE, and replay of saved writes | Never waits behind reads |
 | Reads, two connections | GETs | Reads for the screen on display go before background reads |
 
@@ -173,7 +173,7 @@ Timeouts end the caller's wait without touching subscriptions:
 
 Other rules:
 
-- Callbacks arrive on the main actor on iOS and the main dispatcher on Android. Each subscriber has its own buffer, so a slow screen never delays another.
+- Callbacks arrive on the main actor on iOS and the main dispatcher on Android. Each subscriber has its own buffer, so a slow screen never delays another. The SDK reads Core's notifications as they arrive, because Core drops notifications for a subscription whose 64-slot buffer is full.
 - Errors the app can act on: `unavailable` (the network has no copy), `refused` with the contract's reason, `uncertain`, `timedOut`, `updateApp` (peers need a newer Core) and `stopped`.
 - The app's data layer keeps one demand entry per contract. Screens observe its data. The SDK restores the demand set once after a reconnect or restart.
 - Before the node first joins, a GET answers from the stored copy and the SDK holds each SUBSCRIBE until the join.
@@ -205,7 +205,7 @@ A change to the hello contract's code or to the UI root key gives a new contract
 
 ### The Hello screen
 
-The native Hello screen lives only in the development bootstrap build. It proves the node, the call API and the hello contract on real phones. The phone's node runs the hello contract's `validate_state` on every state it receives, so the screen shows only messages signed by a certified, unrevoked publishing key.
+The native Hello screen lives only in the development bootstrap build. It proves the node, the call API and the hello contract on real phones. The phone's node runs the hello contract's `validate_state` on every state that changes its stored copy, so the screen shows only messages signed by a certified, unrevoked publishing key.
 
 ```mermaid
 sequenceDiagram
@@ -307,7 +307,7 @@ Each user supplies its own store, send step and read-back step. A resend always 
 - On iOS and Android, Alice on her iPhone and Bob on his Android phone keep the Hello screen open while `publish.yml` runs `evyctl hello publish --message "Hello again, EVY world"`. Both screens show the new message within 30 seconds, while both apps keep running. Both phones run in the thin-peer role from 1.8 Thin-peer protocol.
 - On iOS and Android, after one successful read, the app relaunched in Airplane Mode shows the stored message and its received time. Back online, it subscribes and shows any higher `(version, value_hash)`. A fresh install in Airplane Mode shows "Connecting to Freenet", then the greeting once the phone is online.
 - On iOS and Android, locking the phone stops the node and ends all calls with `stopped`. Unlocking and returning to EVY starts the node, subscribes again and shows a greeting published while the phone was locked.
-- On iOS and Android, a test peer sends a state signed by an uncertified key and a state with a lower version. The phone's node rejects both, and the screen keeps "Hello again, EVY world".
+- On iOS and Android, a test peer sends a state signed by an uncertified key and a state with a lower version. The phone's node rejects the uncertified state and keeps its stored state for the lower version, and the screen keeps "Hello again, EVY world".
 - The UI root key revokes `ci-1` after it signed version 900. A state from `laptop-1` at version 3 then replaces it on the contract's peers and on both phones. A later copy of version 900 is rejected.
 - Contract tests cover each rule in [the hello contract](#the-hello-contract): equal versions with different bytes, a message over 1 KiB, a missing signature, a forged certificate, a revoked key, extra fields, noncanonical JSON and noncanonical signature encoding. `fdev verify-merge` passes with the report and fixture coverage required by [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage).
 - `evyctl` reads back each publish through a second node. A fixture that drops the reply to the first UPDATE leads `evyctl` to resend the same saved bytes. A crash after step 3 ends with one published state on the next run. Competing equal-version states arrive in opposite orders: peers and both phones keep the higher-hash state after restart, and the losing run stops and reports the winner.

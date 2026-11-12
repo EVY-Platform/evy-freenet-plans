@@ -25,14 +25,14 @@ River runs its signed web UI in one WebView, served by the phone's embedded node
 flowchart LR
   dev["Development builds<br/>full peer"] --> gate["End of milestone 1<br/>README release gate passes"]
   gate --> internal["TestFlight internal testing (iOS)<br/>Play internal testing (Android)<br/>thin peer"]
-  internal --> wait["Core session admission #5264 lands"]
+  internal --> wait["Core local-client authentication #5264 lands"]
   wait --> public["Public App Store and Play release"]
 ```
 
 - River test builds go to TestFlight internal testing on iOS and Play internal testing on Android.
 - Distribution starts at the end of milestone 1, when the README release gate passes. Every distributed build runs as a thin peer.
 - These channels have no store review. This plan makes no review claim.
-- Public store release of River waits for Core's session admission design ([#5264](https://github.com/freenet/freenet-core/issues/5264)). Internal testing may start before it lands.
+- Public store release of River waits for Core's local-client authentication, the open part of [#5264](https://github.com/freenet/freenet-core/issues/5264). Internal testing may start before it lands.
 
 Release the [developer package](#developer-package) when the tests pass.
 
@@ -51,7 +51,7 @@ River publishes its signed bundle through its [web container contract](https://g
 
 ### Test-network dependencies
 
-Use a harness dependency set that links one compatible freenet-stdlib version into each NAT test binary. The dependency alignment is tracked in [Core #5950](https://github.com/freenet/freenet-core/issues/5950): freenet-test-network 0.1.24 requires stdlib `^0.1.29`, while Core 0.2.152 uses 0.12.1. Select an upgraded harness release or a reviewed, pinned dependency change before the first linked NAT run.
+Use a harness dependency set that links one compatible freenet-stdlib version into each NAT test binary. The dependency alignment is tracked in [Core #5950](https://github.com/freenet/freenet-core/issues/5950): freenet-test-network 0.1.24 requires stdlib `^0.1.29`, while Core 0.2.156 uses 0.12.1. Select an upgraded harness release or a reviewed, pinned dependency change before the first linked NAT run.
 
 - Record the harness, Core and stdlib revisions, dependency lock digest, enabled features, Rust toolchain and linker version with the test results.
 - Inspect the dependency graph of each affected test binary and fail on a second stdlib version.
@@ -66,11 +66,11 @@ Every consuming application supplies a manifest of its contracts, exact Wasm has
 | --- | --- |
 | Executed properties | Each required `properties[]` row has `cases_run` at or above the manifest's minimum, a `held` verdict, zero `violations` and zero `inconclusive`. The manifest supplies the states, deltas, summaries and correctly ordered base/result transitions each property needs |
 | Size and case budget | Each required focused run has zero `cases_skipped_oversized` and zero `cases_skipped_budget` in every property row. Set `--max-case-bytes` to cover the combined state, delta and summary inputs of its largest required case, and set `--max-cases` to execute the generated cases |
-| Sampling | In each required focused run, `states_sampled` equals `corpus_states` and `transitions_sampled` equals `corpus_transitions`. Split larger corpora into bounded fixture sets while preserving chronological order and base/result orientation |
+| Sampling | In each required focused run, `states_sampled` equals `corpus_states`, `transitions_sampled` equals `corpus_transitions`, and `cases_not_sampled` is zero in every property row except `state_associativity`. Set `--max-states-paired` to cover the corpus, or split larger corpora into bounded fixture sets while preserving chronological order and base/result orientation |
 | Boundary cases | Include near-capacity states, concurrent equal-version records, removals, lowered caps and repeated deltas. Keep explicit deterministic tests for each required associativity triple and the resulting reconciled fixpoint |
 | Reproduction | Replaying the pinned corpus with the recorded verifier and arguments gives the same coverage and results. Run the application's native contract tests and its iOS and Android runtime conformance tests as well |
 
-The counted reports and size option are supplied by [Core #6043](https://github.com/freenet/freenet-core/pull/6043). Use focused corpora and explicit triple fixtures for the sampling and associativity limits tracked in [#6053](https://github.com/freenet/freenet-core/issues/6053). Core's associativity check tests reconciliation to a stable state ([#5924](https://github.com/freenet/freenet-core/pull/5924)). Treat every merge-law violation as a release failure, including laws assigned to the network's report-only tier ([#6015](https://github.com/freenet/freenet-core/pull/6015)). Diagnose inconclusive rejected merges through [#5725](https://github.com/freenet/freenet-core/issues/5725) and supply a conclusive regression fixture before release.
+The counted reports and size option are supplied by [Core #6043](https://github.com/freenet/freenet-core/pull/6043). The sampling count and the `--max-states-paired` option are supplied by [#6055](https://github.com/freenet/freenet-core/pull/6055). The verifier always leaves some associativity triples unsampled, so use focused corpora and explicit triple fixtures for them. Core's associativity check tests reconciliation to a stable state ([#5924](https://github.com/freenet/freenet-core/pull/5924)). Core's nodes record merge-law findings as local diagnostics and keep hosting the contract ([#6177](https://github.com/freenet/freenet-core/pull/6177)), so this gate is the application's own check. Treat every merge-law violation as a release failure, including findings the verifier classes as report-only. A merge refusal that leaves two peers apart counts as a commutativity violation ([#6178](https://github.com/freenet/freenet-core/pull/6178)). Supply a conclusive regression fixture for each remaining inconclusive case before release.
 
 ## River acceptance cases
 
@@ -86,7 +86,7 @@ Each case runs on iOS and Android.
 | Connectivity | Switch between Wi-Fi and cellular and remove a serving peer. Subscriptions return after reconnect |
 | Compatible web update | Install a new River release while a session runs. The release activates under [Activating a release in 1.3 Single-application host](03-host.md#activating-a-release), and drafts and pending messages survive |
 | Interrupted upgrade | Upgrade from both starting points in the [upgrade test window in 1.7 Upgrades and migration](07-migration.md#upgrade-test-window) and kill the app during migration. The next start finishes it, and River sends `migration_done` |
-| Device limits and accessibility | Memory, Wasm execution, battery and storage stay within the [device limits in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) and [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm). Keyboard, focus, large text and screen-reader flows work. River tracks two mobile layout gaps in [river#714](https://github.com/freenet/river/issues/714) and [river#718](https://github.com/freenet/river/issues/718) |
+| Device limits and accessibility | Memory, Wasm execution, battery and storage stay within the [device limits in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) and [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm). Keyboard, focus, large text and screen-reader flows work. River closed two mobile layout gaps in [river#714](https://github.com/freenet/river/issues/714) and [river#718](https://github.com/freenet/river/issues/718); keep both cases in these checks |
 
 ## Developer package
 
@@ -108,7 +108,7 @@ Use one River release and invite-only test rooms with a named room owner and a m
 | Tester support | Test invitations name the room owner, support contact and test-data handling. The owner can remove a participant with River's room controls |
 | Runtime | Pulley runs the contracts and delegate on iOS and Android |
 | Privacy | The checklist records public room data, peer-visible keys and IP addresses, private device records, and the declarations TestFlight and Play require |
-| Encryption | The checklist records X25519, AES-GCM, ChaCha20, XChaCha20-Poly1305, Ed25519, BLAKE3, HKDF-SHA256 and SHA-256, following [Encryption export regulations](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations) |
+| Encryption | The checklist records X25519, Argon2id, AES-GCM, ChaCha20, XChaCha20-Poly1305, Ed25519, BLAKE3, HKDF-SHA256 and SHA-256, following [Encryption export regulations](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations) |
 
 ### Store build checks
 
@@ -136,6 +136,7 @@ Peers refuse a node whose Core version is below the network's `min-compatible-ve
 
 - Each iOS and Android build records its Core version and the network's `min-compatible-version`.
 - A new iOS and Android build ships before the network's minimum passes the packaged Core version.
+- Core 1.0.0 states its minimum in handshake format 2 ([#6189](https://github.com/freenet/freenet-core/pull/6189)), which releases up to 0.2.156 refuse. Package a Core release that reads format 2 before the network moves to 1.0.0.
 - A phone that falls behind gets "update the app" from the SDK ([typed errors in 1.2 Embedded node and mobile SDK](02-sdk.md#requests-events-and-errors)). River tells the user to install the new build.
 
 ## Release tests

@@ -82,7 +82,7 @@ Uncertain uploads and two releases at the same version are general Freenet publi
 
 | Issue | Problem |
 | --- | --- |
-| [river#634](https://github.com/freenet/river/pull/634) | A publish timed out but landed. River now reads the network before signing |
+| [river#634](https://github.com/freenet/river/pull/634) | A publish timed out but landed |
 | [river#635](https://github.com/freenet/river/pull/635) | River's version counter only moves forward |
 | [delta#82](https://github.com/freenet/delta/issues/82) | Two different bundles signed at one version never converge |
 | [atlas#53](https://github.com/freenet/atlas/issues/53) | A reused version splits the published UI for good |
@@ -126,7 +126,7 @@ The host checks each release before it runs any of the release's code.
 | Container key | Matches the key pinned in the build. `crates/mobile` checks it at activation |
 | Signature and version | The publisher signature is valid. The version is higher than the active release |
 | Paths | Reject absolute paths, `..`, symlinks, hardlinks and duplicate paths. Core's unpacker rejects the first four ([#3946](https://github.com/freenet/freenet-core/issues/3946), [#4372](https://github.com/freenet/freenet-core/pull/4372)) |
-| File digests | The host records each file's digest when it unpacks the bundle. It checks the digest again before it serves the file. The bundle carries no manifest file |
+| File digests | The host records each file's digest when it unpacks the bundle. It checks the digest again before the embedded node serves the file. The bundle carries no manifest file |
 | Size | Enforce download, decompression, file-count and memory caps |
 | `app_definition.json` | The host supports `host_api` and every required permission |
 

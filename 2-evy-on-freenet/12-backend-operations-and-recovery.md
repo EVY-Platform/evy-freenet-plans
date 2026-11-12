@@ -92,22 +92,23 @@ The backend node subscribes to these contracts:
 - `ui.evy`, from [2.2 EVY UI contracts and publishing](02-ui-contracts.md)
 - every contract the live UI document binds, from [2.4 SDUI data and actions](04-data-and-actions.md)
 - the listing, purchase and photo contracts in the hosting inventory of [2.7 EVY Marketplace](07-marketplace.md)
+- the UI proposal contract, from [2.8 Attribution](08-attribution.md)
 
-When a new UI version binds a new contract, the node adds that subscription.
+When a new UI version binds a new contract, the node adds that subscription. Core allows 500 subscriptions on one client connection ([executor.rs](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/contract/executor.rs#L101-L105)), so the backend spreads its subscriptions over as many connections as the hosting inventory needs.
 
 Every hour a readback check GETs each subscribed contract through a second node. If a contract is missing or older than the saved copy, the check PUTs the saved copy again and raises an alert.
 
 ## Keys
 
-This is the one backend key list. [2.10 Testing and release](10-testing-and-release.md) links to it.
+This is the one backend key list.
 
 | Key | Held in | Used for | Rotation | If lost or leaked |
 | --- | --- | --- | --- | --- |
 | UI root key | Offline hardware, with a second hardware copy kept in a separate place | Contract parameter of EVY's UI and data contracts. Certifies publishing keys and signs their revocations | Not rotated. A new root changes contract keys and needs new iOS and Android builds | Use the second hardware copy |
 | Payment root key | Offline hardware, with a second hardware copy kept in a separate place | Certifies the payment service key. Signs financial policies and payment-key revocations | Not rotated. A new root changes purchase contract keys and needs new iOS and Android builds | Use the second hardware copy |
-| Publishing key | Key service. CI uses it; a laptop uses it only in an emergency | Signs UI documents, the hello greeting, lookups, removals and collections through `evyctl` | Yearly | The UI root signs a revocation and certifies a new key. Contracts drop the revoked key's states, as [2.2 EVY UI contracts and publishing](02-ui-contracts.md) defines. `evyctl` republishes the current versions |
-| Payment service key | Key service | Signs payment records and the service-signed message list in each purchase | Yearly | Follow [Signing-key recovery](#signing-key-recovery) |
-| Attribution key | Key service | Signs attribution snapshots | Yearly | The payment root signs a new policy version with the new attribution key. The attribution module re-signs affected snapshots from its records |
+| Publishing key | Key service. CI uses it; a laptop uses it only in an emergency | Signs UI documents, the hello greeting, lookups, removals, collections, proposal acceptances and `evy.code-deployment/1` records through `evyctl` | Yearly | The UI root signs a revocation and certifies a new key. Contracts drop the revoked key's states, as [2.2 EVY UI contracts and publishing](02-ui-contracts.md) defines. `evyctl` republishes the current versions |
+| Payment service key | Key service | Signs payment records, the service-signed message list in each purchase and listing decisions | Yearly | Follow [Signing-key recovery](#signing-key-recovery) |
+| Attribution key | Key service | Signs contributor registrations, attribution snapshots and code acceptances | Yearly | The UI root signs a revocation and certifies a new key. The UI proposal contract drops the revoked key's records, and the attribution module re-signs its genuine records, as [The UI proposal contract in 2.8 Attribution](08-attribution.md#the-ui-proposal-contract) defines |
 | Backup key | Key service | Encrypts the database, its backups and both buckets | Automatic yearly rotation in the key service, which keeps old key material for decryption | Set the deletion waiting period to 30 days and cancel any deletion request. A leak alone does not expose data, because the key never leaves the key service |
 | Stripe credentials | Secrets store | Restricted API keys per module and the webhook secret | [Roll the key](https://docs.stripe.com/keys#rolling-keys) with up to 7 days of overlap. [Roll the webhook secret](https://docs.stripe.com/webhooks) with up to 24 hours of overlap | Roll at once with no overlap |
 
@@ -164,7 +165,7 @@ sequenceDiagram
     P-->>P: Drop records signed by K after R
 ```
 
-The revocation names, for each affected purchase, key K and the last trusted purchase revision R. The purchase contract checks it with no lookup of another contract, as [The purchase contract in 2.7 EVY Marketplace](07-marketplace.md#the-purchase-contract) defines. The remuneration module then re-checks the affected purchases.
+The revocation names, for each affected purchase, key K and the last trusted purchase revision R. The purchase contract checks it with no lookup of another contract, as [Payment signing-key revocation in 2.6 Payments](06-payments.md#payment-signing-key-revocation) defines. Each listing contract with an affected decision gets the same two records, naming the item and its last trusted decision version, as [The listing contract in 2.7 EVY Marketplace](07-marketplace.md#the-listing-contract) defines. The remuneration module then re-checks the affected purchases.
 
 ## Acceptance
 
@@ -172,8 +173,8 @@ The revocation names, for each affected purchase, key K and the last trusted pur
 - The database has point-in-time recovery and encryption on. The write-once bucket rejects a delete during retention.
 - Backend outbox: a crash after save, after send and after readback each ends with one effect. A resend uses the same bytes.
 - Look-up-first: replaying a Stripe outbox entry older than 24 hours creates no second PaymentIntent, refund or transfer.
-- Backend node: the subscription list holds `ui.evy`, every contract the live UI binds and every hosted contract. A test removes a hosted contract from the test network; the readback check PUTs it again.
+- Backend node: the subscription list holds `ui.evy`, every contract the live UI binds, every hosted contract and the UI proposal contract. A test removes a hosted contract from the test network; the readback check PUTs it again.
 - The restore drill passes before the first live payment and its record is kept. The quarterly drill repeats it.
-- Payment service key drill: the payment root revokes key K with a cutoff. Purchase contracts reject K's records after the cutoff and accept the re-signed records. Remuneration totals stay the same.
+- Payment service key drill: the payment root revokes key K with a cutoff. Purchase and listing contracts reject K's records after the cutoff and accept the re-signed records. Remuneration totals stay the same.
 - Publishing key drill: the UI root revokes the publishing key. Readers on iOS and Android drop its states and show the republished version.
 - The reports endpoint rejects unsigned reports. No report appears in public contract state.

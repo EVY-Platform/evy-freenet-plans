@@ -40,6 +40,7 @@ The EVY delegate adds these messages to the ordinary messages from [Ordinary mes
 | `DeleteRecords { namespace }` | Done | The migration runner, retiring a predecessor. `namespace` is `root_seed`, `addresses`, `drafts` or `pending` |
 
 - Only the native migration runner sends lifecycle messages, through [Native session admission in 2.1 Hello EVY world](01-hello-evy-world.md#native-session-admission). The host authorizes the runner before forwarding a lifecycle call and refuses these calls from the reader's path, under [Caller rules in 2.4 SDUI data and actions](04-data-and-actions.md#caller-rules).
+- Each lifecycle message travels as an `ApplicationMessage` payload, the one inbound delegate message Core accepts from a client ([#6103](https://github.com/freenet/freenet-core/pull/6103)). stdlib's `InboundDelegateMsg::Lifecycle` events come from the node only.
 - `ExportRecords` pages hold at most 256 records, under [Bounds in 2.4 SDUI data and actions](04-data-and-actions.md#bounds).
 - The native backup screen uses Core's FNSX export. The native Forget screen uses Forget from 1.5 Identity, keys and local protection.
 
@@ -104,7 +105,7 @@ EVY opens Home and sends pending operations only after step 4 succeeds. If the m
 
 The runner is Rust in freenet-core's `crates/mobile`. Swift on iOS and Kotlin on Android call it through UniFFI. It uses the admitted native session, reports progress and completion to the EVY app, and authorizes retirement before sending `UnregisterDelegate`.
 
-Use freenet-migrate 0.8.0 and freenet-stdlib 0.12.1 directly in the runner. Core 0.2.152 and freenet-migrate 0.8.0 use the same stdlib types for keys, parameters, messages and errors. Pin the resolved dependencies in `Cargo.lock` and use freenet-migrate-build 0.2.0 for the predecessor table. Sources: [freenet-migrate dependency declaration](https://github.com/freenet/freenet-migrate/blob/66d9d093def9caecf25e7c3ffcfee59cf7d1ed7f/freenet-migrate/Cargo.toml) and [0.8.0 release notes](https://github.com/freenet/freenet-migrate/blob/66d9d093def9caecf25e7c3ffcfee59cf7d1ed7f/CHANGELOG.md).
+Use freenet-migrate 0.8.0 and freenet-stdlib 0.12.1 directly in the runner. Core 0.2.156 and freenet-migrate 0.8.0 use the same stdlib types for keys, parameters, messages and errors. Pin the resolved dependencies in `Cargo.lock` and use freenet-migrate-build 0.2.0 for the predecessor table. Sources: [freenet-migrate dependency declaration](https://github.com/freenet/freenet-migrate/blob/66d9d093def9caecf25e7c3ffcfee59cf7d1ed7f/freenet-migrate/Cargo.toml) and [0.8.0 release notes](https://github.com/freenet/freenet-migrate/blob/66d9d093def9caecf25e7c3ffcfee59cf7d1ed7f/CHANGELOG.md).
 
 When changing a contract or delegate's stdlib dependency, record the outgoing Wasm and exact parameters in its predecessor registry before rebuilding. Derive and test the resulting keys on iOS and Android, then run the migration fixtures with the pinned toolchain and dependency set.
 
@@ -127,6 +128,6 @@ CI fails when the built dependency set differs from the manifest or a production
 - Interrupting the move before import, after import and before retirement keeps the old records. The next start completes the move. Locking the phone during the move gives the same result.
 - After a completed move, the old delegate holds no records, and its key is unregistered.
 - CI fails for changed delegate Wasm without a registry row, multiple freenet-stdlib versions in a production graph, or a dependency set that differs from `migration-dependencies`. The pinned freenet-migrate 0.8.0 runner uses Core's stdlib types directly. Migration results record the exact iOS and Android artifacts.
-- On iOS and Android, an FNSX backup restores onto a fresh phone. Alice's derived public keys stay the same, and her saved pickup address from 2.7 EVY Marketplace is still there. A backup from delegate generation 1 restores into a generation 2 build and migrates.
+- On iOS and Android, an FNSX backup restores onto a fresh phone. Alice's derived public keys stay the same, and her saved pickup address from 2.7 EVY Marketplace is still there. Once [#4035](https://github.com/freenet/freenet-core/issues/4035) lands, a backup from delegate generation 1 restores into a generation 2 build and migrates. Until then, EVY reports that backup as older, as in [Older River releases in 1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#older-river-releases).
 - Restoring onto a phone with EVY data shows what will be lost first. EVY asks before it resends restored pending operations.
 - After Forget, no EVY record can be read on the phone.

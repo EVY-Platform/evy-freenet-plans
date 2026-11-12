@@ -97,7 +97,7 @@ Rules:
 - Give every node-owned background task a retained cancellation and join handle, including tasks started during construction and transport startup. Track shared process-wide runtime tasks separately.
 - `stop()` requests shutdown and lets node-owned tasks finish their cleanup within the shutdown deadline. It then cancels and joins any remaining node-owned tasks within that same deadline.
 - `stop()` finishes only when every node-owned task has ended and the port, listeners, store and held keys are released. A remaining task or resource returns `IncompleteShutdown`. Keep lifecycle operations serialized until the remaining tasks and resources are reclaimed.
-- Complete Core's task-teardown work tracked by [#6048](https://github.com/freenet/freenet-core/issues/6048) before the first iOS and Android release. Verify the selected fix against the task monitor and each registered task, using [Core's task-monitor implementation](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/node/background_task_monitor.rs) as the source baseline.
+- Complete Core's task-teardown work tracked by [#6048](https://github.com/freenet/freenet-core/issues/6048) before the first iOS and Android release. Verify the selected fix against the task monitor and each registered task, using [Core's task-monitor implementation](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/node/background_task_monitor.rs) as the source baseline. That version aborts tasks registered through its `LateRegistrar`; tasks registered with `register` still need the fix.
 - Report the loopback port the node picked. Reuse the previous port so River keeps the same web origin and storage. If that port is taken, pick a free one and report it.
 - Watch the network path with `NWPathMonitor` on iOS and `ConnectivityManager` on Android. On a change, rejoin Freenet. River's web client re-reads and resubscribes its rooms when its WebSocket reconnects ([river#759](https://github.com/freenet/river/pull/759)).
 - Restart the node after a node failure while the app process keeps running.
@@ -127,12 +127,13 @@ Use one recorded transport profile for the first iOS and Android release:
 
 | Setting | Release profile | Evidence |
 | --- | --- | --- |
-| `transport-quic` | Explicitly `off`; record the effective mode at startup | [Core 0.2.152 QUIC modes](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/transport/quic.rs#L82) |
+| `transport-quic` | Unset. Core's default mode on iOS and Android is `off`. Record the effective mode at startup | [Core's default QUIC mode](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/transport/quic.rs#L154-L164) |
+| `quic-data-percent`, `quic-max-paths` | Unset; record the resolved values | [Core transport configuration](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/config.rs) |
 | Congestion controller | Core's resolved default, recorded with its version | [Core transport configuration](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/config.rs) |
 | `bandwidth-limit`, `total-bandwidth-limit` | Unset; measure traffic under [1.8 Thin-peer protocol](08-thin-peer.md#traffic-measurement) | [Node-wide UDP egress cap #5964](https://github.com/freenet/freenet-core/pull/5964), [per-connection streaming cap #6051](https://github.com/freenet/freenet-core/pull/6051) |
 | `min-bandwidth-per-connection` | Record the resolved value with the cap settings | [Core transport configuration](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/config.rs) |
 
-Core 0.2.152 maps `prefer` to `shadow`; application traffic uses the UDP transport. A later transport profile is an explicit release change with new iOS and Android connectivity, traffic, memory and task-cleanup evidence. Record configured and effective settings in the [release support matrix in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence).
+Application traffic uses the UDP transport. Core is replacing that transport with QUIC ([#5940](https://github.com/freenet/freenet-core/issues/5940)): desktop nodes default to `shadow`, and `prefer` sends data on QUIC where both peers agree ([#6114](https://github.com/freenet/freenet-core/pull/6114)). Move the phone profile to QUIC before Core removes the UDP transport. Each transport profile change is an explicit release change with new iOS and Android connectivity, traffic, memory and task-cleanup evidence. Record configured and effective settings in the [release support matrix in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence).
 
 ### Local network access
 
@@ -154,7 +155,7 @@ The packages report node status and these typed errors:
 | `KeyLost` | The installation key is missing | The key-loss screen |
 | `UpdateRequired` | Peers refuse this build's Core version | "Update River", with a link to the App Store or Google Play |
 | `IncompleteShutdown` | Stop passed its deadline with a node-owned task, port, store or key still held | Nothing; the host logs it and finishes teardown before another start |
-| `NoGateways` | No gateway is known | A "no connection" banner |
+| `NoGateways` | No gateway is usable | A "no connection" banner |
 
 ## Keys and host records
 
@@ -176,7 +177,8 @@ Run contracts and delegates with the [Pulley interpreter](https://docs.wasmtime.
 | --- | --- |
 | Wasm linear-memory reservation | 256 MiB per instance |
 | iOS Store replacement | After 4 instances |
-| iOS executors | At most 2 |
+| iOS contract executors | At most 2 |
+| Delegate executor | Core's one delegate executor, with its fixed 16 MiB Store budget ([#6144](https://github.com/freenet/freenet-core/pull/6144)) |
 | Android executors and Store replacement | Measured per ABI and pinned in the release support matrix |
 | Android ABIs | arm64-v8a and x86_64 |
 

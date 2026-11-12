@@ -31,7 +31,7 @@ sequenceDiagram
 ```
 
 - The host activates releases under [Activating a release in 1.3 Single-application host](03-host.md#activating-a-release).
-- River migrates in its own page with its own adapter and journal ([delegate_migration.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/components/app/freenet_api/delegate_migration.rs), freenet-migrate 0.7).
+- River migrates in its own page with its own adapter and journal ([delegate_migration.rs](https://github.com/freenet/river/blob/6ed56973291373ca44e470cd9c735112ca300a10/ui/src/components/app/freenet_api/delegate_migration.rs), freenet-migrate 0.8 on freenet-stdlib 0.12.1).
 - While River migrates, its room list shows a migrating state (`RoomListDisplay::Migrating` in [room_list.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/components/room_list.rs)).
 - Predecessor contracts and delegates come from earlier River releases signed by River's publisher key. The key check in [Execution policy in 1.4 Application bundles](04-bundles.md#execution-policy) therefore lets them run.
 
@@ -81,7 +81,7 @@ River keeps one TOML registry per component, oldest version first. The current k
 
 Registry cases:
 
-- For `irregular_key = true`, probe the recorded `delegate_key` in place of the derived key. River's V1 chat delegate uses this entry.
+- An `irregular_key = true` entry records the `delegate_key` itself, as River's V1 chat delegate does. Core runs a delegate only when its parameters derive its key ([#5918](https://github.com/freenet/freenet-core/pull/5918)). Include a fixture for this entry and treat a refused probe as an empty predecessor.
 - Users with data only in River delegate versions V4 to V6 rejoin their rooms by invite. The registry covers versions whose messages the current code can read ([river#204](https://github.com/freenet/river/issues/204)). Include V4 to V6 invite recovery in the fixtures.
 
 ### Walk policies
@@ -134,7 +134,7 @@ River and the host retire the old version in this order:
 | 1. Verify | River | A readback of the new delegate shows every entry the walk found |
 | 2. Reclaim | River | Deletes the predecessor copies through the predecessor delegate's own delete message |
 | 3. Report | River | Sends `migration_done` with the emptied keys |
-| 4. Unregister | Host | Sends `UnregisterDelegate` for each key in `retired_delegates`. Core drops the key's record, and its `NodeStarted` runs and wake-ups stop at the next fire ([#5747](https://github.com/freenet/freenet-core/pull/5747) review item S8) |
+| 4. Unregister | Host | Sends `UnregisterDelegate` for each key in `retired_delegates` through River's session, which carries River's app identity. Core drops a key's record only when its bound app unregisters it ([delegate_capabilities.rs](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/contract/delegate_capabilities.rs)). Check on the selected Core build that the record is gone and that its `NodeStarted` runs and wake-ups have stopped ([#5747](https://github.com/freenet/freenet-core/pull/5747) review item S8) |
 | 5. Drop | Host | Deletes the previous release copy |
 
 Use River's full predecessor list as the retirement workload ([river#586](https://github.com/freenet/river/issues/586)).

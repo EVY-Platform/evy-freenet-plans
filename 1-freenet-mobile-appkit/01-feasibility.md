@@ -29,7 +29,7 @@ Show that River runs in an AppKit WebView on iOS and Android through its embedde
 | Swift package on iOS and Kotlin library on Android | Start, stop and report on the node and host River's WebView, on the same targets ([1.2 Embedded node and mobile SDK](02-sdk.md)) |
 | Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers until [1.8 Thin-peer protocol](08-thin-peer.md) lands |
 
-River's web client uses freenet-stdlib 0.8.5 and runs against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#protocol-compatibility)). River is the test application on iOS and Android.
+River's web client uses freenet-stdlib 0.8.5 and runs against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#protocol-compatibility)). River's main branch builds on freenet-stdlib 0.12.1 since 8 November 2026. River is the test application on iOS and Android.
 
 ## Support matrix
 
@@ -47,23 +47,23 @@ Every device that ran an operation matched the desktop fixtures for bytes, typed
 
 Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend, Wasm reservation, executor cap, Store replacement limits, negotiated node role and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
 
-Record the resolved transport profile for every iOS and Android build: configured and effective `transport-quic` mode, congestion controller, `bandwidth-limit`, `total-bandwidth-limit` and `min-bandwidth-per-connection`. Use the transport settings from [1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile). Link each lifecycle result to the task-cleanup evidence from [Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect).
+Record the resolved transport profile for every iOS and Android build: configured and effective `transport-quic` mode, `quic-data-percent`, `quic-max-paths`, congestion controller, `bandwidth-limit`, `total-bandwidth-limit` and `min-bandwidth-per-connection`. Use the transport settings from [1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile). Link each lifecycle result to the task-cleanup evidence from [Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect).
 
 Repeat the runtime, lifecycle, host, key protection and application tests on the actual release artifacts. Record real iOS and Android phone coverage, every supported Android ABI, battery measurements and supported carrier paths before release. A changed runtime, minimum OS, mobile patch revision, transport mode, congestion controller or bandwidth setting requires the affected runtime, lifecycle, connectivity and traffic checks again.
 
 ## Device limits
 
-The initial iOS and Android release uses the measured fixed-reservation profile: 256 MiB of reserved linear-memory address space per Wasm instance, with iOS Store replacement after 4 instances and at most 2 executors. Pin the measured Android executor and Store limits per ABI in the release support matrix. The table below preserves the recorded prototype measurements; acceptance repeats memory-growth, capacity and lifecycle checks on the actual release artifacts.
+The initial iOS and Android release uses the measured fixed-reservation profile: 256 MiB of reserved linear-memory address space per Wasm instance, with iOS Store replacement after 4 instances and at most 2 contract executors. Core runs delegates on one more executor with a fixed 16 MiB Store budget ([#6144](https://github.com/freenet/freenet-core/pull/6144)); measure it as part of the release profile. Pin the measured Android executor and Store limits per ABI in the release support matrix. The table below preserves the recorded prototype measurements; acceptance repeats memory-growth, capacity and lifecycle checks on the actual release artifacts.
 
 After upstream Core ships support for smaller reservations, select its released version, measure the revised profile on iOS and Android and update limits under [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm).
 
 | Limit | Value | Evidence |
 | --- | --- | --- |
 | Linear-memory reservation per Wasm instance | 256 MiB. River's contracts use about 1 MiB | [Reservation finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations). Core set the 256 MiB default in [#3990](https://github.com/freenet/freenet-core/pull/3990) after the same reservation failure on a 4 GB Raspberry Pi ([#3986](https://github.com/freenet/freenet-core/issues/3986)) |
-| iOS Store limits | Replace each Store after 4 instances, 2 executors. With these, the iPhone stored 300 contracts | Same. Core's default replaces each Store after 500 instances ([#5268](https://github.com/freenet/freenet-core/issues/5268)) |
+| iOS Store limits | Replace each Store after 4 instances, 2 executors. With these, the iPhone stored 300 contracts | Same. Core's default replaces a Store when its retired instance memory reaches a byte budget, with 500 instances as the backstop ([#5268](https://github.com/freenet/freenet-core/issues/5268)) |
 | Local updates | About 21 per second, 45 ms each, on every device | [Local update finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#a-local-update-takes-about-45-ms) |
 | Large records | 32 MiB records cross Core, the bindings and the UI intact. On the iPhone a 32 MiB put takes 292 ms and a get 77 ms | [Large-record copying](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#large-record-copying-split-by-layer) |
-| Memory footprint | 24 to 27 MiB on the iPhone and 105 to 122 MiB on the emulator, with River open | [Memory and storage](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#memory-storage-and-address-space). Core tracks memory per hosted contract in [#5647](https://github.com/freenet/freenet-core/issues/5647) and per distinct Wasm module in [#5348](https://github.com/freenet/freenet-core/issues/5348) |
+| Memory footprint | 24 to 27 MiB on the iPhone and 105 to 122 MiB on the emulator, with River open | [Memory and storage](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#memory-storage-and-address-space). Core measured about 0.8 MiB of memory per hosted contract in [#5647](https://github.com/freenet/freenet-core/issues/5647) and tracks memory per distinct Wasm module in [#5348](https://github.com/freenet/freenet-core/issues/5348) |
 | Storage | Stores 6.1 MiB, unpacked web apps 8.3 MiB and logs 3.2 MiB on the iPhone | Same |
 | Package size | iOS 41.8 MiB stripped (16.8 MiB zipped before App Store thinning). Android APK 40.9 MiB for arm64-v8a | [Package size](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#package-size) |
 | River download | River's 1.06 MB bundle downloads as 1.2 MiB from the public network | [River in the WebView](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#river-and-atlas-in-the-webview) |
@@ -150,7 +150,7 @@ What the fork supplies, tested on the iOS Simulator and Android emulator. Each r
 | Storage defaults | Sets its own defaults: 64 MiB module cache, 128 MiB hosted state and 1 GiB disk |
 | Wasm | Uses fixed 256 MiB reservations with the iOS limits of 4 instances per Store and 2 executors |
 | Native requests | Allows one request awaiting a reply at a time. A timeout resets the connection and its subscriptions |
-| Gateway files | Core saves gateway key paths as absolute paths, which go stale when iOS moves the app container. The fork counts a cached gateway only if its key file exists |
+| Gateway files | Core saves gateway key paths as absolute paths, which go stale when iOS moves the app container. The fork counts a cached gateway only if its key file exists. Core skips a gateway whose key file is missing or unreadable ([#6149](https://github.com/freenet/freenet-core/pull/6149)) |
 | Port | Needs the preferred loopback port before the first start |
 
 ### Requirements for later plans
@@ -165,7 +165,7 @@ A community prototype also runs River on Android with an in-process node ([river
 | Take data, config and log directories from the host. Keep local-mode and network-mode stores apart and discard a persisted config whose data directory, mode or gateway source differs. | [Storage in 1.2 Embedded node and mobile SDK](02-sdk.md#storage) |
 | Pass each gateway override to Core's `--gateway` option as `ip:port,hex-public-key`. Use an IP address to avoid a DNS lookup. Fetch the public gateway index when network mode has no overrides. | [1.2 Embedded node and mobile SDK](02-sdk.md) |
 | Wait for at least one connected peer before the first network request, then retry reads for a bounded window. | [Offline startup in 1.2 Embedded node and mobile SDK](02-sdk.md#offline-startup) |
-| Use JSON commands and events in the WebView bridge. The Wasm client opens its own WebSocket to the loopback API. Serve a fixed set of bundle files and verify each file against a SHA-256 manifest. The manifest carries a protocol version; the host ignores unknown keys. Keep message handling in `crates/mobile` so iOS and Android use the same implementation. | [shell-bridge messages in 1.3 Single-application host](03-host.md#shell-bridge-messages), [1.4 Application bundles](04-bundles.md) |
+| Use JSON commands and events in the WebView bridge. River's Wasm client reaches the loopback WebSocket API through Core's shell page. Serve a fixed set of bundle files and check each file's SHA-256 digest, recorded at unpack, before serving it. Keep message handling in `crates/mobile` so iOS and Android use the same implementation. | [shell-bridge messages in 1.3 Single-application host](03-host.md#shell-bridge-messages), [1.4 Application bundles](04-bundles.md) |
 | Test a two-peer contract exchange, leak thresholds tuned to measured noise and binding generation in CI. | [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) |
 
 ## Runs still to do

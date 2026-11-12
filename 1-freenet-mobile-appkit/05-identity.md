@@ -25,7 +25,7 @@ Protect River's keys and private data on iOS and Android, and let Alice delete t
 | Application | River's website container key. Core computes it from the container code and the publisher's verifying key | Nobody holds it. Anyone can recompute it |
 | Publisher | The key that signs each River bundle release | The River publisher |
 | User | Alice's signing key for "Skate club". River makes one per room and stores it in its chat delegate | Alice |
-| Delegate | River's chat delegate key, a hash of its code. Its secret store holds Alice's signing keys and the DMs she sent | Nobody holds it. Anyone can recompute it |
+| Delegate | River's chat delegate key, derived from its code hash and its empty parameters. Its secret store holds Alice's signing keys and the DMs she sent | Nobody holds it. Anyone can recompute it |
 | Node network key | The key Alice's node uses to connect to other peers. Core creates it on first run and saves it as `transport_keypair` in its secrets directory | Alice's node |
 | Node encryption key (KEK) | The key that encrypts every delegate's secret store | Alice's node, through the Keychain or Keystore |
 

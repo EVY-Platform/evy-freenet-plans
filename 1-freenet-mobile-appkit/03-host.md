@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | iOS and Android WebView host, bridge script and device adapters |
-| [freenet-core](https://github.com/freenet/freenet-core) | Used | Shell page, loopback WebSocket authentication and session admission ([#5264](https://github.com/freenet/freenet-core/issues/5264)) |
+| [freenet-core](https://github.com/freenet/freenet-core) | Used | Shell page, loopback WebSocket tokens, app grants ([#6130](https://github.com/freenet/freenet-core/pull/6130)) and local-client authentication ([#5264](https://github.com/freenet/freenet-core/issues/5264)) |
 | [river](https://github.com/freenet/river) | Modified | File-save requests and results, support report settings action and pending-message counts. Draft messages under 1.6 Application protocols, data and operations; migration messages under 1.7 Upgrades and migration |
 
 ## Purpose
@@ -39,20 +39,20 @@ Test builds on iOS and Android use separate application IDs and storage from pro
 
 River's web client uses the node's loopback WebSocket API. Core's loopback binding limits the client API to the phone ([client API exposure](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/docs/client-api-exposure.md)).
 
-Bind every client connection to River's verified host session through Core's [session admission #5264](https://github.com/freenet/freenet-core/issues/5264). Adopt the upstream design when it lands. Test clients with and without an Origin header. Keep session credentials in trusted native code and revoke them when the host session ends.
+River's page gets its app identity from the token in Core's shell page. Core also gives a native client one web app's identity through a user-approved, revocable app grant ([#6130](https://github.com/freenet/freenet-core/pull/6130)). Both rest on the loopback boundary: Core serves any process on the phone that connects. The public release needs Core's local-client authentication, the open part of [#5264](https://github.com/freenet/freenet-core/issues/5264), which refuses another local process acting as River. Bind every client connection to River's verified host session through it. Adopt the upstream design when it lands. Test clients with and without an Origin header. Keep session credentials in trusted native code and revoke them when the host session ends.
 
-| Release stage | Needs #5264 |
+| Release stage | Needs local-client authentication |
 | --- | --- |
-| TestFlight internal testing and Play internal testing | No. Testing may start before #5264 lands |
+| TestFlight internal testing and Play internal testing | No. Testing may start before it lands |
 | Public App Store and Google Play release | Yes |
 
-Once #5264 lands, test that every equivalent API path accepts River's admitted session and rejects another local client acting as River.
+Once it lands, test that every equivalent API path accepts River's admitted session and rejects another local client acting as River, including one that holds an app grant for another app.
 
 ## WebView host
 
 | Profile | How River runs | What protects it |
 | --- | --- | --- |
-| River on iOS and Android | River's web code in a WKWebView on iOS and an Android WebView, with files served by the embedded node | The trusted bridge, isolated web storage and session admission |
+| River on iOS and Android | River's web code in a WKWebView on iOS and an Android WebView, with files served by the embedded node | The trusted bridge, isolated web storage and local-client authentication |
 | River in a desktop browser | River's web code inside Core's sandboxed frame | Core's authentication, storage and capability checks |
 
 [1.1 Mobile feasibility and supported profiles](01-feasibility.md) confirmed that River runs in both WebViews, served by the embedded node from its website container ([device results](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#river-and-atlas-in-the-webview)).
@@ -120,7 +120,7 @@ The native save operation owns the accepted file independently of River's WebVie
 
 | Requirement | GitHub links | Check on the selected Core build |
 | --- | --- | --- |
-| Session admission | [#5264](https://github.com/freenet/freenet-core/issues/5264) | Only River's admitted session can act as River. Required before the public store release |
+| Local-client authentication | [#5264](https://github.com/freenet/freenet-core/issues/5264). Its first part, app grants for native clients, shipped in [#6130](https://github.com/freenet/freenet-core/pull/6130) | Only River's admitted session can act as River. Required before the public store release |
 | Private delegate replies | A delegate's notification output goes to every client that has messaged that delegate ([#4682](https://github.com/freenet/freenet-core/pull/4682)). Core withholds it from non-local connections ([#5211](https://github.com/freenet/freenet-core/pull/5211)) | River's chat delegate replies reach only River's session |
 | Durable, isolated web storage | [#5165](https://github.com/freenet/freenet-core/issues/5165) | Reload and app termination keep only River's records |
 
@@ -287,4 +287,4 @@ Test the complete export on iOS and Android:
 - A verified River version activates at the next session boundary with web storage intact. Only `migration_done` from the current session and active release permits predecessor cleanup. An interrupted migration resumes before another release activates.
 - On iOS and Android, the first Enable tap or first alert shows the notification prompt and saves River's choice. Revoking either River's choice or the OS permission routes alerts to River's page.
 - On iOS and Android, the user can review and export a support report while offline and after a node startup failure. The report passes the allowed-field, status and private-data checks in [Support reports](#support-reports).
-- Once #5264 lands, every equivalent API path accepts River's admitted session and rejects another local client acting as River. Closing River revokes that session's authority.
+- Once Core's local-client authentication ([#5264](https://github.com/freenet/freenet-core/issues/5264)) lands, every equivalent API path accepts River's admitted session and rejects another local client acting as River. Closing River revokes that session's authority.

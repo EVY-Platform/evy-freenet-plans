@@ -98,7 +98,7 @@ One contract in `freenet/contracts/ui_proposal/` holds the public attribution re
 
 - Every record uses `signed-register/1` from [2.4 SDUI data and actions](04-data-and-actions.md) with its own domain, such as `evy.ui-proposal/1`.
 - A closed proposal keeps its record and drops its flows. The attribution module keeps their bytes.
-- Core's 50 MB state limit applies. The contract adds no size cap of its own.
+- Core's 50 MiB state limit applies. The contract adds no size cap of its own.
 - A root-signed revocation of a publishing or attribution key makes the contract drop that key's records. The attribution module then re-signs its genuine records with a newly certified key.
 
 ## Proposing a UI change

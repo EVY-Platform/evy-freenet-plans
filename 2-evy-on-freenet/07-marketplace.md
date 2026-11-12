@@ -75,7 +75,7 @@ flowchart LR
 - The seller key is Alice's EVY key for the `marketplace` feature. Bob's EVY delegate derives his buyer key with `GetPublicKeys { feature: "marketplace", scope: "purchase:<purchase ID>" }`, so each purchase has its own key.
 - The iOS and Android apps create purchase IDs as UUIDs, following EVY's message-ID generation ([EVY+Mutations.swift](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/ios/evy/Core/EVY+Mutations.swift)).
 - Every signed state and record uses `signed-register/1`. This plan names only domains and payload fields.
-- Contracts limit only the size of the whole state, under Core's 50 MB limit.
+- Contracts limit only the size of the whole state, under Core's 50 MiB limit.
 
 ### The listing contract
 
@@ -110,7 +110,7 @@ The search index is an instance of the [collection contract from 2.4 SDUI data a
 
 An entry holds `listing` (the listing contract key), `item_id`, `title`, `price_cents`, `area` and the first photo ID. Alice's app writes the entry when she lists an item and updates it when she edits the item.
 
-Readers show an entry only when it matches the listing contract: the entry's author is the listing's seller, and the item exists, is not removed and is not sold.
+Readers show an entry only when it matches the listing contract: the entry's author is the listing's seller, and the item exists, has a listing decision, is not removed and is not sold. The listing authority writes decisions only for admitted sellers, so search shows only items it accepted from them.
 
 ### The purchase contract
 

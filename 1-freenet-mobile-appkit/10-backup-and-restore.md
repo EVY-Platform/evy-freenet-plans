@@ -41,7 +41,7 @@ Each export creates a new recovery code. The phone never stores it.
 
 ### The backup file
 
-The file is one Core FNSX file. It holds River's delegate secrets for every delegate listed in the `delegates` field of River's `app_definition.json` ([1.4 Application bundles](04-bundles.md)):
+The file is one Core FNSX file. Core exports every delegate secret in the installation's local scope. That scope holds the secrets of the delegates listed in the `delegates` field of River's `app_definition.json` ([1.4 Application bundles](04-bundles.md)) and of any predecessor delegate River has yet to retire:
 
 | Entry | What it holds for Alice |
 | --- | --- |

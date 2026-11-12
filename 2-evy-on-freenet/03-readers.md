@@ -57,7 +57,7 @@ The reader asks for an OS permission only at its first use.
 Some values reach the reader decrypted, such as a private address. The reader follows these rules on iOS and Android:
 
 - Decrypted values stay in memory only. SwiftData and Room never store them. When the reader needs a value again, it asks for it to be decrypted again.
-- The draft being edited stays in memory. `EVYDraftStore` on iOS and its Kotlin twin on Android hold it outside SwiftData and Room.
+- `EVYDraftStore` on iOS and its Kotlin twin on Android hold the draft being edited in memory. SwiftData and Room never store it.
 - The reader marks every value that came from decryption.
 - The user may act on a marked value directly: copy it, or tap a link inside it, such as a link someone sent.
 - A UI document may not write a marked value into a public record, or build it into an outgoing request or URL. The reader refuses the action and records the row ID in its diagnostics.

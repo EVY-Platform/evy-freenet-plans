@@ -120,7 +120,7 @@ These upstream changes reduce phone traffic:
 
 ### Carrier evidence
 
-Carrier transport problems are general to Freenet. Track them in Core's issues and file a new issue where none exists. This plan tests each supported carrier path on iOS and Android. The selected release profile uses encrypted UDP with hole punching ([#2211](https://github.com/freenet/freenet-core/pull/2211)) and `transport-quic: off`. Core 0.2.152 also maps `prefer` to `shadow`, with application traffic on UDP ([QUIC modes](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/transport/quic.rs#L82)). UDP reachability remains a carrier acceptance requirement. A transport-profile change repeats the iOS and Android carrier, serving-peer-loss, traffic, memory and lifecycle tests.
+Carrier transport problems are general to Freenet. Track them in Core's issues and file a new issue where none exists. This plan tests each supported carrier path on iOS and Android. The selected release profile uses encrypted UDP with hole punching ([#2211](https://github.com/freenet/freenet-core/pull/2211)) and Core's default `transport-quic` mode on iOS and Android, `off` ([Transport profile in 1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile)). UDP reachability remains a carrier acceptance requirement. A transport-profile change repeats the iOS and Android carrier, serving-peer-loss, traffic, memory and lifecycle tests.
 
 | Source | State | What it means for phones |
 | --- | --- | --- |
@@ -134,7 +134,7 @@ Carrier transport problems are general to Freenet. Track them in Core's issues a
 | [Duplicate-packet acknowledgements #5803](https://github.com/freenet/freenet-core/pull/5803) | Shipped in [Core 0.2.142](https://github.com/freenet/freenet-core/releases/tag/v0.2.142) | Test dropped acknowledgements, duplicate packets and interrupted receives |
 | [Wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951), [state after suspend #4153](https://github.com/freenet/freenet-core/issues/4153) | Open | Resume regression cases |
 
-Run the carrier-NAT and serving-peer-loss cases on freenet-test-network's Docker NAT simulation as well as on carriers. Check its stdlib version against Core first.
+Run the carrier-NAT and serving-peer-loss cases on freenet-test-network's Docker NAT simulation as well as on carriers. Check its stdlib version against Core first. Record each test peer's `transport-quic` mode: Core's default on Linux is `shadow`.
 
 ## Acceptance
 
