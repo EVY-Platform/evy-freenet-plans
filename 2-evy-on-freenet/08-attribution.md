@@ -178,7 +178,7 @@ Before sending anything, `evyctl` saves the exact signed bytes, named by hash, t
 
 ## Crediting a purchase
 
-Each purchase carries the buyer-signed `runtime_context` from [The purchase contract in 2.7 EVY Marketplace](07-marketplace.md#the-purchase-contract), retained with the purchase as [Financial policy identity in 2.6 Payments](06-payments.md#financial-policy-identity) lists. This plan uses these fields:
+Each purchase carries the buyer-signed `runtime_context` from [The purchase contract in 2.7 EVY Marketplace](07-marketplace.md#the-purchase-contract). This plan uses these fields:
 
 ```jsonc
 "runtime_context": {

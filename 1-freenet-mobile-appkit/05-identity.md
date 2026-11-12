@@ -49,7 +49,7 @@ On first start, `crates/mobile` creates one KEK for the installation and stores 
 - `setUnlockedDeviceRequired` needs Android 9 (API 28). This sets the Android floor in [supported profiles in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#supported-profiles).
 - Core records the backend in `secrets_dir/kek_backend` and loads the key only from that backend.
 - `crates/mobile` sets the umask to `0o077` before it starts any thread, as Core's `freenet` binary does ([#4219](https://github.com/freenet/freenet-core/pull/4219)).
-- The KEK stays on its phone. Exclude River's encrypted storage from iCloud and Google device backups.
+- The KEK stays on its phone. Exclude the node store and River's encrypted storage from iCloud and Google device backups.
 - iOS keeps Keychain items after an app is deleted. At first start after a reinstall, the host deletes a leftover Keychain key that has no matching data, then creates a new one.
 
 ## What the key protects

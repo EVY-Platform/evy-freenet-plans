@@ -33,7 +33,7 @@ sequenceDiagram
 - The host activates releases under [Activating a release in 1.3 Single-application host](03-host.md#activating-a-release).
 - River migrates in its own page with its own adapter and journal ([delegate_migration.rs](https://github.com/freenet/river/blob/6ed56973291373ca44e470cd9c735112ca300a10/ui/src/components/app/freenet_api/delegate_migration.rs), freenet-migrate 0.8 on freenet-stdlib 0.12.1).
 - While River migrates, its room list shows a migrating state (`RoomListDisplay::Migrating` in [room_list.rs](https://github.com/freenet/river/blob/78307756805f3e02399791dda142c86b83780b8f/ui/src/components/room_list.rs)).
-- Predecessor contracts and delegates come from earlier River releases signed by River's publisher key. The key check in [Execution policy in 1.4 Application bundles](04-bundles.md#execution-policy) therefore lets them run.
+- Predecessor contracts and delegates come from earlier River releases signed by River's publisher key. The key check in [Execution policy in 1.4 Application bundles](04-bundles.md#execution-policy) therefore covers them.
 
 ## Reporting completion
 

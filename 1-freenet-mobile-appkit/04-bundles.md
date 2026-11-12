@@ -93,11 +93,12 @@ River's publisher keeps its signing key backed up.
 
 ## Execution policy
 
-Each iOS and Android build pins River's container key.
+Each iOS and Android build pins River's container key. The pin decides which application the host opens.
 
-- `crates/mobile` checks the key when the host activates a release. A release under any other key does not run.
-- Any contract or delegate in a release signed under that key may run.
+- `crates/mobile` checks the key when the host activates a release. The host opens only a release under that key.
+- The host serves web code and registers delegates only from that release.
 - A release that adds or changes a delegate needs no new store build and no user approval. River's signed release is the check.
+- As a full peer, Core also validates and merges the contracts it hosts for the network. That Wasm runs under Pulley with Core's contract host functions.
 
 ## Setup
 

@@ -176,7 +176,7 @@ A removal marker holds `id`, `created_at`, `version` 1, the publishing key's cer
 Accepted risks:
 
 - A record with a future `created_at` stays longer than newer honest records.
-- Core forwards each client UPDATE between peers as the full state until it adopts a delta wire format ([#4072](https://github.com/freenet/freenet-core/pull/4072) deferred it).
+- Core forwards each client UPDATE between peers as the full state until it adopts a delta wire format ([#4072](https://github.com/freenet/freenet-core/pull/4072) deferred it). Each phone sends that state within its bandwidth cap.
 
 The publisher removes a record with `evyctl record remove test.notes <id>`. It signs the marker with the publishing key, sends it with `fdev execute update` and reads it back with `fdev execute get`. This is the same send-and-read-back routine as `evyctl hello publish` in [2.1 Hello EVY world](01-hello-evy-world.md#publishing-a-new-greeting).
 
@@ -307,7 +307,7 @@ Contracts enforce record rules on every peer. Work that needs an outside system 
 | Work | Implementation |
 | --- | --- |
 | Validate a record | The contract checks it in `validate_state` and `update_state` |
-| Report a refused write | The writer's node rejects the UPDATE. The SDK returns a [typed error from 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#requests-events-and-errors). The reader shows the reason in EVY's error alert |
+| Report a refused write | The writer's node rejects the UPDATE. The call API returns `refused` with the contract's reason, as in [Matching replies to requests in 2.1 Hello EVY world](01-hello-evy-world.md#matching-replies-to-requests). The reader shows the reason in EVY's error alert |
 | Run outside work after a write | The backend subscribes with freenet-stdlib's TypeScript client and signs its results under its own domain |
 
 ## Offline writes
@@ -320,7 +320,7 @@ flowchart LR
     Sign --> Send[Reader sends UPDATE]
     Send --> Check{Contract state holds it?}
     Check -->|Yes| Clear[ClearPending]
-    Check -->|No answer| Wait[Keep pending, resend same bytes on reconnect]
+    Check -->|No answer| Wait[Keep pending, resend same bytes after a failed stream or a reconnect]
     Check -->|Refused| Refuse[Keep draft, show reason, ClearPending]
     Wait --> Check
 ```
@@ -329,6 +329,7 @@ flowchart LR
 | --- | --- |
 | Offline after an earlier join | The delegate saves the note. The row shows "Sending". The reader sends it when the node reconnects |
 | Before the first join since startup | The delegate saves the note. The reader sends it after the join |
+| Routed traffic fills the bandwidth cap | Core fails the stream. The note stays pending and the row shows "Sending". The reader reads the contract and resends the same bytes |
 | EVY closes before the contract holds it | The note stays pending. On the next start, `ListPending` returns it. The adapter reads the contract and resends the same bytes if needed |
 | The pending save fails | The draft stays. The reader shows the storage error and retries the save before sending |
 | Bob writes to the same collection meanwhile | The contract merges both notes. A resend of Alice's note does not duplicate it |

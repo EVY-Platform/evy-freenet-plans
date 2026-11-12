@@ -24,7 +24,7 @@ After the handover and capture, the module splits the 0.70 dollars among the con
 
 Implement `api/src/modules/remuneration` with its `remuneration` PostgreSQL schema inside the shared TypeScript/Bun backend in [`api/`](https://github.com/EVY-Platform/evy/tree/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api).
 
-The module uses these purchase fields, which [Financial policy identity in 2.6 Payments](06-payments.md#financial-policy-identity) lists:
+The module uses these purchase fields from [The purchase contract in 2.7 EVY Marketplace](07-marketplace.md#the-purchase-contract):
 
 | Field | Dave's purchase |
 | --- | --- |

@@ -55,7 +55,7 @@ Once it lands, test that every equivalent API path accepts River's admitted sess
 | River on iOS and Android | River's web code in a WKWebView on iOS and an Android WebView, with files served by the embedded node | The trusted bridge, isolated web storage and local-client authentication |
 | River in a desktop browser | River's web code inside Core's sandboxed frame | Core's authentication, storage and capability checks |
 
-[1.1 Mobile feasibility and supported profiles](01-feasibility.md) confirmed that River runs in both WebViews, served by the embedded node from its website container ([device results](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#river-and-atlas-in-the-webview)).
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md) confirmed that River runs in both WebViews, served by the embedded node from its website container ([device results](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md#river-and-atlas-in-the-webview)).
 
 Host rules:
 
@@ -157,7 +157,7 @@ Load verified files from one release together. Core serves the shell and contrac
 
 ## Opening, suspending and reopening an app
 
-[Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) covers the node's start and stop, including an offline start. The host owns River's session.
+[Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) covers the node's start and stop, and [Offline startup](02-sdk.md#offline-startup) covers a start with no network. The host owns River's session.
 
 When Alice opens River on the subway with no signal:
 
@@ -167,7 +167,7 @@ When Alice opens River on the subway with no signal:
 
 On a first launch with no stored River release, show a native connection and retry screen until the host can fetch and verify one.
 
-Online, loading the stored container first saves about 0.5 s on the public network ([cached-app evidence](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#smaller-items)).
+Online, loading the stored container first saves about 0.5 s on the public network ([cached-app evidence](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#smaller-items)).
 
 Keep an invite link's URL while Core joins and serves its connecting page. Once the container is available, open Bob's invite at its intended target. Test [#5745](https://github.com/freenet/freenet-core/issues/5745) with the fix in [#5750](https://github.com/freenet/freenet-core/pull/5750).
 
@@ -252,9 +252,9 @@ Build a versioned JSON report from this list of allowed fields:
 | --- | --- |
 | Report | Report format version and collection time |
 | Versions | App version and build, Core version, active River release version and digest, platform and OS version |
-| Node | Lifecycle state and resolved bandwidth profile |
+| Node | Lifecycle state, resolved bandwidth profile, upload and download bytes for this app run and Core's refused-stream count |
 | Connections | OS network-path state and type, loopback WebSocket state, Freenet join state, peer count and each peer connection's state and failure code |
-| Storage | Total bytes used by the node store and WebView storage |
+| Storage | Total bytes used by the node store and WebView storage, hosted contract count and resolved hosting budgets |
 | Permissions | Permission name, River's saved choice and current OS permission status |
 | Pending messages | Total pending-message count and counts by send status, supplied by River |
 | Failures | The latest 50 failures from this app run, with time, component, operation name and typed failure code |
@@ -271,7 +271,7 @@ The host builds the JSON locally. The 64 KiB bridge limit applies to River's `su
 
 Test the complete export on iOS and Android:
 
-- Export from River's settings after an offline start, peer loss and a denied notification permission, and from the host's recovery screen after a failed node start. Check the reported versions, states, sources and times against the fixture.
+- Export from River's settings after an offline start, peer loss, upload held at the cap and a denied notification permission, and from the host's recovery screen after a failed node start. Check the reported versions, states, sources and times against the fixture.
 - Seed unique test values in delegate replies, conversation keys, message bodies, session tokens, private records and WebSocket query strings. Export through the settings and recovery actions and scan every exported byte for those values. Include the cases from [River diagnostic redaction #700](https://github.com/freenet/river/pull/700).
 - Check that the JSON contains only the allowed fields, unavailable values are marked, and pending-message counts match River's fixture.
 

@@ -50,7 +50,7 @@ The EVY delegate adds these messages to the ordinary messages from [Ordinary mes
 | --- | --- | --- | --- |
 | Root seed, addresses, drafts and pending operations | EVY delegate secrets in Core's encrypted store | Core's FNSX export | Erased with the node key |
 | Public rows | SwiftData on iOS, Room on Android | Not backed up. Read again from the contracts | Wiped |
-| Stored UI documents and contract states | The node's store | Not backed up. Read again from the network | Wiped |
+| Stored UI documents, EVY contract states, and contract code and state the node hosts for other peers | The node's store | Not backed up. Read again from the network | Wiped |
 
 ## Backup and Forget
 

@@ -30,7 +30,7 @@ flowchart LR
     Key --> Ctl[evyctl signs the greeting]
     Ctl --> Fdev[fdev execute update]
     Fdev --> Node[EVY backend node]
-    Node --> Net[Freenet peers]
+    Node --> Net[Freenet network]
     Net --> A[Alice's iPhone<br>embedded node]
     Net --> B[Bob's Android phone<br>embedded node]
 ```
@@ -168,6 +168,7 @@ Timeouts end the caller's wait without touching subscriptions:
 
 - A read times out after 15 seconds with `timedOut`. The SDK closes that read connection and opens a new one.
 - A write or delegate call times out after 30 seconds with `uncertain`. The caller keeps its saved bytes and reads the contract before sending again.
+- A write whose stream Core fails under the bandwidth cap returns `uncertain`.
 - A reply that arrives on a closed connection is dropped.
 - When Core and freenet-stdlib return a request ID on every reply and error, the SDK sends parallel requests on one connection.
 
@@ -195,7 +196,7 @@ Both apps start the embedded node at launch, in network mode with the [Bandwidth
 | Local network | `NSLocalNetworkUsageDescription`: "EVY connects to Freenet peers on your Wi-Fi." | `ACCESS_LOCAL_NETWORK` in builds that target API 37 or later |
 | Builds in this plan | Development bootstrap build on an iPhone and on the iOS Simulator | Debug bootstrap build on an Android phone and on the Android emulator |
 
-Both apps get the SDK from [1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md). The local network rows follow [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md).
+Both apps use the Swift package and Kotlin library from [SDK interface and packages in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#sdk-interface-and-packages), in the release that passes 1.8 Testing and release. The local network rows follow [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md).
 
 ### Contract keys
 
@@ -265,7 +266,7 @@ The EVY backend node runs on an always-on server. It stays subscribed to the hel
 sequenceDiagram
     participant CI as publish.yml with evyctl
     participant Op as EVY backend node
-    participant Net as Freenet peers
+    participant Net as Freenet network
     participant A as Alice's iPhone
     participant B as Bob's Android phone
     CI->>CI: Sign version 2 and save it in the outbox
@@ -308,8 +309,8 @@ Each user supplies its own store, send step and read-back step. A resend always 
 - On iOS and Android, after one successful read, the app relaunched in Airplane Mode shows the stored message and its received time. Back online, it subscribes and shows any higher `(version, value_hash)`. A fresh install in Airplane Mode shows "Connecting to Freenet", then the greeting once the phone is online.
 - On iOS and Android, locking the phone stops the node and ends all calls with `stopped`. Unlocking and returning to EVY starts the node, subscribes again and shows a greeting published while the phone was locked.
 - On iOS and Android, a test peer sends a state signed by an uncertified key and a state with a lower version. The phone's node rejects the uncertified state and keeps its stored state for the lower version, and the screen keeps "Hello again, EVY world".
-- The UI root key revokes `ci-1` after it signed version 900. A state from `laptop-1` at version 3 then replaces it on the contract's peers and on both phones. A later copy of version 900 is rejected.
+- The UI root key revokes `ci-1` after it signed version 900. A state from `laptop-1` at version 3 then replaces it on an independent peer and on both phones. A later copy of version 900 is rejected.
 - Contract tests cover each rule in [the hello contract](#the-hello-contract): equal versions with different bytes, a message over 1 KiB, a missing signature, a forged certificate, a revoked key, extra fields, noncanonical JSON and noncanonical signature encoding. `fdev verify-merge` passes with the report and fixture coverage required by [Merge-law coverage in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage).
-- `evyctl` reads back each publish through a second node. A fixture that drops the reply to the first UPDATE leads `evyctl` to resend the same saved bytes. A crash after step 3 ends with one published state on the next run. Competing equal-version states arrive in opposite orders: peers and both phones keep the higher-hash state after restart, and the losing run stops and reports the winner.
+- `evyctl` reads back each publish through a second node. A fixture that drops the reply to the first UPDATE leads `evyctl` to resend the same saved bytes. A crash after step 3 ends with one published state on the next run. Competing equal-version states arrive in opposite orders: an independent peer and both phones keep the higher-hash state after restart, and the losing run stops and reports the winner.
 - Call API tests on iOS and Android: a delegate call completes within 1 second while 50 background reads wait. A read that times out leaves every subscription delivering updates. A write that times out returns `uncertain`, and a read shows whether it landed. A test delegate registers and answers through `send`.
 - Native session admission passes on iOS and Android before reviewed pilot and public release. A second local client, including one that omits Origin or claims EVY's app identity, is refused contract calls, signing, decryption, private replies, export, import, deletion and delegate unregistration through every equivalent API path. The subscription, priority, read and replacement connections all require admission. A credential from the session ended by lock, background or restart is refused; a fresh admitted session succeeds.

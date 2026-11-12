@@ -268,13 +268,15 @@ The adapters run in both readers and use the messages from [Ordinary messages in
 
 ## Moderation and seller admission
 
-The moderators are named in the README. The support page states the report response time, a 14-day buyer dispute window after pickup and a 7-day moderation decision window.
+The support page names the moderators and states the report response time, a 14-day buyer dispute window after pickup and a 7-day moderation decision window.
 
 | Record | Where it lives | Signed by |
 | --- | --- | --- |
 | Seller list, `marketplace.sellers` | The lookups contract, public. One entry per seller key: enrollment ID, status (`admitted` or `suspended`) and the time it starts | EVY's publishing key, through `evyctl` |
 | Report | The authenticated backend reports endpoint, private. See [Reports](#reports) | The reporter's feature key |
 | Removal | A removal marker in the target's contract: the item in the seller's listing contract, or its entry in the search index. A removed item hides its photos | EVY's publishing key, through `evyctl record remove` |
+
+Removal and Block change what both readers show. Each phone's node keeps the contract state it hosts for the network, including a removed item's photos, in its store until Core evicts it.
 
 Seller admission:
 
@@ -315,7 +317,7 @@ EVY's backend node keeps Marketplace data hosted:
 
 - It subscribes to every listing contract, the search index, every live purchase and every photo of a live listing.
 - It saves a copy of each one in the hosting bucket before the user sees it as accepted. This list of saved copies is the hosting inventory.
-- It keeps purchases hosted for the 14-day dispute window after pickup, and photos for as long as their listing.
+- It keeps purchases hosted for 30 days after pickup, and photos for as long as their listing.
 - Its hourly readback check PUTs a saved copy again when the network has lost it or holds an older one.
 
 ## Pilot enrollment
@@ -325,7 +327,7 @@ The pilot runs in Sydney, in AUD.
 - Sellers are on the seller list.
 - The operator issues one buyer enrollment to each verified buyer.
 - Each enrolled buyer may hold one live request per item, across all of their purchase keys.
-- Set hosting storage, repair alarms and retention periods before the pilot.
+- Set hosting storage, repair alarms, retention periods and the search index size that the phone bandwidth profile carries before the pilot.
 
 ## The skateboard sale
 
@@ -341,7 +343,7 @@ Alice sells her skateboard on her iPhone and Bob buys it on his Android phone, u
 
 - Before step 4, Alice or Bob can cancel. The reservation then passes to the next accepted request, oldest first.
 - After step 4, Bob can no longer cancel. Only Alice answers, with "Confirm" or "Reject". If she does neither within 24 hours, the payment module captures automatically.
-- Alice receives 69.30 dollars and contributors share 0.70 dollars, as [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts) shows.
+- Alice receives 69.30 dollars and the contributor fee is 0.70 dollars, as [Fees and seller accounts in 2.6 Payments](06-payments.md#fees-and-seller-accounts) shows.
 - Readers hide the sold skateboard from search, even while Alice's app is closed.
 
 ## Acceptance
@@ -387,4 +389,4 @@ Moderation and hosting:
 - A report reaches the backend endpoint signed by the reporter's feature key. No report appears in public contract state.
 - `evyctl record remove` hides an item and its search entry on both phones. A blocked seller's items and a blocked author's messages disappear, while the purchase keeps its status and receipts.
 - A suspended seller sees "Selling paused" in "Create item". Their existing sale keeps its payment and refund display.
-- A test removes a hosted listing contract from the test network. The readback check PUTs the saved copy, and a second node reads the same bytes.
+- A test removes a hosted listing contract from every peer in the test network, including the test phones. The readback check PUTs the saved copy, and a second node reads the same bytes.

@@ -18,7 +18,7 @@ Example: Bob buys Alice's skateboard for 70 dollars under UI version 4 and polic
 
 - Bob pays 71.48 dollars in Stripe's payment sheet on his Android phone: the 70-dollar price plus a 1.48-dollar service fee that covers Stripe's card fee.
 - Alice receives 69.30 dollars.
-- Contributors share the full 0.70-dollar contributor fee.
+- EVY holds the 0.70-dollar contributor fee for contributors.
 - The payment module writes a signed payment record into the purchase, so both phones show the payment.
 
 This plan builds `api/src/modules/payment` in EVY's shared TypeScript/Bun backend, with its own `payment` PostgreSQL schema. It reuses EVY's [payment procedures](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/api/src/procedures/payments.ts) and [payment orchestration](https://github.com/EVY-Platform/evy/blob/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed/docs/services/marketplace/data.md#payment-orchestration).

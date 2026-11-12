@@ -40,7 +40,7 @@ flowchart TD
 | River's web client | Reads and writes rooms, registers its chat delegate and resubscribes after a reconnect |
 | WebView host | Loads River, handles shell-bridge messages, watches the network path and the app's foreground state |
 | `crates/mobile` | Wraps Core for Swift and Kotlin: node lifecycle, status, settings, key backend and host records |
-| Core | Verifies state, runs contracts and delegates, and talks to peers |
+| Core | Verifies state, runs contracts and delegates, and routes and hosts for the network within the bandwidth profile |
 
 ## SDK interface and packages
 
@@ -139,7 +139,7 @@ Application traffic uses the UDP transport. Core is replacing that transport wit
 
 The phone's node is a full Freenet peer, the one peer role the [whitepaper](https://github.com/freenet/paper-1/blob/bff15702759800a003ffbfce639fe859f57d966d/sections/03-primitives.tex) describes. It verifies contracts, runs delegates and keeps subscribed state on the device, and it routes and hosts for the network as every peer does. Core's bandwidth controls bound what it sends. Core's mobile discussions are [#420](https://github.com/freenet/freenet-core/discussions/420) and [#811](https://github.com/freenet/freenet-core/discussions/811).
 
-[1.1 Mobile feasibility and supported profiles](01-feasibility.md) measured a phone on Wi-Fi with every bandwidth setting unset ([finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#phones-are-full-peers-on-the-public-network)):
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md) measured a phone on Wi-Fi with every bandwidth setting unset ([finding](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#phones-are-full-peers-on-the-public-network)):
 
 | Run | Upload | Download |
 | --- | --- | --- |
@@ -167,7 +167,7 @@ Sources: Core's [bandwidth configuration](https://github.com/freenet/freenet-cor
 
 #### Traffic measurement
 
-Measure traffic on iOS and Android with the [harness](https://github.com/glesage/freenet-appkit/tree/1988c5cbdfc5c1f88065382de2a4f86093948b6e/harness) `watch` scenario and Core's upload and download counters. Run each workload twice: with every bandwidth setting unset, then with the profile. Publish the results with the resolved transport and bandwidth settings in the [release support matrix in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence).
+Measure traffic on iOS and Android with the [harness](https://github.com/glesage/freenet-appkit/tree/1988c5cbdfc5c1f88065382de2a4f86093948b6e/harness) `watch` scenario and Core's upload and download counters. Run each workload twice: on a development build with every bandwidth setting unset, then on the release build with the profile. Record battery drain per hour beside each workload, on an unplugged iPhone and Android phone. Publish the results with the resolved transport and bandwidth settings in the [release support matrix in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence).
 
 | Workload | What to record |
 | --- | --- |
@@ -242,6 +242,7 @@ Run contracts and delegates with the [Pulley interpreter](https://docs.wasmtime.
 
 - Check that contracts and delegates give the same results on iOS and Android, including memory growth and returned buffers.
 - Measure memory, run time and capacity failures on the exact release builds.
+- Measure River's read and send times while the contract executors validate contracts hosted for the network.
 - Adopt smaller reservations once an upstream Core release handles moving guest memory. Repeat the contract, delegate, memory-growth, capacity and lifecycle tests on iOS and Android before changing the profile.
 - Add armeabi-v7a once smaller reservations are adopted and a 32-bit Android phone passes these tests.
 - Change executor and Store limits only through a measured profile update. Record each setting and build digest in the release support matrix.
@@ -251,7 +252,7 @@ Run contracts and delegates with the [Pulley interpreter](https://docs.wasmtime.
 The host supplies installation-specific data, config, secret, cache and log folders. Its settings take precedence over the saved config.
 
 - Keep local-mode and network-mode stores apart. Discard a saved config whose folder, mode or gateway source differs.
-- Use Core's default storage and memory settings. Record the resolved values in the release support matrix.
+- Set the hosting budgets in the release profile: hosted state bytes, disk budget, hosted-contract memory share and module cache. Measure them on iOS and Android while the node hosts for the network, starting from the prototype values in [1.1 Mobile feasibility and supported profiles](01-feasibility.md#prototype-learnings). Record the resolved values in the release support matrix.
 - Keep rebuildable web-app caches apart from secrets.
 - Turn off Core's secret snapshots, so the phone keeps only each secret's current value.
 - Keep store ownership and paths across node restarts and iOS container moves.
@@ -272,7 +273,8 @@ The host supplies installation-specific data, config, secret, cache and log fold
 - Run repeated start/stop cycles within one live app process on iOS and Android. Cover normal stop, a shutdown timeout and a startup failure. Per-generation task counters show zero live node-owned tasks after completed teardown; stale callbacks cease, the stopped generation's samplers stop updating counters, and the port and store can be reused. Record shared process-wide runtime tasks and caches separately; shared task counts remain stable across cycles and caches stay within their configured bounds.
 - The release support matrix records the configured and effective transport settings. A profile change passes the affected iOS and Android connectivity, traffic, memory and lifecycle tests.
 - On real iOS and Android phones, on Wi-Fi and on each supported carrier, upload stays within `total-bandwidth-limit` during idle, active use and reconnect. Bob's message sends while routed traffic holds the cap.
-- Idle, active, reconnect and cap-reached traffic is measured and published for iOS and Android, with every bandwidth setting unset and with the profile.
+- Idle, active, reconnect and cap-reached traffic is measured and published for iOS and Android, on a development build with every bandwidth setting unset and on the release build with the profile.
+- With every network off, the host reports offline from the OS network path while Core's peer count stays up, and rejoins when the path returns, on iOS and Android.
 - After a restart, the node reuses its previous loopback port. With that port taken, it reports a new port.
 - Offline startup shows River's stored rooms and chat delegate before the first join.
 - The Keychain backend on iOS and the Keystore backend on Android load, store and delete the node key. A missing key returns `KeyLost`.

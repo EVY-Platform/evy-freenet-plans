@@ -29,7 +29,7 @@ flowchart LR
     River[River web UI in a WebView on iOS and Android] --> Host[AppKit WebView host]
     Host --> Node[Embedded node and store]
     Node --> Data[River room contracts and chat delegate]
-    Node --> Full[Freenet peers]
+    Node <--> Peers[Freenet peers]
 ```
 
 - [1.1 Mobile feasibility and supported profiles](1-freenet-mobile-appkit/01-feasibility.md)
@@ -88,10 +88,10 @@ Each plan owns its acceptance tests. A release ships only when the plans listed 
 | Release | Channels | Plans that must pass | Also required |
 | --- | --- | --- | --- |
 | River test release, end of milestone 1 (Freenet mobile AppKit) | TestFlight internal testing on iOS, Play internal testing on Android | All plans in milestone 1 (Freenet mobile AppKit) | Every build runs the release bandwidth profile from [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#bandwidth-profile) |
-| River public release | App Store and Google Play | All plans in milestone 1 (Freenet mobile AppKit) | Core's local-client authentication, the open part of [#5264](https://github.com/freenet/freenet-core/issues/5264) |
+| River public release | App Store and Google Play | All plans in milestone 1 (Freenet mobile AppKit) | Core's local-client authentication, the open part of [#5264](https://github.com/freenet/freenet-core/issues/5264); the network-role declaration under [Store requirements in 1.8 Testing and release](1-freenet-mobile-appkit/08-testing-and-release.md#store-requirements) |
 | EVY pilot and live users, end of milestone 2 (EVY on Freenet) | External TestFlight and Play closed testing (both reviewed), then the App Store and Google Play | All plans in milestone 2 (EVY on Freenet) | Organization Apple and Play developer accounts; authenticated native sessions under [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md#native-session-admission), implemented and tested on both builds |
 
-Both milestones use the release evidence owned by [1.8 Testing and release](1-freenet-mobile-appkit/08-testing-and-release.md):
+Both milestones use this release evidence:
 
 | Evidence | Required result |
 | --- | --- |
@@ -144,7 +144,7 @@ Core, stdlib and migration-library checkpoints below were checked on 12 November
 - [EVY-Platform/evy](https://github.com/EVY-Platform/evy): checked commit [`d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed`](https://github.com/EVY-Platform/evy/commit/d0fb7e6475f1dfc5c74325e37d4e92aed88d84ed)
 - [freenet/delta](https://github.com/freenet/delta): checked commit [`6e8c96031642e03f9cdcbe1bea71059b03699b1d`](https://github.com/freenet/delta/commit/6e8c96031642e03f9cdcbe1bea71059b03699b1d)
 - [freenet/atlas](https://github.com/freenet/atlas): checked commit [`051e38033e81a4232341ffa4360af94232e7809b`](https://github.com/freenet/atlas/commit/051e38033e81a4232341ffa4360af94232e7809b)
-- [glesage/freenet-appkit](https://github.com/glesage/freenet-appkit): checked commit [`1988c5cbdfc5c1f88065382de2a4f86093948b6e`](https://github.com/glesage/freenet-appkit/commit/1988c5cbdfc5c1f88065382de2a4f86093948b6e)
+- [glesage/freenet-appkit](https://github.com/glesage/freenet-appkit): docs at commit [`0a80db4218b46e4d1854ab783ac3c44b1377190f`](https://github.com/glesage/freenet-appkit/commit/0a80db4218b46e4d1854ab783ac3c44b1377190f) on the `store-build` branch; harness at commit [`1988c5cbdfc5c1f88065382de2a4f86093948b6e`](https://github.com/glesage/freenet-appkit/commit/1988c5cbdfc5c1f88065382de2a4f86093948b6e)
 - [freenet/paper-1](https://github.com/freenet/paper-1): checked commit [`bff15702759800a003ffbfce639fe859f57d966d`](https://github.com/freenet/paper-1/commit/bff15702759800a003ffbfce639fe859f57d966d)
 - [freenet/freenet-agent-skills](https://github.com/freenet/freenet-agent-skills): checked commit [`890ad1b20c03ee99dd0a0ae89ec3e3b17c19eac4`](https://github.com/freenet/freenet-agent-skills/commit/890ad1b20c03ee99dd0a0ae89ec3e3b17c19eac4)
 - [Ghostkeys](https://github.com/freenet/ghostkeys)

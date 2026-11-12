@@ -4,10 +4,10 @@
 
 | Document | Contents |
 | --- | --- |
-| [Support matrix](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md) | Routes, targets, Wasm backends, revisions, operations per device, required adapters |
-| [Device results](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md) | Every measured value, generated from the stored runs |
-| [Findings](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md) | What the runs turned up and which plan acts on each finding |
-| [Distribution review](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/distribution-review.md) | The iOS and Android packages against App Store and Google Play policy |
+| [Support matrix](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/support-matrix.md) | Routes, targets, Wasm backends, revisions, operations per device, required adapters |
+| [Device results](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md) | Every measured value, generated from the stored runs |
+| [Findings](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md) | What the runs turned up and which plan acts on each finding |
+| [Distribution review](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/distribution-review.md) | The iOS and Android packages against App Store and Google Play policy |
 
 ## Repositories
 
@@ -27,13 +27,13 @@ Show that River runs in an AppKit WebView on iOS and Android through its embedde
 | River WebView on iOS | iOS 16 and later, arm64 devices, Pulley, with the iOS Store limits in [Device limits](#device-limits) |
 | River WebView on Android | Android 9 (API 28) and later, the first level with the node key setting in [Node encryption key in 1.5 Identity, keys and local protection](05-identity.md#node-encryption-key). Release builds run Pulley on arm64-v8a and x86_64 ([Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)). armeabi-v7a is added once smaller Wasm reservations are adopted and a 32-bit phone passes the tests |
 | Swift package on iOS and Kotlin library on Android | Start, stop and report on the node and host River's WebView, on the same targets ([1.2 Embedded node and mobile SDK](02-sdk.md)) |
-| Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers with the [Bandwidth profile in 1.2 Embedded node and mobile SDK](02-sdk.md#bandwidth-profile) |
+| Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers with the [Bandwidth profile in 1.2 Embedded node and mobile SDK](02-sdk.md#bandwidth-profile). Supported carrier paths are the carriers listed in the release support matrix, each reaching a gateway over UDP |
 
-River's web client uses freenet-stdlib 0.8.5 and runs against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#protocol-compatibility)). River's main branch builds on freenet-stdlib 0.12.1 since 8 November 2026. River is the test application on iOS and Android.
+River's web client uses freenet-stdlib 0.8.5 and runs against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/support-matrix.md#protocol-compatibility)). River's main branch builds on freenet-stdlib 0.12.1 since 8 November 2026. River is the test application on iOS and Android.
 
 ## Support matrix
 
-Every device that ran an operation matched the desktop fixtures for bytes, typed errors, timeout results and callback order ([operations](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#operations)).
+Every device that ran an operation matched the desktop fixtures for bytes, typed errors, timeout results and callback order ([operations](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/support-matrix.md#operations)).
 
 | Check | iPhone 13 mini | iOS Simulator | Android emulator |
 | --- | --- | --- | --- |
@@ -45,7 +45,7 @@ Every device that ran an operation matched the desktop fixtures for bytes, typed
 
 ### Release-profile evidence
 
-Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend, Wasm reservation, executor cap, Store replacement limits, bandwidth profile and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
+Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend, Wasm reservation, executor cap, Store replacement limits, bandwidth profile, hosting budgets, hosted contract count and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
 
 Record the resolved transport profile for every iOS and Android build: configured and effective `transport-quic` mode, `quic-data-percent`, `quic-max-paths`, congestion controller, `bandwidth-limit`, `total-bandwidth-limit`, `min-bandwidth-per-connection` and the connection limits. Use the transport settings from [1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile). Link each lifecycle result to the task-cleanup evidence from [Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect).
 
@@ -59,14 +59,14 @@ After upstream Core ships support for smaller reservations, select its released 
 
 | Limit | Value | Evidence |
 | --- | --- | --- |
-| Linear-memory reservation per Wasm instance | 256 MiB. River's contracts use about 1 MiB | [Reservation finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations). Core set the 256 MiB default in [#3990](https://github.com/freenet/freenet-core/pull/3990) after the same reservation failure on a 4 GB Raspberry Pi ([#3986](https://github.com/freenet/freenet-core/issues/3986)) |
+| Linear-memory reservation per Wasm instance | 256 MiB. River's contracts use about 1 MiB | [Reservation finding](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#the-iphone-refused-cores-wasm-memory-reservations). Core set the 256 MiB default in [#3990](https://github.com/freenet/freenet-core/pull/3990) after the same reservation failure on a 4 GB Raspberry Pi ([#3986](https://github.com/freenet/freenet-core/issues/3986)) |
 | iOS Store limits | Replace each Store after 4 instances, 2 executors. With these, the iPhone stored 300 contracts | Same. Core's default replaces a Store when its retired instance memory reaches a byte budget, with 500 instances as the backstop ([#5268](https://github.com/freenet/freenet-core/issues/5268)) |
-| Local updates | About 21 per second, 45 ms each, on every device | [Local update finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#a-local-update-takes-about-45-ms) |
-| Large records | 32 MiB records cross Core, the bindings and the UI intact. On the iPhone a 32 MiB put takes 292 ms and a get 77 ms | [Large-record copying](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#large-record-copying-split-by-layer) |
-| Memory footprint | 24 to 27 MiB on the iPhone and 105 to 122 MiB on the emulator, with River open | [Memory and storage](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#memory-storage-and-address-space). Core measured about 0.8 MiB of memory per hosted contract in [#5647](https://github.com/freenet/freenet-core/issues/5647) and tracks memory per distinct Wasm module in [#5348](https://github.com/freenet/freenet-core/issues/5348) |
+| Local updates | About 21 per second, 45 ms each, on every device | [Local update finding](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#a-local-update-takes-about-45-ms) |
+| Large records | 32 MiB records cross Core, the bindings and the UI intact. On the iPhone a 32 MiB put takes 292 ms and a get 77 ms | [Large-record copying](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md#large-record-copying-split-by-layer) |
+| Memory footprint | 24 to 27 MiB on the iPhone and 105 to 122 MiB on the emulator, with River open | [Memory and storage](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md#memory-storage-and-address-space). Core measured about 0.8 MiB of memory per hosted contract in [#5647](https://github.com/freenet/freenet-core/issues/5647) and tracks memory per distinct Wasm module in [#5348](https://github.com/freenet/freenet-core/issues/5348) |
 | Storage | Stores 6.1 MiB, unpacked web apps 8.3 MiB and logs 3.2 MiB on the iPhone | Same |
-| Package size | iOS 41.8 MiB stripped (16.8 MiB zipped before App Store thinning). Android APK 40.9 MiB for arm64-v8a | [Package size](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#package-size) |
-| River download | River's 1.06 MB bundle downloads as 1.2 MiB from the public network | [River in the WebView](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#river-and-atlas-in-the-webview) |
+| Package size | iOS 41.8 MiB stripped (16.8 MiB zipped before App Store thinning). Android APK 40.9 MiB for arm64-v8a | [Package size](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md#package-size) |
+| River download | River's 1.06 MB bundle downloads as 1.2 MiB from the public network | [River in the WebView](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md#river-and-atlas-in-the-webview) |
 
 ## Startup and network
 
@@ -77,22 +77,22 @@ After upstream Core ships support for smaller reservations, select its released 
 | Stored River shown, offline | 306 ms | 1.22 s |
 | River shown after a fresh install, public network | 2.43 s | 2.02 s |
 | River shown again after 20 s in another app | 678 ms | 576 ms |
-| Full peer on Wi-Fi | 27 peers, about 60 KiB/s each way | 22 peers, about 22 KiB/s each way |
+| First two minutes on Wi-Fi, bandwidth settings unset | 27 peers, about 60 KiB/s each way | 22 peers, about 22 KiB/s each way |
 | Idle | Under 1 KiB/s each way | 1.4 KiB/s up and 1.1 KiB/s down, with 1 peer |
 | Fresh start on cellular | First peer through the carrier NAT in 5.6 s | Not a real carrier |
 
 | Finding | Responsible plan or repository |
 | --- | --- |
-| [Offline startup requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-node-cannot-start-offline-in-network-mode) | freenet-core, [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [Cellular transition requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-node-does-not-move-to-cellular-on-its-own) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [OS network-path monitoring requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-peer-count-stays-up-during-an-outage) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [Platform callback dispatch requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#callbacks-run-on-the-nodes-own-threads) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [Full-peer traffic finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#phones-are-full-peers-on-the-public-network) | [Bandwidth profile in 1.2 Embedded node and mobile SDK](02-sdk.md#bandwidth-profile) |
-| [Loading cached apps](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#smaller-items) first saves about 0.5 s online | [1.3 Single-application host](03-host.md) |
+| [Offline startup requirement](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#the-node-cannot-start-offline-in-network-mode) | freenet-core, [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [Cellular transition requirement](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#the-node-does-not-move-to-cellular-on-its-own) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [OS network-path monitoring requirement](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#the-peer-count-stays-up-during-an-outage) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [Platform callback dispatch requirement](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#callbacks-run-on-the-nodes-own-threads) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
+| [Full-peer traffic finding](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#phones-are-full-peers-on-the-public-network) | [Bandwidth profile in 1.2 Embedded node and mobile SDK](02-sdk.md#bandwidth-profile) |
+| [Loading cached apps](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#smaller-items) first saves about 0.5 s online | [1.3 Single-application host](03-host.md) |
 
 ## Foreground lifecycle
 
-The first iOS and Android release runs Core while the host is in the foreground. Each device passed three stop-and-start cycles with a fresh session each time. The node restarted in 50 ms on the iPhone and 58 ms on the emulator ([startup and lifecycle](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#startup-and-lifecycle)).
+The first iOS and Android release runs Core while the host is in the foreground. Each device passed three stop-and-start cycles with a fresh session each time. The node restarted in 50 ms on the iPhone and 58 ms on the emulator ([startup and lifecycle](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md#startup-and-lifecycle)).
 
 ```mermaid
 stateDiagram-v2
@@ -106,7 +106,7 @@ stateDiagram-v2
 
 ## Message alerts
 
-Alerts cover updates that arrive while the host runs in the foreground. The host's setup and settings screens show this scope. Alert taps reached the requested page on every device. The banner appeared 25 ms after the page raised it on the iPhone and 12 ms on the emulator ([message alerts](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/device-results.md#message-alerts-and-the-bridge)).
+Alerts cover updates that arrive while the host runs in the foreground. The host's setup and settings screens show this scope. Alert taps reached the requested page on every device. The banner appeared 25 ms after the page raised it on the iPhone and 12 ms on the emulator ([message alerts](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/device-results.md#message-alerts-and-the-bridge)).
 
 | Situation | What happens |
 | --- | --- |
@@ -117,15 +117,16 @@ An alert triggers a refresh of verified state before the screen opens. Backgroun
 
 ## Distribution review
 
-The [distribution review](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/distribution-review.md) assessed the iOS and Android packages against App Store and Google Play policy:
+The [distribution review](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/distribution-review.md) assessed the iOS and Android packages against App Store and Google Play policy:
 
 | Item | Result |
 | --- | --- |
 | Interpreter use | Pulley maps no executable memory, which fits both stores |
-| Downloaded website content and Wasm | Ship River with website and contract keys |
+| Downloaded website content and Wasm | Ship River with its pinned website container key. Core runs contract Wasm for River and for the contracts the node hosts for the network, all under Pulley |
+| Network role | The phone routes and hosts for the network as a full peer within its bandwidth cap. Declare this role under [Store requirements in 1.8 Testing and release](08-testing-and-release.md#store-requirements) |
 | Local network | Release builds retry the first LAN send after the iOS local-network prompt and request `ACCESS_LOCAL_NETWORK` on Android |
 | User-generated content | River provides reporting, blocking, a filter, terms and a support URL in its own UI |
-| Encryption export and data safety | Declare the standard algorithms and the data sent to peers |
+| Encryption export and data safety | Declare the standard algorithms, the data sent to peers and the contract state the node stores and forwards for the network |
 
 ## Prototype learnings
 
@@ -170,7 +171,7 @@ A community prototype also runs River on Android with an in-process node ([river
 
 ## Runs still to do
 
-Run the remaining harness scenarios when the equipment is available ([remaining runs](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#not-run-yet)):
+Run the remaining harness scenarios when the equipment is available ([remaining runs](https://github.com/glesage/freenet-appkit/blob/0a80db4218b46e4d1854ab783ac3c44b1377190f/docs/findings.md#not-run-yet)):
 
 | Run | Needs |
 | --- | --- |

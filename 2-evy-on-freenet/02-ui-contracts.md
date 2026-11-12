@@ -17,7 +17,7 @@ Publish EVY's whole UI as one signed document in one contract, `ui.evy`. UI vers
 - Home, the entry page, with a "Hello" button.
 - Hello, which shows the text "Hello EVY world".
 
-Each later version replaces the complete document under the same contract and the same version stream. Plans use the example version timeline in the [README](../README.md).
+Each later version replaces the complete document under the same contract and the same version stream.
 
 ```mermaid
 flowchart LR
@@ -165,5 +165,5 @@ Every hour the node reads each of these contracts through a second node. When th
 - `evyctl ui publish` publishes UI version 1, and readback through a second node matches the saved bytes.
 - `evyctl` reports invalid route targets, duplicate UUIDs and malformed actions at matching JSON paths. It warns when a version drops the `hello` route.
 - Both write-once copies exist and match before the send. A failed bucket write stops publication. An attempt to overwrite or delete a bucket object fails.
-- After test peers drop `ui.evy`, the backend node's hourly check sends the saved bytes again and a fresh peer can read the document.
+- After every peer in the isolated test network, including the test phones, drops `ui.evy`, the backend node's hourly check sends the saved bytes again and a fresh peer can read the document.
 - `evyctl ui fallback --reader 1` writes a verified UI version 1 document and refuses a document that fails verification.

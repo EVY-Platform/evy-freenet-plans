@@ -87,7 +87,7 @@ Core records when Bob's phone receives the room state and passes that time to Ri
 | --- | --- |
 | Room list and conversation read the same room | Each screen gets its own reply |
 | A read also subscribes to the room | River waits for the subscription confirmation before it relies on update notifications ([#2501](https://github.com/freenet/freenet-core/pull/2501)) |
-| River opens before the node joins | River reads its saved room copy through [1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect) |
+| River opens before the node joins | River reads its saved room copy through [Offline startup in 1.2 Embedded node and mobile SDK](02-sdk.md#offline-startup) |
 | One screen closes while another watches the room | The other screen keeps its subscription |
 
 ### Where River saves data
@@ -141,7 +141,7 @@ If `flush_done` does not arrive within about 2 seconds, the host stops the node 
 
 ### Core retention and offline delivery
 
-Core stores room state and sends it to peers. A successful client PUT confirms local storage; propagation continues in the background ([#3626](https://github.com/freenet/freenet-core/pull/3626)). This plan tests cached reads and reconnect delivery while Core keeps the room. Storage tests fill the build's hosting budget and record which rooms Core keeps or evicts.
+Core stores room state and sends it to peers. A successful client PUT confirms local storage; propagation continues in the background ([#3626](https://github.com/freenet/freenet-core/pull/3626)). This plan tests cached reads and reconnect delivery while Core keeps the room. Storage tests fill the build's hosting budget with contracts hosted for the network and record whether Core keeps River's subscribed rooms.
 
 These open Core threads may give stronger guarantees later:
 
