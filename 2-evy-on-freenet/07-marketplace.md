@@ -350,7 +350,7 @@ Reader tests use the shared SwiftUI and Compose fixtures for listings, purchases
 
 Contracts:
 
-- The [merge-law coverage gate in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage) and shared vectors in Rust, Swift, Kotlin and TypeScript cover the listing and purchase contracts: every delivery order converges, equal versions break ties by hash, a removal marker beats its item and no merge clears `sold`. Include focused near-capacity corpora for the listing and search index, with removal markers, pruning and concurrent updates.
+- The [merge-law coverage gate in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage) and shared vectors in Rust, Swift, Kotlin and TypeScript cover the listing and purchase contracts: every delivery order converges, equal versions break ties by hash, a removal marker beats its item and no merge clears `sold`. Include focused near-capacity corpora for the listing and search index, with removal markers, pruning and concurrent updates.
 - The purchase contract key comes out the same in Rust, Swift, Kotlin and TypeScript. A substituted seller, buyer or purchase ID fails.
 - The search index takes entries from many sellers. A publisher removal frees its space. An entry whose author is not the listing's seller stays hidden.
 - A photo contract rejects bytes that do not match its hash.

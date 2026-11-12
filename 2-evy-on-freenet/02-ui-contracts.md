@@ -92,7 +92,7 @@ The state holds one document per reader generation, plus the revocations from th
 | `summarize_state` | Each generation's version and document hash, and the revoked keys |
 | `get_state_delta` | Each generation where the peer holds a lower tuple or nothing, and each revocation the peer lacks |
 
-Ordering compares versions as numbers, then hash bytes as unsigned bytes. Every peer drops the same generations, so all peers converge. Run merge fixtures under [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage), including generation pruning and revocation at the state-size ceiling.
+Ordering compares versions as numbers, then hash bytes as unsigned bytes. Every peer drops the same generations, so all peers converge. Run merge fixtures under [Merge-law coverage in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage), including generation pruning and revocation at the state-size ceiling.
 
 The contract checks the envelope and the key chain. `evyctl` checks flows, routes and actions before signing.
 
@@ -159,7 +159,7 @@ Every hour the node reads each of these contracts through a second node. When th
 
 ## Acceptance
 
-- Contract tests and the [merge-law coverage gate in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage) cover: two generations, an equal-version hash tie, a revocation that drops one key's documents in every generation, a state that passes 50 MiB and drops its lowest generation, noncanonical JSON, a forged certificate and a state that holds only one new document. Focused near-capacity corpora exercise the required merge cases with the selected verifier and its recorded byte and case budgets.
+- Contract tests and the [merge-law coverage gate in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage) cover: two generations, an equal-version hash tie, a revocation that drops one key's documents in every generation, a state that passes 50 MiB and drops its lowest generation, noncanonical JSON, a forged certificate and a state that holds only one new document. Focused near-capacity corpora exercise the required merge cases with the selected verifier and its recorded byte and case budgets.
 - Signature, canonical encoding, ordering and generation choice give the same results in Rust, TypeScript, Swift and Kotlin from one set of shared vectors.
 - A revocation that empties the newest generation leaves readers on the highest remaining generation they support. A revocation that empties every generation they support leaves them on the bundled fallback document.
 - `evyctl ui publish` publishes UI version 1, and readback through a second node matches the saved bytes.

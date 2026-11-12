@@ -35,8 +35,8 @@ The plan would follow the encrypted sync design in [RFC #5587](https://github.co
 
 - how a second device pairs, for example with a QR code and a matching code on both screens
 - how concurrent edits merge, such as the train-and-pickup example above
-- how restore from [3.1 Automated backup](01-backup.md) or [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md) joins a sync group
-- how large sync checkpoints may be on mobile data, using the thin peer from [1.8 Thin-peer protocol](../1-freenet-mobile-appkit/08-thin-peer.md)
+- how restore from [3.1 Automated backup](01-backup.md) or [1.9 Backup and restore](../1-freenet-mobile-appkit/09-backup-and-restore.md) joins a sync group
+- how large sync checkpoints may be on mobile data, under the bandwidth cap from [Bandwidth profile in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#bandwidth-profile)
 
 Each part needs matching iOS and Android tests, including iOS–Android pairs.
 

@@ -8,7 +8,7 @@
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | Native migration runner in `crates/mobile`, exposed to Swift and Kotlin through the admitted native session |
 | [freenet-migrate](https://github.com/freenet/freenet-migrate) | Used | freenet-migrate 0.8.0 with `migrate_delegate_secrets_journaled` and the `NewestSnapshotWins` walk; freenet-migrate-build 0.2.0 |
 | [freenet-stdlib](https://github.com/freenet/freenet-stdlib) | Used | Delegate interface |
-| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Swift package and Kotlin library, the native call API from [2.1 Hello EVY world](01-hello-evy-world.md), and the backup screens from [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md) |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Used | Swift package and Kotlin library, the native call API from [2.1 Hello EVY world](01-hello-evy-world.md), and the backup screens from [1.9 Backup and restore](../1-freenet-mobile-appkit/09-backup-and-restore.md) |
 
 ## Purpose
 
@@ -54,7 +54,7 @@ The EVY delegate adds these messages to the ordinary messages from [Ordinary mes
 
 ## Backup and Forget
 
-Backup uses existing tools. EVY reuses the mobile parts from [1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md): the recovery-code screen, the iOS and Android save and open dialogs, and restore.
+Backup uses existing tools. EVY reuses the mobile parts from [1.9 Backup and restore](../1-freenet-mobile-appkit/09-backup-and-restore.md): the recovery-code screen, the iOS and Android save and open dialogs, and restore.
 
 | Step | What happens |
 | --- | --- |
@@ -63,7 +63,7 @@ Backup uses existing tools. EVY reuses the mobile parts from [1.10 Backup and re
 | Restore on a phone with EVY data | EVY shows what will be lost, runs Forget, then imports |
 | Pending operations after restore | EVY asks before it resends restored pending operations |
 
-Restoring records from an older delegate build needs that build's code in the export ([#4035](https://github.com/freenet/freenet-core/issues/4035)). Consistent snapshots follow the upstream issue linked in 1.10 Backup and restore.
+Restoring records from an older delegate build needs that build's code in the export ([#4035](https://github.com/freenet/freenet-core/issues/4035)). Consistent snapshots follow the upstream issue linked in 1.9 Backup and restore.
 
 Forget uses Forget from [1.5 Identity, keys and local protection](../1-freenet-mobile-appkit/05-identity.md): it erases the node key, then wipes EVY's data folder.
 
@@ -116,7 +116,7 @@ Each EVY build records a `migration-dependencies` manifest in evy:
 - the freenet-migrate and freenet-migrate-build versions, source revisions and checksums
 - the `Cargo.lock` digest
 
-CI fails when the built dependency set differs from the manifest or a production native or Wasm dependency graph contains multiple freenet-stdlib versions. Record the runner's iOS and Android artifact digests with the migration results. Test-network dependencies follow [Test-network dependencies in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#test-network-dependencies).
+CI fails when the built dependency set differs from the manifest or a production native or Wasm dependency graph contains multiple freenet-stdlib versions. Record the runner's iOS and Android artifact digests with the migration results. Test-network dependencies follow [Test-network dependencies in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#test-network-dependencies).
 
 ## Acceptance
 
@@ -128,6 +128,6 @@ CI fails when the built dependency set differs from the manifest or a production
 - Interrupting the move before import, after import and before retirement keeps the old records. The next start completes the move. Locking the phone during the move gives the same result.
 - After a completed move, the old delegate holds no records, and its key is unregistered.
 - CI fails for changed delegate Wasm without a registry row, multiple freenet-stdlib versions in a production graph, or a dependency set that differs from `migration-dependencies`. The pinned freenet-migrate 0.8.0 runner uses Core's stdlib types directly. Migration results record the exact iOS and Android artifacts.
-- On iOS and Android, an FNSX backup restores onto a fresh phone. Alice's derived public keys stay the same, and her saved pickup address from 2.7 EVY Marketplace is still there. Once [#4035](https://github.com/freenet/freenet-core/issues/4035) lands, a backup from delegate generation 1 restores into a generation 2 build and migrates. Until then, EVY reports that backup as older, as in [Older River releases in 1.10 Backup and restore](../1-freenet-mobile-appkit/10-backup-and-restore.md#older-river-releases).
+- On iOS and Android, an FNSX backup restores onto a fresh phone. Alice's derived public keys stay the same, and her saved pickup address from 2.7 EVY Marketplace is still there. Once [#4035](https://github.com/freenet/freenet-core/issues/4035) lands, a backup from delegate generation 1 restores into a generation 2 build and migrates. Until then, EVY reports that backup as older, as in [Older River releases in 1.9 Backup and restore](../1-freenet-mobile-appkit/09-backup-and-restore.md#older-river-releases).
 - Restoring onto a phone with EVY data shows what will be lost first. EVY asks before it resends restored pending operations.
 - After Forget, no EVY record can be read on the phone.

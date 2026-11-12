@@ -196,7 +196,7 @@ Test reconnect delivery through Core's [state comparison](https://github.com/fre
 | --- | --- |
 | Alice edits the room settings on her phone and her laptop | Test River's configuration rank: a valid configuration wins over an invalid one, then the higher version wins, then the greater signature digest breaks an equal-version tie. Deliver both edits in opposite orders, exchange summaries and restart both clients; they keep the same winner. Tell Alice when her edit was overridden ([river#793](https://github.com/freenet/river/pull/793)) |
 | A ban changes the room secret while Bob has a draft | Keep the draft. River checks Bob's membership and the room secret before it signs and sends |
-| Peers merge changes in different orders or get duplicates | Test real room states, re-delivered deltas, lowered caps and ban-driven removals using River's configuration ranks and bounded cleanup ([river#793](https://github.com/freenet/river/pull/793), [river#815](https://github.com/freenet/river/pull/815)). Run the [merge-law coverage gate in 1.9 Testing and release](09-testing-and-release.md#merge-law-coverage) on the exact room Wasm and parameters |
+| Peers merge changes in different orders or get duplicates | Test real room states, re-delivered deltas, lowered caps and ban-driven removals using River's configuration ranks and bounded cleanup ([river#793](https://github.com/freenet/river/pull/793), [river#815](https://github.com/freenet/river/pull/815)). Run the [merge-law coverage gate in 1.8 Testing and release](08-testing-and-release.md#merge-law-coverage) on the exact room Wasm and parameters |
 
 ## Lost network state
 

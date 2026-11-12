@@ -252,14 +252,14 @@ Build a versioned JSON report from this list of allowed fields:
 | --- | --- |
 | Report | Report format version and collection time |
 | Versions | App version and build, Core version, active River release version and digest, platform and OS version |
-| Node | Lifecycle state and negotiated node role |
-| Connections | OS network-path state and type, loopback WebSocket state, Freenet join state, serving-peer count and each serving connection's state and failure code |
+| Node | Lifecycle state and resolved bandwidth profile |
+| Connections | OS network-path state and type, loopback WebSocket state, Freenet join state, peer count and each peer connection's state and failure code |
 | Storage | Total bytes used by the node store and WebView storage |
 | Permissions | Permission name, River's saved choice and current OS permission status |
 | Pending messages | Total pending-message count and counts by send status, supplied by River |
 | Failures | The latest 50 failures from this app run, with time, component, operation name and typed failure code |
 
-Record each status or measurement's observation time and source (OS, Core, host or River). Mark unavailable values explicitly. Assign serving connections labels that last only for the report, such as `peer-1`.
+Record each status or measurement's observation time and source (OS, Core, host or River). Mark unavailable values explicitly. Assign peer connections labels that last only for the report, such as `peer-1`.
 
 Validate River's pending-message counts as nonnegative integers for the fixed send statuses. Check that the total equals their sum.
 
@@ -271,7 +271,7 @@ The host builds the JSON locally. The 64 KiB bridge limit applies to River's `su
 
 Test the complete export on iOS and Android:
 
-- Export from River's settings after an offline start, serving-peer loss and a denied notification permission, and from the host's recovery screen after a failed node start. Check the reported versions, states, sources and times against the fixture.
+- Export from River's settings after an offline start, peer loss and a denied notification permission, and from the host's recovery screen after a failed node start. Check the reported versions, states, sources and times against the fixture.
 - Seed unique test values in delegate replies, conversation keys, message bodies, session tokens, private records and WebSocket query strings. Export through the settings and recovery actions and scan every exported byte for those values. Include the cases from [River diagnostic redaction #700](https://github.com/freenet/river/pull/700).
 - Check that the JSON contains only the allowed fields, unavailable values are marked, and pending-message counts match River's fixture.
 

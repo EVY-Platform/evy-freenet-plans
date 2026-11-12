@@ -29,7 +29,7 @@ flowchart LR
     River[River web UI in a WebView on iOS and Android] --> Host[AppKit WebView host]
     Host --> Node[Embedded node and store]
     Node --> Data[River room contracts and chat delegate]
-    Node --> Full[Serving full peers]
+    Node --> Full[Freenet peers]
 ```
 
 - [1.1 Mobile feasibility and supported profiles](1-freenet-mobile-appkit/01-feasibility.md)
@@ -39,9 +39,8 @@ flowchart LR
 - [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md)
 - [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md)
 - [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md)
-- [1.8 Thin-peer protocol](1-freenet-mobile-appkit/08-thin-peer.md)
-- [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md)
-- [1.10 Backup and restore](1-freenet-mobile-appkit/10-backup-and-restore.md)
+- [1.8 Testing and release](1-freenet-mobile-appkit/08-testing-and-release.md)
+- [1.9 Backup and restore](1-freenet-mobile-appkit/09-backup-and-restore.md)
 
 ### Milestone 2 (EVY on Freenet)
 
@@ -88,17 +87,17 @@ Each plan owns its acceptance tests. A release ships only when the plans listed 
 
 | Release | Channels | Plans that must pass | Also required |
 | --- | --- | --- | --- |
-| River test release, end of milestone 1 (Freenet mobile AppKit) | TestFlight internal testing on iOS, Play internal testing on Android | All plans in milestone 1 (Freenet mobile AppKit) | Every build runs as a thin peer |
+| River test release, end of milestone 1 (Freenet mobile AppKit) | TestFlight internal testing on iOS, Play internal testing on Android | All plans in milestone 1 (Freenet mobile AppKit) | Every build runs the release bandwidth profile from [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#bandwidth-profile) |
 | River public release | App Store and Google Play | All plans in milestone 1 (Freenet mobile AppKit) | Core's local-client authentication, the open part of [#5264](https://github.com/freenet/freenet-core/issues/5264) |
 | EVY pilot and live users, end of milestone 2 (EVY on Freenet) | External TestFlight and Play closed testing (both reviewed), then the App Store and Google Play | All plans in milestone 2 (EVY on Freenet) | Organization Apple and Play developer accounts; authenticated native sessions under [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md#native-session-admission), implemented and tested on both builds |
 
-Both milestones use the release evidence owned by [1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md):
+Both milestones use the release evidence owned by [1.8 Testing and release](1-freenet-mobile-appkit/08-testing-and-release.md):
 
 | Evidence | Required result |
 | --- | --- |
 | Embedded node teardown | Repeated in-process start and stop passes [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#acceptance), including termination of node-owned background tasks ([Core #6048](https://github.com/freenet/freenet-core/issues/6048)) |
-| Merge-law coverage | The pinned verifier checks the required properties and near-capacity fixtures under [Merge-law coverage in 1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage) |
-| NAT harness dependencies | Each linked harness binary passes [Test-network dependencies in 1.9 Testing and release](1-freenet-mobile-appkit/09-testing-and-release.md#test-network-dependencies), including its stdlib and linker checks ([Core #5950](https://github.com/freenet/freenet-core/issues/5950)) |
+| Merge-law coverage | The pinned verifier checks the required properties and near-capacity fixtures under [Merge-law coverage in 1.8 Testing and release](1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage) |
+| NAT harness dependencies | Each linked harness binary passes [Test-network dependencies in 1.8 Testing and release](1-freenet-mobile-appkit/08-testing-and-release.md#test-network-dependencies), including its stdlib and linker checks ([Core #5950](https://github.com/freenet/freenet-core/issues/5950)) |
 | Mobile release profile | Exact iOS and Android artifacts record effective runtime, transport and bandwidth settings under [1.1 Mobile feasibility and supported profiles](1-freenet-mobile-appkit/01-feasibility.md#release-profile-evidence) |
 
 ## Decision gates
@@ -117,8 +116,8 @@ Both milestones use the release evidence owned by [1.9 Testing and release](1-fr
 | [Core](https://github.com/freenet/freenet-core) resolves gateway hostnames during node startup, so a start with no DNS fails. It returns `PeerNotJoined` before joining. | **Change** | Resolve gateways in the join loop and serve stored contracts and delegate storage before the first join, so Alice opens "Skate club" offline. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#offline-startup) |
 | [Core](https://github.com/freenet/freenet-core) runs Wasm with configured reservations, executors and Store replacement limits. | Release profile | Use the measured fixed-reservation profile for the first iOS and Android release, with Android on arm64-v8a and x86_64. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#running-wasm) |
 | [Core](https://github.com/freenet/freenet-core) stores its node encryption key in a file, systemd credential or desktop keyring. | New | Add a host-supplied key backend. Swift keeps the key in the iOS Keychain and Kotlin in the Android Keystore. [1.5 Identity, keys and local protection](1-freenet-mobile-appkit/05-identity.md#node-encryption-key) |
-| [Core](https://github.com/freenet/freenet-core)'s network peers route requests and host contract data. | **Change** | Extend the outbound-only light-client proposal ([#5917](https://github.com/freenet/freenet-core/issues/5917)) with the thin-peer role: phones verify their own data while at least two serving full peers route and host. [1.8 Thin-peer protocol](1-freenet-mobile-appkit/08-thin-peer.md#scope-and-trust-boundary) |
-| [Core](https://github.com/freenet/freenet-core) exports delegate secrets but not the delegate code that wrote them. | **Change** | Include delegate code in exports ([#4035](https://github.com/freenet/freenet-core/issues/4035)), and file an issue for consistent snapshots, so old River backups restore on a new phone. [1.10 Backup and restore](1-freenet-mobile-appkit/10-backup-and-restore.md#older-river-releases) |
+| [Core](https://github.com/freenet/freenet-core) caps everything a node sends with `total-bandwidth-limit` ([#5964](https://github.com/freenet/freenet-core/pull/5964)). | Release profile | Run the phone as a full peer with a measured cap, per-connection share and connection limit. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#bandwidth-profile) |
+| [Core](https://github.com/freenet/freenet-core) exports delegate secrets but not the delegate code that wrote them. | **Change** | Include delegate code in exports ([#4035](https://github.com/freenet/freenet-core/issues/4035)), and file an issue for consistent snapshots, so old River backups restore on a new phone. [1.9 Backup and restore](1-freenet-mobile-appkit/09-backup-and-restore.md#older-river-releases) |
 | [River](https://github.com/freenet/river) bundles its web UI, room contract and chat delegate Wasm files. | New | Add `app_definition.json` with River's name, host API, delegates and permissions. [1.4 Application bundles](1-freenet-mobile-appkit/04-bundles.md#app_definitionjson) |
 | [River](https://github.com/freenet/river) signs chat messages in its page and submits them to the room contract. | New | Keep each draft and pending message under its own key in the chat delegate until the network has the message. Answer the host's `flush_request` and send `migration_done`. [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#bobs-saved-draft) |
 | [Core](https://github.com/freenet/freenet-core) clients call contracts and delegates over a WebSocket. | New | Add a native contract and delegate call API to `crates/mobile` for EVY's Swift and Kotlin readers. Bind every connection and equivalent API path to the authenticated native host session under [#5264](https://github.com/freenet/freenet-core/issues/5264). [2.1 Hello EVY world](2-evy-on-freenet/01-hello-evy-world.md#native-session-admission) |
@@ -129,7 +128,7 @@ Both milestones use the release evidence owned by [1.9 Testing and release](1-fr
 | Today | Type | Proposal |
 | --- | --- | --- |
 | [Core](https://github.com/freenet/freenet-core) reserves 256 MiB per Wasm instance. | **Change** | Adopt smaller reservations once upstream Core ships the memory-address handling and iOS and Android tests pass. Then add Android armeabi-v7a. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#running-wasm) |
-| [Core](https://github.com/freenet/freenet-core) forwards client updates as full merged state ([#4072](https://github.com/freenet/freenet-core/pull/4072)). | **Change** | Send client UPDATEs as deltas. [1.8 Thin-peer protocol](1-freenet-mobile-appkit/08-thin-peer.md#upstream-work-and-carrier-evidence) |
+| [Core](https://github.com/freenet/freenet-core) forwards client updates as full merged state ([#4072](https://github.com/freenet/freenet-core/pull/4072)). | **Change** | Send client UPDATEs as deltas. [1.2 Embedded node and mobile SDK](1-freenet-mobile-appkit/02-sdk.md#upstream-bandwidth-work) |
 | [Core](https://github.com/freenet/freenet-core) counts client and delegate subscriptions as local hosting demand. | **Change** | Add bounded contract pinning and stronger offline delivery after maintainer agreement and eviction and restart tests. [1.6 Application protocols, data and operations](1-freenet-mobile-appkit/06-data-and-operations.md#core-retention-and-offline-delivery) |
 | [Core](https://github.com/freenet/freenet-core) stores delegate secrets; apps move them through predecessor and successor delegates. | **Change** | Let Core move secrets to approved successor delegates. [1.7 Upgrades and migration](1-freenet-mobile-appkit/07-migration.md#core-assisted-migration) |
 

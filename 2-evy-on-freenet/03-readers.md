@@ -205,7 +205,7 @@ EVY publishes from its organization accounts: an Apple Developer Program organiz
 
 ### Build and channel evidence
 
-The workflow runs the store build checks from [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md) on both artifacts, with application `EVY`, iOS deployment target 17 and Android API 28.
+The workflow runs the store build checks from [1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md) on both artifacts, with application `EVY`, iOS deployment target 17 and Android API 28.
 
 | Channel | iOS | Android |
 | --- | --- | --- |

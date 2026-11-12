@@ -27,7 +27,7 @@ Show that River runs in an AppKit WebView on iOS and Android through its embedde
 | River WebView on iOS | iOS 16 and later, arm64 devices, Pulley, with the iOS Store limits in [Device limits](#device-limits) |
 | River WebView on Android | Android 9 (API 28) and later, the first level with the node key setting in [Node encryption key in 1.5 Identity, keys and local protection](05-identity.md#node-encryption-key). Release builds run Pulley on arm64-v8a and x86_64 ([Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm)). armeabi-v7a is added once smaller Wasm reservations are adopted and a 32-bit phone passes the tests |
 | Swift package on iOS and Kotlin library on Android | Start, stop and report on the node and host River's WebView, on the same targets ([1.2 Embedded node and mobile SDK](02-sdk.md)) |
-| Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers until [1.8 Thin-peer protocol](08-thin-peer.md) lands |
+| Network | Network mode through the public gateway index or gateway overrides. Phones run as full peers with the [Bandwidth profile in 1.2 Embedded node and mobile SDK](02-sdk.md#bandwidth-profile) |
 
 River's web client uses freenet-stdlib 0.8.5 and runs against Core 0.2.139 (freenet-stdlib 0.12.1) without an adapter ([protocol compatibility](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/support-matrix.md#protocol-compatibility)). River's main branch builds on freenet-stdlib 0.12.1 since 8 November 2026. River is the test application on iOS and Android.
 
@@ -45,9 +45,9 @@ Every device that ran an operation matched the desktop fixtures for bytes, typed
 
 ### Release-profile evidence
 
-Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend, Wasm reservation, executor cap, Store replacement limits, negotiated node role and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
+Publish a release support matrix beside the prototype results. Each row records the Core commit, stdlib and Wasmtime versions, mobile patch revision, artifact digest, device, OS, ABI, runtime backend, Wasm reservation, executor cap, Store replacement limits, bandwidth profile and test results. Mark coverage as built, simulator/emulator tested, or real-device tested. Validate the execution model proposed in [1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm) with the selected iOS and Android release profiles.
 
-Record the resolved transport profile for every iOS and Android build: configured and effective `transport-quic` mode, `quic-data-percent`, `quic-max-paths`, congestion controller, `bandwidth-limit`, `total-bandwidth-limit` and `min-bandwidth-per-connection`. Use the transport settings from [1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile). Link each lifecycle result to the task-cleanup evidence from [Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect).
+Record the resolved transport profile for every iOS and Android build: configured and effective `transport-quic` mode, `quic-data-percent`, `quic-max-paths`, congestion controller, `bandwidth-limit`, `total-bandwidth-limit`, `min-bandwidth-per-connection` and the connection limits. Use the transport settings from [1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile). Link each lifecycle result to the task-cleanup evidence from [Start, stop and reconnect in 1.2 Embedded node and mobile SDK](02-sdk.md#start-stop-and-reconnect).
 
 Repeat the runtime, lifecycle, host, key protection and application tests on the actual release artifacts. Record real iOS and Android phone coverage, every supported Android ABI, battery measurements and supported carrier paths before release. A changed runtime, minimum OS, mobile patch revision, transport mode, congestion controller or bandwidth setting requires the affected runtime, lifecycle, connectivity and traffic checks again.
 
@@ -87,7 +87,7 @@ After upstream Core ships support for smaller reservations, select its released 
 | [Cellular transition requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-node-does-not-move-to-cellular-on-its-own) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
 | [OS network-path monitoring requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#the-peer-count-stays-up-during-an-outage) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
 | [Platform callback dispatch requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#callbacks-run-on-the-nodes-own-threads) | [1.2 Embedded node and mobile SDK](02-sdk.md) |
-| [Thin-peer requirement](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#phones-are-full-peers-on-the-public-network) | [1.8 Thin-peer protocol](08-thin-peer.md) |
+| [Full-peer traffic finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#phones-are-full-peers-on-the-public-network) | [Bandwidth profile in 1.2 Embedded node and mobile SDK](02-sdk.md#bandwidth-profile) |
 | [Loading cached apps](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#smaller-items) first saves about 0.5 s online | [1.3 Single-application host](03-host.md) |
 
 ## Foreground lifecycle

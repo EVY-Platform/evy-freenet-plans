@@ -30,9 +30,9 @@ flowchart LR
     Key --> Ctl[evyctl signs the greeting]
     Ctl --> Fdev[fdev execute update]
     Fdev --> Node[EVY backend node]
-    Node --> Net[Serving full peers]
-    Net --> A[Alice's iPhone<br>embedded thin peer]
-    Net --> B[Bob's Android phone<br>embedded thin peer]
+    Node --> Net[Freenet peers]
+    Net --> A[Alice's iPhone<br>embedded node]
+    Net --> B[Bob's Android phone<br>embedded node]
 ```
 
 ## Supplied EVY code and integration scope
@@ -121,7 +121,7 @@ The contract implements the four functions of freenet-stdlib's [contract interfa
 
 Ordering compares versions as numbers, then the 32 hash bytes as unsigned bytes. At equal versions the higher hash wins, so every peer keeps the same state.
 
-CI in evy runs a test for each rule and runs `fdev verify-merge` on fixture states under [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage). The workspace uses the freenet-stdlib release that matches the Core version in the SDK.
+CI in evy runs a test for each rule and runs `fdev verify-merge` on fixture states under [Merge-law coverage in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage). The workspace uses the freenet-stdlib release that matches the Core version in the SDK.
 
 ## Native contract and delegate calls
 
@@ -184,7 +184,7 @@ Locking the phone sends the app to the background. In the background the app end
 
 ## The EVY app on iOS and Android
 
-Both apps start the embedded node at launch, in network mode and the thin-peer role from [1.8 Thin-peer protocol](../1-freenet-mobile-appkit/08-thin-peer.md), with Core's default storage and memory settings. The node runs while the app is in the foreground, as in [foreground lifecycle in 1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#foreground-lifecycle).
+Both apps start the embedded node at launch, in network mode with the [Bandwidth profile in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#bandwidth-profile) and Core's default storage and memory settings. The node runs while the app is in the foreground, as in [foreground lifecycle in 1.1 Mobile feasibility and supported profiles](../1-freenet-mobile-appkit/01-feasibility.md#foreground-lifecycle).
 
 | | iOS | Android |
 | --- | --- | --- |
@@ -195,7 +195,7 @@ Both apps start the embedded node at launch, in network mode and the thin-peer r
 | Local network | `NSLocalNetworkUsageDescription`: "EVY connects to Freenet peers on your Wi-Fi." | `ACCESS_LOCAL_NETWORK` in builds that target API 37 or later |
 | Builds in this plan | Development bootstrap build on an iPhone and on the iOS Simulator | Debug bootstrap build on an Android phone and on the Android emulator |
 
-Both apps get the SDK from [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md). The local network rows follow [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md).
+Both apps get the SDK from [1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md). The local network rows follow [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md).
 
 ### Contract keys
 
@@ -259,13 +259,13 @@ The data layer owns the greeting subscription. Leaving the screen ends only the 
 | `.github/workflows/publish.yml`, started by a maintainer. This is the normal path | `ci-1`, from the GitHub environment `publishing` |
 | The publisher's laptop, for emergencies | `laptop-1`, from the OS keychain |
 
-The EVY backend node is a full peer on an always-on server. It stays subscribed to the hello contract, so at least one full peer always hosts it.
+The EVY backend node runs on an always-on server. It stays subscribed to the hello contract, so at least one always-on peer hosts it.
 
 ```mermaid
 sequenceDiagram
     participant CI as publish.yml with evyctl
     participant Op as EVY backend node
-    participant Net as Serving full peers
+    participant Net as Freenet peers
     participant A as Alice's iPhone
     participant B as Bob's Android phone
     CI->>CI: Sign version 2 and save it in the outbox
@@ -304,12 +304,12 @@ Each user supplies its own store, send step and read-back step. A resend always 
 ## Acceptance
 
 - On iOS and Android, the development bootstrap build on a real phone opens on the Hello screen and, on Wi-Fi, shows "Hello EVY world" within 5 seconds. Record the time on the iPhone, the Android phone, the iOS Simulator and the Android emulator.
-- On iOS and Android, Alice on her iPhone and Bob on his Android phone keep the Hello screen open while `publish.yml` runs `evyctl hello publish --message "Hello again, EVY world"`. Both screens show the new message within 30 seconds, while both apps keep running. Both phones run in the thin-peer role from 1.8 Thin-peer protocol.
+- On iOS and Android, Alice on her iPhone and Bob on his Android phone keep the Hello screen open while `publish.yml` runs `evyctl hello publish --message "Hello again, EVY world"`. Both screens show the new message within 30 seconds, while both apps keep running. Both phones run the bandwidth profile from 1.2 Embedded node and mobile SDK.
 - On iOS and Android, after one successful read, the app relaunched in Airplane Mode shows the stored message and its received time. Back online, it subscribes and shows any higher `(version, value_hash)`. A fresh install in Airplane Mode shows "Connecting to Freenet", then the greeting once the phone is online.
 - On iOS and Android, locking the phone stops the node and ends all calls with `stopped`. Unlocking and returning to EVY starts the node, subscribes again and shows a greeting published while the phone was locked.
 - On iOS and Android, a test peer sends a state signed by an uncertified key and a state with a lower version. The phone's node rejects the uncertified state and keeps its stored state for the lower version, and the screen keeps "Hello again, EVY world".
 - The UI root key revokes `ci-1` after it signed version 900. A state from `laptop-1` at version 3 then replaces it on the contract's peers and on both phones. A later copy of version 900 is rejected.
-- Contract tests cover each rule in [the hello contract](#the-hello-contract): equal versions with different bytes, a message over 1 KiB, a missing signature, a forged certificate, a revoked key, extra fields, noncanonical JSON and noncanonical signature encoding. `fdev verify-merge` passes with the report and fixture coverage required by [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage).
+- Contract tests cover each rule in [the hello contract](#the-hello-contract): equal versions with different bytes, a message over 1 KiB, a missing signature, a forged certificate, a revoked key, extra fields, noncanonical JSON and noncanonical signature encoding. `fdev verify-merge` passes with the report and fixture coverage required by [Merge-law coverage in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage).
 - `evyctl` reads back each publish through a second node. A fixture that drops the reply to the first UPDATE leads `evyctl` to resend the same saved bytes. A crash after step 3 ends with one published state on the next run. Competing equal-version states arrive in opposite orders: peers and both phones keep the higher-hash state after restart, and the losing run stops and reports the winner.
 - Call API tests on iOS and Android: a delegate call completes within 1 second while 50 background reads wait. A read that times out leaves every subscription delivering updates. A write that times out returns `uncertain`, and a read shows whether it landed. A test delegate registers and answers through `send`.
 - Native session admission passes on iOS and Android before reviewed pilot and public release. A second local client, including one that omits Origin or claims EVY's app identity, is refused contract calls, signing, decryption, private replies, export, import, deletion and delegate unregistration through every equivalent API path. The subscription, priority, read and replacement connections all require admission. A credential from the session ended by lock, background or restart is refused; a fresh admitted session succeeds.

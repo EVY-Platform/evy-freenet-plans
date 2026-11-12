@@ -5,7 +5,7 @@
 | Repository | Role | Work in this plan |
 | --- | --- | --- |
 | [freenet-core](https://github.com/freenet/freenet-core) | Modified | New `crates/mobile` interface, complete node-task teardown, offline startup, host-supplied key backend and host records |
-| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Swift package for iOS and Kotlin library for Android, with network-path monitoring |
+| [freenet-appkit](https://github.com/glesage/freenet-appkit) | Modified | Swift package for iOS and Kotlin library for Android, with network-path monitoring, the bandwidth profile and iOS and Android traffic tests |
 | [river](https://github.com/freenet/river) | Used | Web client that runs against the embedded node |
 
 ## Purpose
@@ -49,7 +49,7 @@ Add `crates/mobile` to freenet-core with this interface and generate the Swift b
 | Interface item | What it provides |
 | --- | --- |
 | `MobileNode` | `new(settings)`, `start()`, `stop()`, `status()`, `info()` with the loopback port and River's URL, and `wait_for_peers()` |
-| `NodeSettings` | Host-supplied data, config, secret, cache and log folders; network or local mode; gateway overrides; preferred loopback port; Wasm backend |
+| `NodeSettings` | Host-supplied data, config, secret, cache and log folders; network or local mode; gateway overrides; preferred loopback port; bandwidth profile; Wasm backend |
 | `NodeEventListener` | Status changes, peer count and failures, implemented in Swift and Kotlin |
 | `WebBundle` and `WebBridge` | Serve River's bundle files from the node and parse shell-bridge JSON messages, so iOS and Android share one implementation |
 | `KekBackend` | Callbacks the host implements to load, store and delete the node encryption key. See [Keys and host records](#keys-and-host-records) |
@@ -130,10 +130,68 @@ Use one recorded transport profile for the first iOS and Android release:
 | `transport-quic` | Unset. Core's default mode on iOS and Android is `off`. Record the effective mode at startup | [Core's default QUIC mode](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/transport/quic.rs#L154-L164) |
 | `quic-data-percent`, `quic-max-paths` | Unset; record the resolved values | [Core transport configuration](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/config.rs) |
 | Congestion controller | Core's resolved default, recorded with its version | [Core transport configuration](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/config.rs) |
-| `bandwidth-limit`, `total-bandwidth-limit` | Unset; measure traffic under [1.8 Thin-peer protocol](08-thin-peer.md#traffic-measurement) | [Node-wide UDP egress cap #5964](https://github.com/freenet/freenet-core/pull/5964), [per-connection streaming cap #6051](https://github.com/freenet/freenet-core/pull/6051) |
-| `min-bandwidth-per-connection` | Record the resolved value with the cap settings | [Core transport configuration](https://github.com/freenet/freenet-core/blob/8942fd239b2b53e606ffb1e26ee986623008afb2/crates/core/src/config.rs) |
+| `total-bandwidth-limit`, `min-bandwidth-per-connection`, connection limits | Set from the [bandwidth profile](#bandwidth-profile); record the resolved values | [Node-wide egress cap #5964](https://github.com/freenet/freenet-core/pull/5964), [Core transport configuration](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/config.rs) |
+| `bandwidth-limit` | Unset | [Per-connection streaming cap #6051](https://github.com/freenet/freenet-core/pull/6051) |
 
 Application traffic uses the UDP transport. Core is replacing that transport with QUIC ([#5940](https://github.com/freenet/freenet-core/issues/5940)): desktop nodes default to `shadow`, and `prefer` sends data on QUIC where both peers agree ([#6114](https://github.com/freenet/freenet-core/pull/6114)). Move the phone profile to QUIC before Core removes the UDP transport. Each transport profile change is an explicit release change with new iOS and Android connectivity, traffic, memory and task-cleanup evidence. Record configured and effective settings in the [release support matrix in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence).
+
+### Bandwidth profile
+
+The phone's node is a full Freenet peer, the one peer role the [whitepaper](https://github.com/freenet/paper-1/blob/bff15702759800a003ffbfce639fe859f57d966d/sections/03-primitives.tex) describes. It verifies contracts, runs delegates and keeps subscribed state on the device, and it routes and hosts for the network as every peer does. Core's bandwidth controls bound what it sends. Core's mobile discussions are [#420](https://github.com/freenet/freenet-core/discussions/420) and [#811](https://github.com/freenet/freenet-core/discussions/811).
+
+[1.1 Mobile feasibility and supported profiles](01-feasibility.md) measured a phone on Wi-Fi with every bandwidth setting unset ([finding](https://github.com/glesage/freenet-appkit/blob/1988c5cbdfc5c1f88065382de2a4f86093948b6e/docs/findings.md#phones-are-full-peers-on-the-public-network)):
+
+| Run | Upload | Download |
+| --- | --- | --- |
+| iPhone 13 mini, first two minutes, 27 peers | 7.2 MB, about 60 KiB/s | 6.4 MB, about 60 KiB/s |
+| Android emulator, first two minutes, 22 peers | About 22 KiB/s | About 22 KiB/s |
+| iPhone 13 mini, idle | Under 1 KiB/s | Under 1 KiB/s |
+| Android emulator, idle, 1 peer | 1.4 KiB/s | 1.1 KiB/s |
+| Loading River's 1.06 MB bundle on the public network | 9 KiB | 1.2 MiB |
+
+At 60 KiB/s, one hour of traffic uses about 210 MiB each way and drains the battery. Every released iOS and Android build therefore runs with this profile:
+
+| Setting | What Core does | Phone profile |
+| --- | --- | --- |
+| `total-bandwidth-limit` | One node-wide token bucket charges every datagram the node sends on UDP and QUIC: handshakes, ACKs, keepalives, retransmissions and stream fragments ([#5964](https://github.com/freenet/freenet-core/pull/5964), [#6116](https://github.com/freenet/freenet-core/pull/6116), [#6147](https://github.com/freenet/freenet-core/pull/6147)). A QUIC path holds its share of the cap ([#6111](https://github.com/freenet/freenet-core/pull/6111), [#6126](https://github.com/freenet/freenet-core/pull/6126)) | Set, with one measured value per platform |
+| `min-bandwidth-per-connection` | Each connection's share is the cap divided by the active connections, and at least this minimum. Core's default of 1 MB/s is above a phone's share ([#6113](https://github.com/freenet/freenet-core/pull/6113)) | Set below the cap divided by `max-number-of-connections`, so connections share the cap evenly |
+| `max-number-of-connections`, `min-number-of-connections` | Bound the number of peers. Core's defaults are 200 and 25 | Set from the traffic measurements |
+| `bandwidth-limit` | Caps one connection's streaming rate, at 64 KiB/s or more. `total-bandwidth-limit` overrides it | Unset |
+
+Sources: Core's [bandwidth configuration](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/docs/architecture/transport/configuration/bandwidth-configuration.md) and [egress_cap.rs](https://github.com/freenet/freenet-core/blob/0f0c942494c0ddbead78c2a0879d75971cdd0d0c/crates/core/src/transport/egress_cap.rs).
+
+- The host passes the profile in `NodeSettings`. It takes precedence over the saved config.
+- The node runs only in the foreground, so a session sends at most the cap multiplied by its foreground time.
+- The cap covers what the phone sends. Download follows what peers send, so measure it and record it beside the cap.
+- Under the cap, Core fails a stream whose turn would come more than 5 seconds late, and the user's own sends share the cap with routed traffic. River keeps an unsent message in its chat delegate and sends it again. Core's per-connection scheduler is tracked in [#5976](https://github.com/freenet/freenet-core/issues/5976).
+
+#### Traffic measurement
+
+Measure traffic on iOS and Android with the [harness](https://github.com/glesage/freenet-appkit/tree/1988c5cbdfc5c1f88065382de2a4f86093948b6e/harness) `watch` scenario and Core's upload and download counters. Run each workload twice: with every bandwidth setting unset, then with the profile. Publish the results with the resolved transport and bandwidth settings in the [release support matrix in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence).
+
+| Workload | What to record |
+| --- | --- |
+| Foreground idle | Upload and download per minute, including keepalives and subscription upkeep |
+| Active use | Upload and download for River's join, read and send sequence |
+| Reconnect and network change | Upload and download per reconnect, with a room state above 1 MiB. River's reconnect uses code-free GET subscriptions, deltas and fallback PUTs ([River PR #759](https://github.com/freenet/river/pull/759)); record each part |
+| Cap reached | Upload held at the cap while routed traffic fills it, Core's refused-stream counters, and the time Bob's own message takes to send |
+
+Each message Bob sends today costs the whole room state, because Core forwards the full merged state ([#4072](https://github.com/freenet/freenet-core/pull/4072)).
+
+#### Upstream bandwidth work
+
+Bandwidth use is general to Freenet. Track it in Core's issues and file a new issue where none exists.
+
+| Change | State |
+| --- | --- |
+| A node-wide upload cap in Core's default configuration ([#6045](https://github.com/freenet/freenet-core/issues/6045)) | Open |
+| Lower daily upload volume for metered connections ([#6171](https://github.com/freenet/freenet-core/issues/6171)) | Open. A median node sends about 3 GB a day, 28% of it hosting announcements |
+| A per-connection stream scheduler under the cap ([#5976](https://github.com/freenet/freenet-core/issues/5976)) | Open |
+| QUIC transport with a capped congestion window and one shared admission queue ([#5940](https://github.com/freenet/freenet-core/issues/5940)) | Tracking issue open. The cap PRs are merged |
+| Compress every peer message with zstd ([#3336](https://github.com/freenet/freenet-core/issues/3336)) | Open proposal |
+| Send a code hash first and the Wasm only when the receiver lacks it ([#5707](https://github.com/freenet/freenet-core/issues/5707)) | Open proposal |
+| Send client UPDATEs as deltas against the receiver's state summary ([#4072](https://github.com/freenet/freenet-core/pull/4072) left the delta format for later) | Core issue to be filed |
+| Cut summary, interest-sync and hosting-announcement traffic ([#5203](https://github.com/freenet/freenet-core/pull/5203), [#5109](https://github.com/freenet/freenet-core/pull/5109), [#4965](https://github.com/freenet/freenet-core/issues/4965), [#5157](https://github.com/freenet/freenet-core/issues/5157)) | Draft PRs and open issues under Core's bandwidth tracking issue [#5153](https://github.com/freenet/freenet-core/issues/5153) |
 
 ### Local network access
 
@@ -204,6 +262,7 @@ The host supplies installation-specific data, config, secret, cache and log fold
 - Is the generic host-supplied key backend acceptable in Core?
 - Is a reserved host namespace in the secret store acceptable?
 - Which Core changes are needed for offline startup and mobile Wasm execution?
+- Which bandwidth cap and connection limits suit a phone that runs only in the foreground?
 
 ## Acceptance
 
@@ -212,6 +271,8 @@ The host supplies installation-specific data, config, secret, cache and log fold
 - On iOS and Android, stop releases every node-owned task, the port, store and keys within its deadline, or returns `IncompleteShutdown`.
 - Run repeated start/stop cycles within one live app process on iOS and Android. Cover normal stop, a shutdown timeout and a startup failure. Per-generation task counters show zero live node-owned tasks after completed teardown; stale callbacks cease, the stopped generation's samplers stop updating counters, and the port and store can be reused. Record shared process-wide runtime tasks and caches separately; shared task counts remain stable across cycles and caches stay within their configured bounds.
 - The release support matrix records the configured and effective transport settings. A profile change passes the affected iOS and Android connectivity, traffic, memory and lifecycle tests.
+- On real iOS and Android phones, on Wi-Fi and on each supported carrier, upload stays within `total-bandwidth-limit` during idle, active use and reconnect. Bob's message sends while routed traffic holds the cap.
+- Idle, active, reconnect and cap-reached traffic is measured and published for iOS and Android, with every bandwidth setting unset and with the profile.
 - After a restart, the node reuses its previous loopback port. With that port taken, it reports a new port.
 - Offline startup shows River's stored rooms and chat delegate before the first join.
 - The Keychain backend on iOS and the Keystore backend on Android load, store and delete the node key. A missing key returns `KeyLost`.

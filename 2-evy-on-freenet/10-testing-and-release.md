@@ -31,8 +31,8 @@ Reviewed pilot and public releases on iOS and Android require [Native session ad
 
 | Plan | Owns |
 | --- | --- |
-| [1.8 Thin-peer protocol](../1-freenet-mobile-appkit/08-thin-peer.md#acceptance) | Thin-peer behavior, rerun here with EVY's workloads |
-| [1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#release-tests) | Device limits and store build checks, rerun here on EVY's builds |
+| [1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#bandwidth-profile) | The bandwidth profile and traffic measurements, rerun here with EVY's workloads |
+| [1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#release-tests) | Device limits and store build checks, rerun here on EVY's builds |
 | [2.1 Hello EVY world](01-hello-evy-world.md#acceptance) | The hello contract, the EVY keys and app startup |
 | [2.2 EVY UI contracts and publishing](02-ui-contracts.md#acceptance) | UI documents, versions, equal-version conflicts and the write-once store |
 | [2.3 Native SDUI readers](03-readers.md#acceptance) | Reader parity, offline start, UI updates within a flow and builds |
@@ -49,10 +49,10 @@ Record each plan's results once, with its suite, source commit and build numbers
 
 ## Test setup
 
-- Run every test on real phones in the thin-peer role, with the node in network mode. Simulator and emulator runs are reported apart.
+- Run every test on real phones with the release bandwidth profile and the node in network mode. Simulator and emulator runs are reported apart.
 - Alice has an iPhone on iOS 17 and Bob an Android phone on Android 9 (API 28), the minimums in [The EVY app on iOS and Android in 2.1 Hello EVY world](01-hello-evy-world.md#the-evy-app-on-ios-and-android). Dave uses a current Android phone and Carol a current iPhone.
 - Build the test apps with `mobile_builds.yml` and `variant: test`, as [Builds from GitHub in 2.3 Native SDUI readers](03-readers.md#builds-from-github) describes. They install beside the store build and open preview UI contracts through "Scan preview", as [Previewing on a phone in 2.5 EVY authoring and publishing](05-developer.md#previewing-on-a-phone) describes.
-- Pass [Test-network dependencies in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#test-network-dependencies) for each linked NAT harness binary before using the isolated network for release evidence. Retain the locked dependency graph, toolchain and linker results.
+- Pass [Test-network dependencies in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#test-network-dependencies) for each linked NAT harness binary before using the isolated network for release evidence. Retain the locked dependency graph, toolchain and linker results.
 
 | | Isolated test network | Public network |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ Record each plan's results once, with its suite, source commit and build numbers
 | EVY builds | iOS and Android debug builds with test contract keys and test-network gateways | Store-variant pilot builds |
 | Backend | One test deployment with the payment, attribution and remuneration modules and a backend node | EVY's backend |
 | Stripe | Test mode with test cards and test connected accounts | Test mode until the release gate passes |
-| Used for | Forged states, serving-peer loss, carrier NAT and refunds after a withdrawal with a short hold | Every cross-plan test on store builds and the pilot sale |
+| Used for | Forged states, peer loss, carrier NAT and refunds after a withdrawal with a short hold | Every cross-plan test on store builds and the pilot sale |
 
 ## Cross-plan tests
 
@@ -69,12 +69,12 @@ Run every test on iOS and Android, with the platforms swapped on a second run.
 
 | Test | Plans | Passing result |
 | --- | --- | --- |
-| EVY on the thin peer | 1.8 Thin-peer protocol; 2.1 Hello EVY world | [Acceptance in 1.8 Thin-peer protocol](../1-freenet-mobile-appkit/08-thin-peer.md#acceptance) passes with EVY's Home, Marketplace and purchase traffic |
-| EVY device limits | 1.9 Testing and release; 2.1 Hello EVY world; 2.3 Native SDUI readers | Rerun the memory, Wasm, battery and storage tests from [Release tests in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#release-tests) on EVY's iOS and Android store builds, with Home, Marketplace and an open purchase |
+| EVY under the bandwidth cap | 1.2 Embedded node and mobile SDK; 2.1 Hello EVY world | The traffic cases in [Acceptance in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#acceptance) pass with EVY's Home, Marketplace and purchase traffic |
+| EVY device limits | 1.8 Testing and release; 2.1 Hello EVY world; 2.3 Native SDUI readers | Rerun the memory, Wasm, battery and storage tests from [Release tests in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#release-tests) on EVY's iOS and Android store builds, with Home, Marketplace and an open purchase |
 | Repeated node lifecycles | 1.2 Embedded node and mobile SDK; 2.3 Native SDUI readers | The in-process lifecycle tests from [Acceptance in 1.2 Embedded node and mobile SDK](../1-freenet-mobile-appkit/02-sdk.md#acceptance) pass with EVY's node, delegate and subscriptions. Stopped node generations leave zero live owned tasks, stale callbacks stop, and their port and store are reusable |
 | Native session admission | 2.1 Hello EVY world; 2.4 SDUI data and actions; 2.11 EVY delegate updates and recovery | [Native session admission in 2.1 Hello EVY world](01-hello-evy-world.md#native-session-admission) passes on every SDK connection and equivalent API route. Another local client and a stale session fail signing, decryption, export, import and deletion; the current authorized session completes the same operations |
-| Merge-law coverage | 1.9 Testing and release; 2.4 SDUI data and actions | [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage) passes on every contract in the release manifest, including near-capacity UI generations and collection states, purchase transitions and revocations. Save the per-property reports and explicit boundary fixtures |
-| Core version | 1.9 Testing and release; 2.1 Hello EVY world | A test peer requires a newer Core than the store builds use. Both phones show "Update EVY" from [2.1 Hello EVY world](01-hello-evy-world.md) and keep drawing saved UI documents |
+| Merge-law coverage | 1.8 Testing and release; 2.4 SDUI data and actions | [Merge-law coverage in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage) passes on every contract in the release manifest, including near-capacity UI generations and collection states, purchase transitions and revocations. Save the per-property reports and explicit boundary fixtures |
+| Core version | 1.8 Testing and release; 2.1 Hello EVY world | A test peer requires a newer Core than the store builds use. Both phones show "Update EVY" from [2.1 Hello EVY world](01-hello-evy-world.md) and keep drawing saved UI documents |
 | One application | 2.1 Hello EVY world; 2.2 EVY UI contracts and publishing; 2.3 Native SDUI readers; 2.7 EVY Marketplace | Home, Hello and Marketplace navigate within one UI document. Test and store installs have separate app IDs, stores and keys |
 | Skateboard sale | 2.4 SDUI data and actions; 2.6 Payments; 2.7 EVY Marketplace | Alice sells to Bob under UI version 4 and policy 1. Check the Stripe objects: a PaymentIntent of 7,148 cents, `application_fee_amount` of 218 cents (70 contributor fee plus 148 service fee) and 6,930 cents to Alice's account. After Stripe's card fee, EVY's net is 70 cents. Both phones show `sold`, and an independent peer reads the same purchase |
 | Offline at the pickup | 2.4 SDUI data and actions; 2.6 Payments | Alice taps "Confirm" with no signal, and Bob closes EVY right after paying. Alice's signed confirmation waits under [Offline writes in 2.4 SDUI data and actions](04-data-and-actions.md#offline-writes) and goes out on reconnect. The payment module captures once, and both phones show `sold` |
@@ -88,7 +88,7 @@ Run every test on iOS and Android, with the platforms swapped on a second run.
 
 ## Store requirements
 
-EVY publishes from organization Apple Developer Program and Google Play Console accounts. Listings and requests meet both stores' user-generated content rules and the [store requirements in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#store-requirements).
+EVY publishes from organization Apple Developer Program and Google Play Console accounts. Listings and requests meet both stores' user-generated content rules and the [store requirements in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#store-requirements).
 
 | Requirement | What the release does | App Store | Google Play |
 | --- | --- | --- | --- |
@@ -101,11 +101,11 @@ EVY publishes from organization Apple Developer Program and Google Play Console 
 | Physical goods | Bob pays for Alice's skateboard in Stripe's payment sheet, as [Store payment rules in 2.6 Payments](06-payments.md#store-payment-rules) sets | Guidelines 3.1.3(e) | [Payments policy](https://support.google.com/googleplay/android-developer/answer/9858738) section 3 |
 | Financial features | Declare in Play Console that EVY takes card payments for physical goods through Stripe | – | [Financial features declaration](https://support.google.com/googleplay/android-developer/answer/13849271) |
 | Downloaded code | `contract-keys.json` holds the hello contract key and the `ui.evy` key and code hash. The app carries the EVY delegate's Wasm. Readers check UI documents against EVY's keys. UI documents are screen data for compiled native readers. Preview scanning exists only in test builds | Guidelines 2.5.2; [DPLA](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/) 3.3.1(B) | [Device and network abuse](https://support.google.com/googleplay/android-developer/answer/16559646) |
-| Review notes | Explain the embedded node in the thin-peer role and the Pulley interpreter, citing Guideline 2.5.2 and DPLA 3.3.1(B). Say that readers draw signed screen data, that payments are for physical goods picked up in person, and which test listing to open | Guidelines 2.5.2 and 3.1.3(e); DPLA 3.3.1(B) | – |
+| Review notes | Explain the embedded Freenet peer, its bandwidth cap and the Pulley interpreter, citing Guideline 2.5.2 and DPLA 3.3.1(B). Say that readers draw signed screen data, that payments are for physical goods picked up in person, and which test listing to open | Guidelines 2.5.2 and 3.1.3(e); DPLA 3.3.1(B) | – |
 
-- `mobile_builds.yml` runs every [store build check in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#store-build-checks) on the store variant. It uses the iOS 17 deployment target and Android `minSdk` 28 from 2.1 Hello EVY world, and passes [Merge-law coverage in 1.9 Testing and release](../1-freenet-mobile-appkit/09-testing-and-release.md#merge-law-coverage) for every contract in `freenet/contracts/`. Both iOS and Android build records retain the verifier reports, corpus digests and dependency manifest.
+- `mobile_builds.yml` runs every [store build check in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#store-build-checks) on the store variant. It uses the iOS 17 deployment target and Android `minSdk` 28 from 2.1 Hello EVY world, and passes [Merge-law coverage in 1.8 Testing and release](../1-freenet-mobile-appkit/08-testing-and-release.md#merge-law-coverage) for every contract in `freenet/contracts/`. Both iOS and Android build records retain the verifier reports, corpus digests and dependency manifest.
 - The iOS build ships arm64. The Android build ships the arm64-v8a and x86_64 ABIs.
-- The EVY delegate seals with X25519, HKDF-SHA256 and ChaCha20-Poly1305, which the encryption declaration in 1.9 Testing and release already covers.
+- The EVY delegate seals with X25519, HKDF-SHA256 and ChaCha20-Poly1305, which the encryption declaration in 1.8 Testing and release already covers.
 
 ## Pilot
 

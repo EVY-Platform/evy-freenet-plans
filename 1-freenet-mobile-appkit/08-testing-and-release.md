@@ -1,4 +1,4 @@
-# 1.9 Testing and release
+# 1.8 Testing and release
 
 ## Repositories
 
@@ -17,20 +17,20 @@ Test River end to end on real iOS and Android phones, across the earlier plans o
 - Tests that span several plans, such as an invite, a send and an upgrade in one run.
 - Store build checks and test distribution.
 
-River runs its signed web UI in one WebView, served by the phone's embedded node in the thin-peer role from [1.8 Thin-peer protocol](08-thin-peer.md).
+River runs its signed web UI in one WebView, served by the phone's embedded node. The node is a full Freenet peer that runs the [Bandwidth profile in 1.2 Embedded node and mobile SDK](02-sdk.md#bandwidth-profile).
 
 ## Distribution
 
 ```mermaid
 flowchart LR
-  dev["Development builds<br/>full peer"] --> gate["End of milestone 1<br/>README release gate passes"]
-  gate --> internal["TestFlight internal testing (iOS)<br/>Play internal testing (Android)<br/>thin peer"]
+  dev["Development builds"] --> gate["End of milestone 1<br/>README release gate passes"]
+  gate --> internal["TestFlight internal testing (iOS)<br/>Play internal testing (Android)<br/>release bandwidth profile"]
   internal --> wait["Core local-client authentication #5264 lands"]
   wait --> public["Public App Store and Play release"]
 ```
 
 - River test builds go to TestFlight internal testing on iOS and Play internal testing on Android.
-- Distribution starts at the end of milestone 1, when the README release gate passes. Every distributed build runs as a thin peer.
+- Distribution starts at the end of milestone 1, when the README release gate passes. Every distributed build runs the release bandwidth profile.
 - These channels have no store review. This plan makes no review claim.
 - Public store release of River waits for Core's local-client authentication, the open part of [#5264](https://github.com/freenet/freenet-core/issues/5264). Internal testing may start before it lands.
 
@@ -72,6 +72,25 @@ Every consuming application supplies a manifest of its contracts, exact Wasm has
 
 The counted reports and size option are supplied by [Core #6043](https://github.com/freenet/freenet-core/pull/6043). The sampling count and the `--max-states-paired` option are supplied by [#6055](https://github.com/freenet/freenet-core/pull/6055). The verifier always leaves some associativity triples unsampled, so use focused corpora and explicit triple fixtures for them. Core's associativity check tests reconciliation to a stable state ([#5924](https://github.com/freenet/freenet-core/pull/5924)). Core's nodes record merge-law findings as local diagnostics and keep hosting the contract ([#6177](https://github.com/freenet/freenet-core/pull/6177)), so this gate is the application's own check. Treat every merge-law violation as a release failure, including findings the verifier classes as report-only. A merge refusal that leaves two peers apart counts as a commutativity violation ([#6178](https://github.com/freenet/freenet-core/pull/6178)). Supply a conclusive regression fixture for each remaining inconclusive case before release.
 
+## Carrier tests
+
+Carrier transport problems are general to Freenet. Track them in Core's issues and file a new issue where none exists. This plan tests each supported carrier path on iOS and Android. The release profile uses encrypted UDP with hole punching ([#2211](https://github.com/freenet/freenet-core/pull/2211)) and Core's default `transport-quic` mode on iOS and Android, `off` ([Transport profile in 1.2 Embedded node and mobile SDK](02-sdk.md#transport-profile)). UDP reachability remains a carrier acceptance requirement. A transport-profile change repeats the iOS and Android carrier, traffic, memory and lifecycle tests.
+
+| Source | State | What it means for phones |
+| --- | --- | --- |
+| [CGNAT discussion #5051](https://github.com/freenet/freenet-core/discussions/5051) | Open | A phone-hotspot user reports that the carrier blocks UDP |
+| [Outbound-only light-client mode #5917](https://github.com/freenet/freenet-core/issues/5917) | Open proposal | An opt-in mode for a node behind restrictive NAT, which connects only to directly reachable peers |
+| [Relay fallback #2925](https://github.com/freenet/freenet-core/issues/2925) | Closed without an implementation | No relay exists for carrier paths that block UDP |
+| [SOCKS5 #2409](https://github.com/freenet/freenet-core/issues/2409) | Open | A possible path where UDP is blocked |
+| [NAT'd node streams at about 1% of uplink #5643](https://github.com/freenet/freenet-core/issues/5643) | Open | Fetches of NAT-published states of 1 to 4 MiB stall or fail. Measure cold fetch on the selected Core build, including a room state above 1 MiB |
+| [Dual-stack IPv6 #3648](https://github.com/freenet/freenet-core/pull/3648), [IPv6 on gateways #3666](https://github.com/freenet/freenet-core/issues/3666) | #3648 merged, #3666 open | IPv6-only carriers reach the IPv4 gateways through NAT64 until #3666 lands |
+| [1200-byte packets #3619](https://github.com/freenet/freenet-core/pull/3619) | Merged | Avoids IP fragmentation on carrier NAT paths |
+| [Stream-listener wakeups #5751](https://github.com/freenet/freenet-core/pull/5751) | Merged 2026-10-03 | Run lossy-link regression cases on the build |
+| [Duplicate-packet acknowledgements #5803](https://github.com/freenet/freenet-core/pull/5803) | Shipped in [Core 0.2.142](https://github.com/freenet/freenet-core/releases/tag/v0.2.142) | Test dropped acknowledgements, duplicate packets and interrupted receives |
+| [Wake recovery #4951](https://github.com/freenet/freenet-core/issues/4951), [state after suspend #4153](https://github.com/freenet/freenet-core/issues/4153) | Open | Resume regression cases |
+
+Run the carrier-NAT and peer-loss cases on freenet-test-network's Docker NAT simulation as well as on carriers, after [Test-network dependencies](#test-network-dependencies) passes. Record each test peer's `transport-quic` mode: Core's default on Linux is `shadow`.
+
 ## River acceptance cases
 
 Each case runs on iOS and Android.
@@ -83,7 +102,7 @@ Each case runs on iOS and Android.
 | Offline and interrupted send | Queue a send before the first join, with no signal and on Wi-Fi with no internet. Restart offline, lose a submission reply and reconnect with concurrent room updates. The message reaches an independent peer after reconnect, and the room holds one copy |
 | Background and resume | Lock or background the phone during startup, signing, sending and refresh. The host sends `flush_request`, River saves its drafts, then the node stops and the WebView closes. Resuming opens a fresh WebView with drafts, keys and sent messages intact |
 | Repeated node lifecycles | Run the in-process start, stop, timeout and startup-failure cases from [Acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance). Each stopped node generation has zero live owned tasks; stale callbacks stop and the port and store are reusable |
-| Connectivity | Switch between Wi-Fi and cellular and remove a serving peer. Subscriptions return after reconnect |
+| Connectivity | Switch between Wi-Fi and cellular and remove connected peers. Subscriptions return after reconnect |
 | Compatible web update | Install a new River release while a session runs. The release activates under [Activating a release in 1.3 Single-application host](03-host.md#activating-a-release), and drafts and pending messages survive |
 | Interrupted upgrade | Upgrade from both starting points in the [upgrade test window in 1.7 Upgrades and migration](07-migration.md#upgrade-test-window) and kill the app during migration. The next start finishes it, and River sends `migration_done` |
 | Device limits and accessibility | Memory, Wasm execution, battery and storage stay within the [device limits in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#device-limits) and [Running Wasm in 1.2 Embedded node and mobile SDK](02-sdk.md#running-wasm). Keyboard, focus, large text and screen-reader flows work. River closed two mobile layout gaps in [river#714](https://github.com/freenet/river/issues/714) and [river#718](https://github.com/freenet/river/issues/718); keep both cases in these checks |
@@ -107,6 +126,7 @@ Use one River release and invite-only test rooms with a named room owner and a m
 | Device access | Tester notes list the notification, clipboard, file, external-link and navigation adapters from [Shell-bridge messages in 1.3 Single-application host](03-host.md#shell-bridge-messages) |
 | Tester support | Test invitations name the room owner, support contact and test-data handling. The owner can remove a participant with River's room controls |
 | Runtime | Pulley runs the contracts and delegate on iOS and Android |
+| Network role | Tester and review notes describe the embedded node as a Freenet peer that routes and hosts for the network within its bandwidth cap. Before the public release, check both builds against Google Play's [Device and Network Abuse policy](https://support.google.com/googleplay/android-developer/answer/16559646) |
 | Privacy | The checklist records public room data, peer-visible keys and IP addresses, private device records, and the declarations TestFlight and Play require |
 | Encryption | The checklist records X25519, Argon2id, AES-GCM, ChaCha20, XChaCha20-Poly1305, Ed25519, BLAKE3, HKDF-SHA256 and SHA-256, following [Encryption export regulations](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations) |
 
@@ -141,7 +161,7 @@ Peers refuse a node whose Core version is below the network's `min-compatible-ve
 
 ## Release tests
 
-Run every release test on the distributed iOS and Android builds, with the phone in the thin-peer role.
+Run every release test on the distributed iOS and Android builds, with the release bandwidth profile.
 
 | Release test | Passing evidence |
 | --- | --- |
@@ -149,11 +169,13 @@ Run every release test on the distributed iOS and Android builds, with the phone
 | River | Every case in [River acceptance cases](#river-acceptance-cases) passes through River's UI and real chat delegate |
 | Local network | The local-network case in the [acceptance in 1.2 Embedded node and mobile SDK](02-sdk.md#acceptance) passes with River |
 | Release profile | The [release-profile evidence in 1.1 Mobile feasibility and supported profiles](01-feasibility.md#release-profile-evidence) records the exact artifacts, runtime, ABIs, effective transport and bandwidth settings, and real-phone and carrier coverage |
+| Traffic | The [traffic measurements in 1.2 Embedded node and mobile SDK](02-sdk.md#traffic-measurement) are published for both builds. Upload stays within the cap on Wi-Fi and on each supported carrier |
+| Carriers | Each case in [Carrier tests](#carrier-tests) passes, or is recorded with its Core issue |
 | Test harness | [Test-network dependencies](#test-network-dependencies) passes for every linked NAT binary used by the release |
 | Merge-law coverage | The [merge-law coverage gate](#merge-law-coverage) passes for every declared contract with the saved reports and boundary fixtures |
 | Store checks | Every [store requirement](#store-requirements) and [store build check](#store-build-checks) holds |
 | Core version | The [Core version rules](#core-version-and-the-network) hold for both builds. A test peer that requires a newer Core gives "update the app" on iOS and Android |
-| Support reports | On iOS and Android, export from River's settings after an offline start, serving-peer loss and a denied notification permission, and from the host's recovery screen after a failed node start. The exported files pass the allowed-field, status and private-data checks in [Support reports in 1.3 Single-application host](03-host.md#support-reports) |
+| Support reports | On iOS and Android, export from River's settings after an offline start, peer loss and a denied notification permission, and from the host's recovery screen after a failed node start. The exported files pass the allowed-field, status and private-data checks in [Support reports in 1.3 Single-application host](03-host.md#support-reports) |
 
 ## Acceptance
 
